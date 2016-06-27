@@ -1,17 +1,19 @@
-#To-do list
-  #Size-dependent mortality in snail classes?
-  
+## Modeling base snail population dynamics to set growth and mortality parameters; 
+## no predation or disease
+
+## To-do list:
+  # Size-dependent mortality in snail classes? (simple approximation looks decent)
 
 require(deSolve)
 
-snail_size=function(t, n, parameters) { 
+snail_size <- function(t, n, parameters) { 
   with(as.list(parameters),{
     
-    S1=n[1]
-    S2=n[2]
-    S3=n[3]
+    S1 = n[1]
+    S2 = n[2]
+    S3 = n[3]
   
-    N = S1+S2+S3
+    N = S1 + S2 + S3
     
     dS1dt = f*(1-N/Kn)*(S2+S3) - muN1*S1 - psi1*S1 - g1*S1
     
@@ -24,77 +26,77 @@ snail_size=function(t, n, parameters) {
   }) 
 } 
 
-#Set initial values and parameters ##################
-nstart=c(S1 = 0, S2 = 0.1, S3 =0)
-time=seq(0,365*2,1)
+# Set initial values and parameters
+nstart = c(S1 = 0, S2 = 0.1, S3 = 0)
+time = seq(0, 365*2, 1)
 
-#List parameters and values
-parameters=c(
-  #Snail model parameters
-    f = 0.26, #Birth rate of adult snails (snails/reproductive snail/day; including survival to detection; more like a recruitment rate)
-    Kn = 50, #carrying capacity of snails (snails/m^2)
-    muN1 = 1/40, #Natural mortality rate of small snails (deaths/snail/day; assume mean lifespan = 50 days)
-    muN2 = 1/50, #Natural mortality rate of medium snails (deaths/snail/day; assume mean lifespan = 50 days)
-    muN3 = 1/60, #Natural mortality rate of large snails (deaths/snail/day; assume mean lifespan = 50 days)
-    psi1 = 0, #TBD: predation rate of prawn cohort on smallest size class of snails
-    g1 = 1/37, #Growth rate of smallest size class snails (translated from mm/day from McCreesh 2014 to days of growth required for transition to next size class) 
-    psi2 = 0, #TBD: predation rate of prawn cohort on medium size class of snails
-    g2 = 1/62, ##Growth rate of medium size class snails (translated from mm/day from McCreesh 2014 to days of growth required for transition to next size class) 
-    psi3 = 0 #TBD: predation rate of prawn cohort on large size class of snails
+# List snail model parameters
+parameters = c(
+    f = 0.26,    # Birth rate of adult snails (snails/reproductive snail/day, including survival to detection; more like a recruitment rate)
+    Kn = 50,     # Carrying capacity of snails (snails/m^2), from Sokolow et al. 2015
+    muN1 = 1/40, # Natural mortality rate of small snails (deaths/snail/day; assume mean lifespan = 50 days)
+    muN2 = 1/50, # Natural mortality rate of medium snails (deaths/snail/day; assume mean lifespan = 50 days)
+    muN3 = 1/60, # Natural mortality rate of large snails (deaths/snail/day; assume mean lifespan = 50 days)
+    g1 = 1/37,   # Growth rate of small snails (size class transition rate, in terms of days to grow 4mm; adapted from McCreesh et al. 2014, assuming water temp. of 25 C) 
+    g2 = 1/62,   # Growth rate of medium snails (size class transition rate, in terms of days to grow 4mm; adapted from McCreesh et al. 2014, assuming water temp. of 25 C) 
+    psi1 = 0,    # TBD: predation rate of prawn cohort on smallest snails
+    psi2 = 0,    # TBD: predation rate of prawn cohort on medium snails
+    psi3 = 0     # TBD: predation rate of prawn cohort on largest snails
 )
 
 
-#Run & plot ###############
-output_ss=as.data.frame(ode(nstart,time,snail_size,parameters))
-  output_ss$S.t = output_ss$S1 + output_ss$S2 + output_ss$S3 #calculate total snail population density
-  eqbm_ss<-output_ss[max(time),]
+# Run & plot
+output_ss = as.data.frame(ode(nstart,time,snail_size,parameters))
+output_ss$S.t = output_ss$S1 + output_ss$S2 + output_ss$S3 # Calculate total snail population density
+eqbm_ss = output_ss[max(time),]
   
-#plot results
 par(mfrow = c(1,1))  
-  plot(output_ss$time, output_ss$S.t, type = 'l', col = 'black', lwd=2, ylim = c(-2, 45), #xlim = c(0,305),
-       ylab = 'state variables', xlab = 'time',
-       main = paste('Kn=', parameters['Kn'],'  muN=', parameters['muN'], '  f=', parameters['f'], sep = ''))
-    lines(output_ss$time, output_ss$S1, type = 'l', col = 'green', lwd=2)
-    lines(output_ss$time, output_ss$S2, type = 'l', col = 'blue', lwd=2)
-    lines(output_ss$time, output_ss$S3, type = 'l', col = 'red', lwd=2)
-    abline(v = 365, lty=2)
-    legend('topright', legend = c('S1', 'S2', 'S3', 'S.t'), lwd=2, col = c('green', 'blue', 'red', 'black'))
+plot(output_ss$time, output_ss$S.t, type = 'l', col = 'black', lwd=2, ylim = c(-2, 45), #xlim = c(0,305),
+     ylab = 'state variables', xlab = 'time',
+     main = paste('Kn=', parameters['Kn'], '  muN1=', parameters['muN1'], '  muN2=', parameters['muN2'],
+                  '\n  muN3=', parameters['muN3'], '  f=', parameters['f'], sep = ''))
+  lines(output_ss$time, output_ss$S1, type = 'l', col = 'green', lwd=2)
+  lines(output_ss$time, output_ss$S2, type = 'l', col = 'blue', lwd=2)
+  lines(output_ss$time, output_ss$S3, type = 'l', col = 'red', lwd=2)
+  abline(v = 365, lty = 2)
+  legend('topright', legend = c('S1', 'S2', 'S3', 'S.t'), lwd = 2, col = c('green', 'blue', 'red', 'black'))
     
-#Set initial values and parameters ##################
-  nstart=c(S1 = eqbm_ss$S.t, S2 = 0, S3 =0)
-  time=seq(0,365*2,1)
+# Simulate and plot single equilibrium-level cohort
+nstart = c(S1 = eqbm_ss$S.t, S2 = 0, S3 = 0)
+time = seq(0,365*2,1)
     
-  parameters['f']=0 #stop recruitment
+parameters['f'] = 0 # Stop recruitment
     
-#Run & plot ###############
-    output_ss=as.data.frame(ode(nstart,time,snail_size,parameters))
-    output_ss$S.t = output_ss$S1 + output_ss$S2 + output_ss$S3 #calculate total snail population density
-    eqbm_ss<-output_ss[max(time),]
+output_ss = as.data.frame(ode(nstart,time,snail_size,parameters))
+output_ss$S.t = output_ss$S1 + output_ss$S2 + output_ss$S3 # Calculate total snail population density
+eqbm_ss = output_ss[max(time),]
     
-  #plot results
-    par(mfrow = c(1,1))  
-    plot(output_ss$time, output_ss$S.t, type = 'l', col = 'black', lwd=2, ylim = c(-2, 45), xlim = c(0,305),
-         ylab = 'state variables', xlab = 'time',
-         main = paste('Kn=', parameters['Kn'],'  muN=', parameters['muN'], '  f=', parameters['f'], sep = ''))
-    lines(output_ss$time, output_ss$S1, type = 'l', col = 'green', lwd=2)
-    lines(output_ss$time, output_ss$S2, type = 'l', col = 'blue', lwd=2)
-    lines(output_ss$time, output_ss$S3, type = 'l', col = 'red', lwd=2)
-    abline(v = 365, lty=2)
-    legend('topright', legend = c('S1', 'S2', 'S3', 'S.t'), lwd=2, col = c('green', 'blue', 'red', 'black'))
+par(mfrow = c(1,1))  
+plot(output_ss$time, output_ss$S.t, type = 'l', col = 'black', lwd=2, ylim = c(-2, 45), xlim = c(0,305),
+     ylab = 'state variables', xlab = 'time',
+     main = paste('Kn=', parameters['Kn'], '  muN1=', parameters['muN1'], '  muN2=', parameters['muN2'],
+                  '\n  muN3=', parameters['muN3'], '  f=', parameters['f'], sep = ''))
+  lines(output_ss$time, output_ss$S1, type = 'l', col = 'green', lwd=2)
+  lines(output_ss$time, output_ss$S2, type = 'l', col = 'blue', lwd=2)
+  lines(output_ss$time, output_ss$S3, type = 'l', col = 'red', lwd=2)
+  abline(v = 365, lty=2)
+  legend('topright', legend = c('S1', 'S2', 'S3', 'S.t'), lwd=2, col = c('green', 'blue', 'red', 'black'))
     
-  #derivative of total snail pop
-    vect<-output_ss$S.t
-    deriv<-numeric(length(vect)-1)
-    for(i in 1:(length(vect)-1)){
-      deriv[i] = vect[i] - vect[i+1]
-    }
-    
-    deriv2<-deriv/output_ss$S.t[1]
-    deriv2 <- deriv2[-(length(deriv2))]
-    sum(deriv2) 
-    
-    x = 0:(length(deriv2)-1)
-    
-    plot(x = x, y= deriv2, type='l')
-    
-    sum(x*deriv2)   
+# Calculate PDF f(t) = -dS(t)/dt (i.e. numerically approximate derivative of survival curve)
+vect = output_ss$S.t
+deriv = numeric(length(vect)-1)
+for (i in 1:(length(vect)-1)) {
+  deriv[i] = vect[i] - vect[i+1]
+}
+
+deriv2 = deriv/output_ss$S.t[1]
+deriv2 = deriv2[-(length(deriv2))]
+sum(deriv2) 
+
+x = 0:(length(deriv2)-1)
+
+plot(x = x, y = deriv2, type = 'l')
+
+# Calculate life expectancy
+sum(x*deriv2)   
+
