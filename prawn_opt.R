@@ -1,3 +1,8 @@
+#to-do list
+  #fit two density dependence parameters to data from Ranjeet et al (or other macrobrachium fisheries data)
+    #update distributions of data being fitted to; currently normal but should be...?
+  #double check parameters -- are rosenbergii parameters ok to use? are fisheries parameters ok to use considering harsher conditions outside of a fisheries setting?
+
 require(deSolve)
 
 prawn_biomass=function(t, n, parameters) { 
@@ -24,11 +29,11 @@ nstart=c(P=15000,L=25)
 
 #List parameters and values
 parameters=c(
-  a = 0.096868,
-  b = 3.2944,
-  gam = 1e-6, #crowding parameter that reduces growth rate at high density
-  mu = 0.006136986, #baseline prawn mortality rate
-  phi = 40000000, #biomass-assessed density dependence parameter in one hactare
+  a = 0.096868, #from Nwosu paper
+  b = 3.2944, #from Nwosu paper
+  gam = 1e-6, #crowding parameter that reduces growth rate at high density NEEDS TO BE FIT
+  mu = 0.006136986, #baseline prawn mortality rate 
+  phi = 40000000, #biomass-assessed density dependence parameter in one hactare NEEDS TO BE FIT
   k = 0.00339726, #growth rate (mm/day)
   linf = 206 #max length (mm)
 )
@@ -41,14 +46,15 @@ output=as.data.frame(ode(nstart,time,prawn_biomass,parameters))
   output$B = ((parameters['a']*(output$L/10)^parameters['b'])/10)*output$P
   output$mean.size = output$B / output$P
 
-plot(x = output$time, y = output$P, col = 'red', xlab = 'time', ylab = 'state variables', 
-     type = 'l', lwd=2, xlim = c(0, max(output$time)),ylim = c(0,max(output$B/100)+100),
+par(mfrow = c(2,1))  
+plot(x = output$time, y = output$P, col = 'red', xlab = '', ylab = 'state variables', 
+     type = 'l', lwd=2, xlim = c(0, max(output$time)),ylim = c(-100,max(output$B/10)+100),
      main = paste('Mean start size = ', as.numeric(nstart[2]), ' mm', sep = ''))
-  lines(x = output$time, y = output$B/100, col = 'blue', lwd=2)
+  lines(x = output$time, y = output$B/10, col = 'blue', lwd=2)
   lines(x = output$time, y = output$mean.size, col = 'purple', lwd=2, lty=2)
   lines(x = output$time, y = output$L, col = 'green', lwd=2)
   abline(v = 8*30, lty = 2, lwd = 2)
-  legend('topright', legend = c('N-prawns', 'biomass/100', 'mean size','length'), lty = 1, 
+  legend('topright', legend = c('N-prawns', 'biomass/10', 'mean size','length'), lty = 1, 
          col = c('red', 'blue', 'purple','green'), cex = 0.5)
   
 start.mass = output$B[output$time==1]
@@ -60,12 +66,12 @@ harvest.size = output$mean.size[output$B==max(output$B)]
 harvest.time = output$time[output$B==max(output$B)]  
   harvest.time  
   
-  legend('top', legend = c(paste('starting mass=',round(start.mass), 'g', sep = ''),
+  legend('bottomright', legend = c(paste('starting mass=',round(start.mass), 'g', sep = ''),
                            paste('total harvest mass=',round(harvest.mass), 'g', sep = ''), 
                            paste('mean prawn mass=', round(harvest.size), 'g', sep = ''), 
                            paste('time of harvest=', round(harvest.time), 'days', sep = '')), cex=0.5)
   
-
+#8 month endpoints of interest for model fitting to Nwosu data
 mass.8mo = output$B[output$time == 30*8]
   mass.8mo
 P.8mo = output$P[output$time == 30*8]
@@ -74,13 +80,16 @@ L.8mo = output$L[output$time == 30*8]
   L.8mo
 size.8mo = output$mean.size[output$time == 30*8]  
   size.8mo
- 
   
-plot(output$L/10, output$mean.size, type = 'l', xlab = 'size(cm)',
-     ylab = 'mean weight (g)', xlim = c(0,25))   
+plot(output$time, output$mean.size, type = 'l', xlab = 'time', lwd = 2, col = 'purple', lty = 2, ylim = c(-10, max(output$L)),
+     ylab = 'prawn size')  
+  lines(output$time, output$L, lwd = 2, col = 'green')
+  legend('bottomright', legend = c('mean weight (g)', 'mean length (mm)'), lwd = 2, col = c('purple', 'green'), cex = 0.7)
+  
+#plot to check length to weight conversion looks right  
+  #plot(output$L/10, output$mean.size, type = 'l', xlab = 'size(cm)', ylab = 'mean weight (g)', xlim = c(0,25))   
 
-plot(output$time, output$mean.size, type = 'l', xlab = 'time',
-     ylab = 'mean weight (g)') 
+
 #Fit density dependence parameters to data #####################
 prawn.optim<-function(params){
   parameters['gam'] = params[1]

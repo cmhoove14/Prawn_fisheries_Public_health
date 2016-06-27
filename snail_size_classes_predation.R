@@ -1,6 +1,6 @@
 require(deSolve)
 
-snail_size=function(t, n, parameters) { 
+snail_size_predation=function(t, n, parameters) { 
   with(as.list(parameters),{
     
     P=n[1]
@@ -46,7 +46,7 @@ snail_size=function(t, n, parameters) {
     dS3dt = g2*S2 - muN*S3 - psi3*S3
       
     
-    return(list(c(P, L, S1, S2, S3)))
+    return(list(c(dPdt, dLdt, dS1dt, dS2dt, dS3dt)))
   }) 
 } 
 
@@ -75,7 +75,7 @@ parameters=c(
 
 
 #Run & plot ############
-output_ss=as.data.frame(ode(nstart,time,snail_size,parameters))
+output_ss=as.data.frame(ode(nstart,time,snail_size_predation,parameters))
 
 #plot results ###############
   plot(output_ss$time, output_ss$P, type = 'l', col = 'red', lwd=2)
