@@ -13,9 +13,10 @@ predation = function(P, P.L, N1, N2, N3) {
   P.bm = (0.096868*(P.L/10)^3.2944)/10 # Prawn length (mm) to weight (g) conversion,
                                        # based on Lalrisanga et al. 2012 (for M. rosenbergii)
   
-  N1.bm = 0.3124*0.4^2 - 0.1205*0.4 # 4mm size class; length-to-weight conversion based on Sanna's data on B. glabrata
-  N2.bm = 0.3124*0.8^2 - 0.1205*0.8 # 8mm size class
-  N3.bm = 0.3124*1.2^2 - 0.1205*1.2 # 12mm size class
+  N1.bm = 0.187178454*0.4^2.536764792 # 4mm size class; length-to-weight conversion based on fitting allometric equation to Sanna's data on B. glabrata
+  N2.bm = 0.187178454*0.8^2.536764792 # 8mm size class
+  N3.bm = 0.187178454*1.2^2.536764792 # 12mm size class
+                                      # Alternative polynomial function: 0.3124*x^2 - 0.1205*x
   
   # Ratios of prawn-to-snail biomass
   rps1 = P.bm / N1.bm
@@ -23,12 +24,12 @@ predation = function(P, P.L, N1, N2, N3) {
   rps3 = P.bm / N3.bm
   
   # Attack rates as a function of biomass ratio
-  alpha1 = 0.037192*rps1 # Prev. function: 1+0.03*rps
+  alpha1 = 0.037192*rps1 # Alternative function: 1+0.03*rps
   alpha2 = 0.037192*rps2
   alpha3 = 0.037192*rps3
   
   # Handling times as a function of biomass ratio
-  handle1 = 1/(0.40450*rps1) # Prev. function: 0.53623*exp(-0.05167*rps)
+  handle1 = 1/(0.40450*rps1) # Alternative function: 0.53623*exp(-0.05167*rps)
   handle2 = 1/(0.40450*rps2)
   handle3 = 1/(0.40450*rps3)
   
@@ -58,14 +59,15 @@ predation = function(P, P.L, N1, N2, N3) {
   # Aggregate functional response
   psi = psi1+psi2+psi3
   
-  return(c(psi1,psi2,psi3,psi))
+  return(list("psi1"=psi1, "psi2"=psi2, "psi3"=psi3, "psi"=psi))
 }
 
 # Plot functional response for a given prawn size and snail population
 x = c(0:50)
 fr = numeric(length = length(x))
 for (i in x) {
-  fr[i+1] = predation(P = 1, P.L = 50, N1 = i, N2 = 0, N3 = 0)[4]
+  pred = predation(P = 1, P.L = 125, N1 = i, N2 = 0, N3 = 0)
+  fr[i+1] = pred$psi
 }
 plot(x, fr, type="l", xlab = "Snail density", ylab = "Functional response")
 
