@@ -1,7 +1,7 @@
 ## Modeling dynamics of prawn predation on snails; no disease
 
 ## To-do list:
-  # Scale attack rate, density-dependent parameters appropriately
+  # Scale attack rate, density-dependent parameters appropriately by area
   # Vary prawn size, eventually include growth dynamics
   # Look for snail elimination thresholds (plot N vs. P)
 
@@ -41,9 +41,9 @@ snail_size_predation = function(t, n, parameters) {
     # dLdt = k/(1+gam*P.bmt)*(linf - L) # Mean prawn length, with growth rate k, max length linf, crowding parameter gam
     
     # Functional response by snail size class
-    psi1 = (P*alpha1*S1) / (1+sum(alpha1*handle1*S1, alpha2*handle2*S2, alpha3*handle3*S3))
-    psi2 = (P*alpha2*S2) / (1+sum(alpha1*handle1*S1, alpha2*handle2*S2, alpha3*handle3*S3))
-    psi3 = (P*alpha3*S3) / (1+sum(alpha1*handle1*S1, alpha2*handle2*S2, alpha3*handle3*S3))
+    psi1 = (P*alpha1) / (1+sum(alpha1*handle1*S1, alpha2*handle2*S2, alpha3*handle3*S3))
+    psi2 = (P*alpha2) / (1+sum(alpha1*handle1*S1, alpha2*handle2*S2, alpha3*handle3*S3))
+    psi3 = (P*alpha3) / (1+sum(alpha1*handle1*S1, alpha2*handle2*S2, alpha3*handle3*S3))
     
     # Total snail population  
     N = S1+S2+S3
@@ -95,6 +95,7 @@ plot(output_ss$time, output_ss$S1, type = 'l', col = 'red', lwd=2, xlab = "Time 
      ylim = c(0, 5000))
 lines(output_ss$time, output_ss$S2, col = 'green', lwd=2)
 lines(output_ss$time, output_ss$S3, col = 'blue', lwd=2)
+legend("topright", c("S","M","L"), col = c("red","green","blue"), lty = 1, lwd = 2)
 
 
 
