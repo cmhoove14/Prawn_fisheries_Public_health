@@ -1,10 +1,8 @@
 ## Modeling functional response of prawn on different size classes of snails
 
 ## To-do list:
-  # Refit attack rate and handling time functions (EDIT: see new ones below)
+  # Continue to tweak attack rate and handling time functions (i.e. to capture size refuge)
   # Resolve scale issue
-  # Get the shape of the curve right in single-class and mixed-class populations
-  # Integrate into dynamic model
 
 predation = function(P, P.L, N1, N2, N3) {
   
@@ -66,7 +64,7 @@ predation = function(P, P.L, N1, N2, N3) {
 x = c(0:50)
 fr = numeric(length = length(x))
 for (i in x) {
-  pred = predation(P = 1, P.L = 125, N1 = i, N2 = 0, N3 = 0)
+  pred = predation(P = 1, P.L = 75, N1 = 0.4*i, N2 = 0.3*i, N3 = 0.3*i)
   fr[i+1] = pred$psi
 }
 plot(x, fr, type="l", xlab = "Snail density", ylab = "Functional response")
