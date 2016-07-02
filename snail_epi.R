@@ -1,12 +1,14 @@
 ## Epidemiological model including snail size classes; no predation
 
 ## To-do list:
-  # Draw parameter estimates from literature
-  # Make sure snail dynamics between size and infection classes are appropriate, e.g.: 
-      # Should small snails be able to get infected?
+  # Tune parameters, draw estimates from literature as necessary
+  # May want to consider a few aspects of snail dynamics further, e.g.: 
+      # Should small snails be able to get infected at all?
       # Should exposed snails be able to reproduce at a reduced rate?
-      # Think a little more about diagonal transitions
-  # Come up with R0 expression
+      # Should growth rates differ by infection status?
+      # Area scaling on beta and lambda?
+      # Think a little more about diagonal transitions, if even necessary
+  # Come up with R0 expression?
 
 require(deSolve)
 
@@ -21,8 +23,7 @@ snail_epi = function(t, n, parameters) {
     E3=n[6]
     I2=n[7]
     I3=n[8]
-    C=n[9]
-    W=n[10]
+    W=n[9]
     
     S = S1+S2+S3  # Total susceptible snails
     E = E1+E2+E3  # Total exposed snails
@@ -47,17 +48,15 @@ snail_epi = function(t, n, parameters) {
     
     dI3dt = sigma*rho*E2 + sigma*E3 + g2*I2 - (muN3 + muI)*I3 - psi3*I3
     
-    dCdt = theta2*I2 + theta3*I3 - muC*C
-    
-    dWdt = lambda*C - (muW + muH)*W
+    dWdt = (lambda/A)*I2 + theta*(lambda/A)*I3 - (muW + muH)*W
     
     
-    return(list(c(dS1dt, dS2dt, dS3dt, dE1dt, dE2dt, dE3dt, dI2dt, dI3dt, dCdt, dWdt)))
+    return(list(c(dS1dt, dS2dt, dS3dt, dE1dt, dE2dt, dE3dt, dI2dt, dI3dt, dWdt)))
   }) 
 } 
 
 # Set initial values and parameters
-nstart = c(S1 = 1, S2 = 0, S3 = 0, E1 = 0, E2 = 0, E3 = 0, I2 = 0, I3 = 0, C = 0, W = 2)
+nstart = c(S1 = 1, S2 = 0, S3 = 0, E1 = 0, E2 = 0, E3 = 0, I2 = 0, I3 = 0, W = 2)
 time = seq(0,365*2,1)
 
 parameters=c(
@@ -89,14 +88,12 @@ parameters=c(
   beta = 8e-4,       # Human-to-snail infection probability (infected snails/miracidia/snail/day), from Sokolow et al. 2015, scaled to 1 m^2
   m = 0.8,           # Miracidial shedding rate per adult female worm divided by miracidial mortality, from Sokolow et al. 2015
   sigma = 1/50,      # Latent period for exposed snails (infectious snails/exposed snail/day), from Sokolow et al. 2015
-  X = 0,             # Fraction of exposed small snails that convert directly to medium shedding; no source
-  rho = 0,           # Fraction of exposed medium snails that convert directly to large shedding; no source
-  theta2 = 500,      # Cercarial shedding rate for medium infected snails (cercariae/infectious medium snail/day); no source
-  theta3 = 1000,     # Cercarial shedding rate for large infected snails (cercariae/infected large snail/day); no source
-  lambda = 1e-4,     # Probability of cercaria successfully infecting human and maturing; no source
+  X = 0,             # Fraction of exposed small snails that convert directly to medium shedding (ignored for now)
+  rho = 0,           # Fraction of exposed medium snails that convert directly to large shedding (ignored for now)
+  lambda = 0.1,      # Snail-to-human infection probability (composite including cercarial shedding, mortality, infection, survival to patency); from Sokolow et al. 2015, scaled to 1 m^2
+  theta = 5,         # Scale factor describing increase in cercarial shedding rate in larger snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
   
   ## Schisto mortality parameters
-  muC = 0.99,        # Cercarial mortality rate (very small chance of cercariae lasting >1 day); no source
   muW = 1/(3.3*365), # Natural mortality rate of adult worms in humans, assuming average lifespan of 3.3 years, from Sokolow et al. 2015
   muH = 1/(60*365)   # Natural mortality of humans (contributing to worm mortality), assuming average lifespan of 60 years, from Sokolow et al. 2015
 )
@@ -127,10 +124,6 @@ plot(x = output_s.epi$time, y = output_s.epi$N.t, type = 'l', col = 'black', lwd
   lines(output_s.epi$time, output_s.epi$E.t, col = 'orange', lwd = 2)
   lines(output_s.epi$time, output_s.epi$S.t, col = 'green', lwd = 2)
   legend('topright', legend = c('total', 'S', 'E', 'I'), lwd = 2, col = c('black', 'green', 'orange', 'red'), cex = 0.7)
-  
-plot(x = output_s.epi$time, y = output_s.epi$C, type = 'l', col = 'orange', lwd=2, xlab = 'Time (days)', 
-     ylab = 'Cercariae', ylim = c(0,max (output_s.epi$C)),
-     main = 'Cercarial Density')
 
 plot(x = output_s.epi$time, y = output_s.epi$W, type = 'l', col = 'red', lwd=2, xlab = 'Time (days)', 
      ylab = 'Worm burden', ylim = c(0,max (output_s.epi$W)),
