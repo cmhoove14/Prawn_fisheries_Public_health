@@ -1,7 +1,10 @@
-#to-do list
-  #fit two density dependence parameters to data from Ranjeet et al (or other macrobrachium fisheries data)
-    #update distributions of data being fitted to; currently normal but should be...?
-  #double check parameters -- are rosenbergii parameters ok to use? are fisheries parameters ok to use considering harsher conditions outside of a fisheries setting?
+## Modeling prawn growth and mortality to maximize biomass
+
+## To-do list:
+  # Fit density-dependent parameters to data from Ranjeet & Kurup 2010 (or other Macrobrachium fisheries data)
+    # Note: update distributions used for fitting - survival shouldn't be normal
+  # Look into other parameter estimates: M. rosenbergii vs. M. vollenhovenii, extensive vs. intensive aquaculture
+  # Think about eumetric curve to optimize harvest based on stocking density and prawn size?
 
 require(deSolve)
 
@@ -11,23 +14,22 @@ prawn_biomass=function(t, n, parameters) {
     P=n[1]
     L=n[2]
        
-    Bp = (a*(L/10)^b)/10 #Mean prawn mass using conversion from length (cm) to weight (g)
+    Bp = (a*(L/10)^b)/10 # Mean prawn mass, converting from length (mm) to weight (g)
 
-    Bm = P*Bp #per prawn biomass conversion to total biomass
+    Bm = P*Bp # Total prawn biomass
 
-    dLdt= k/(1+gam*Bm)*(linf - L) #Mean prawn length growing at growth rate k limited by max length linf, and pop density (B/phi)
+    dLdt = k/(1+gam*Bm)*(linf - L) # Mean prawn length, using von Bertalanffy growth limited by density-dependent parameter gamma
     
-    dPdt= -P*(mu*L^-0.25 + Bm/phi) #Number of prawns subject to baseline mortality rate and density dependent mortality
+    dPdt = -P*(mu*L^-0.25 + Bm/phi) # Prawn abundance, subject to baseline and density-dependent mortality
 
     return(list(c(dPdt,dLdt)))
   }) 
 } 
 
-#Set initial values and parameters ##################
+# Set initial values and parameters
 nstart=c(P=15000,L=25)
   time=seq(0,365*2,1)
 
-#List parameters and values
 parameters=c(
   a = 0.096868, #from Nwosu paper
   b = 3.2944, #from Nwosu paper
