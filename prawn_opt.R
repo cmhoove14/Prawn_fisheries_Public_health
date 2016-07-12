@@ -26,8 +26,8 @@ prawn_biomass = function(t, n, parameters) {
 } 
 
 # Set initial values and parameters
-# Stocking conditions: 19,000/ha maximizes profit in current model; L = 25mm ~ W = 0.2g
-nstart = c(P = 19000, L = 25)
+# Stocking conditions: 11,000/ha maximizes profit in current model; L = 25mm ~ W = 0.2g
+nstart = c(P = 11000, L = 25)
 time = seq(0, 365*2, 1)
 
 parameters=c(
@@ -36,7 +36,7 @@ parameters=c(
   gam = 1e-6,       # Density-dependent growth parameter (based on biomass per hectare); not yet fit
   mu = 0.006136986, # Natural prawn mortality rate, from Nwosu & Wolfi 2006 (M. vollenhovenii)
   d = -0.25,        # Exponential relationship of size with mortality; no source
-  phi = 40000000,   # Density-dependent mortality parameter (based on biomass per hectare); not yet fit
+  phi = 20000000,   # Density-dependent mortality parameter (based on biomass per hectare); not yet fit
   k = 0.00339726,   # Growth rate (mm/day), from Nwosu & Wolfi 2006 (M. vollenhovenii); alternate value for M. rosenbergii, from Sampaio & Wagner 1996: 0.0104333333
   linf = 206        # Max length (mm), from Nwosu & Wolfi 2006 (M. vollenhovenii)
 )
