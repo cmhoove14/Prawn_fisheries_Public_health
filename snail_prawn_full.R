@@ -161,7 +161,7 @@ parameters=c(
   muH = 1/(60*365)   # Natural mortality of humans (contributing to worm mortality), assuming average lifespan of 60 years, from Sokolow et al. 2015
 )
 
-# Run model and calculate secondary outcomes of interest
+# Run model & calculate secondary outcomes of interest
 output = as.data.frame(ode(nstart, time, snail_prawn_model, parameters))
 output$S.t = output$S1 + output$S2 + output$S3                            # Total susceptible snails
 output$E.t = output$E1 + output$E2 + output$E3                            # Total exposed snails 
@@ -171,9 +171,53 @@ output$N2.t = output$S2 + output$E2 + + output$I2                         # Tota
 output$N3.t = output$S3 + output$E3 + + output$I3                         # Total snails of size class 3
 output$N.t = output$S.t + output$E.t + output$I.t                         # Total snails
 output$prev = pnbinom(2, size = 0.25, mu = output$W, lower.tail = FALSE)  # Estimated prevalence, using a negative binomial dist. with k = 0.25
-output$B = ((parameters['a']*(output$L/10)^parameters['b'])/10)           # Mean prawn biomass, transformed from length using allometric equation
+output$B = ((parameters['a.p']*(output$L/10)^parameters['b.p'])/10)       # Mean prawn biomass, transformed from length using allometric equation
 output$Bt = output$B*output$P                                             # Total prawn biomass
 
+# Plot snail dynamics by size class
+plot(x = output$time, y = output$N.t, type = 'l', col = 'black', lwd=2, xlab = 'Time (days)', 
+     ylab = 'Number of snails', ylim = c(0,max(output$N.t)),
+     main = 'Snail Size Classes')
+lines(output$time, output$N1.t, col = 'green', lwd = 2)
+lines(output$time, output$N2.t, col = 'blue', lwd = 2)
+lines(output$time, output$N3.t, col = 'red', lwd = 2)
+legend('topright', legend = c('total', '1', '2', '3'), lwd = 2, col = c('black', 'green', 'blue', 'red'), cex = 0.7)
 
+# Plot snail dynamics by infection class
+plot(x = output$time, y = output$N.t, type = 'l', col = 'black', lwd=2, xlab = 'Time (days)', 
+     ylab = 'Number of snails', ylim = c(0,max(output$N.t)), 
+     main = 'Snail Infection Classes')
+lines(output$time, output$I.t, col = 'red', lwd = 2)
+lines(output$time, output$E.t, col = 'orange', lwd = 2)
+lines(output$time, output$S.t, col = 'green', lwd = 2)
+legend('topright', legend = c('total', 'S', 'E', 'I'), lwd = 2, col = c('black', 'green', 'orange', 'red'), cex = 0.7)
+
+# Plot mean human worm burden and prevalence of infection
+plot(x = output$time, y = output$W, type = 'l', col = 'red', lwd=2, xlab = 'Time (days)', 
+     ylab = 'Worm burden', ylim = c(0,max (output$W)),
+     main = 'Worm Burden')
+plot(x = output$time, y = output$prev, type = 'l', col = 'red', lwd=2, xlab = 'Time (days)', 
+     ylab = 'Prevalence', ylim = c(0,max (output$prev)),
+     main = 'Estimated Prevalence')
+
+# Plot prawn dynamics with time to optimal harvest
+start.mass.kg = output$Bt[output$time == 0]/1000
+harvest.mass.kg = max(output$Bt)/1000
+harvest.size = output$B[output$Bt == max(output$Bt)]  
+harvest.time = output$time[output$Bt == max(output$Bt)]
+
+plot(x = output$time, y = output$P/100, col = 'red', xlab = 'Time (days)', ylab = 'State variables', 
+     type = 'l', lwd=2, xlim = c(0, max(output$time)), ylim = c(0, max(output$Bt/1000)+50),
+     main = paste('Prawn fishery dynamics\n', '(mean start size = ', as.numeric(nstart[11]), ' mm)', sep = ''))
+lines(x = output$time, y = output$Bt/1000, col = 'blue', lwd=2)
+lines(x = output$time, y = output$B, col = 'purple', lwd=2, lty=2)
+lines(x = output$time, y = output$L, col = 'green', lwd=2)
+abline(v = harvest.time, lty = 2, lwd = 2)
+legend('topright', legend = c('Prawns (100s)', 'Total biomass (kg)', 'Mean size (g)', 'Mean length (mm)'), 
+       lty = 1, col = c('red', 'blue', 'purple', 'green'), cex = 0.5)
+legend('bottomright', legend = c(paste('Starting mass =', round(start.mass.kg), 'kg', sep = ' '),
+                                 paste('Total harvest mass =', round(harvest.mass.kg), 'kg', sep = ' '), 
+                                 paste('Mean harvest mass =', round(harvest.size), 'g', sep = ' '), 
+                                 paste('Time of harvest =', round(harvest.time), 'days', sep = ' ')), cex=0.5)
 
 
