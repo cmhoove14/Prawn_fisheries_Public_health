@@ -1,4 +1,4 @@
-## Full snail-prawn model including epidemiological, predation, and aquaculture components
+#### Full snail-prawn model including epidemiological, predation, and aquaculture components
 
 require(deSolve)
 
@@ -99,54 +99,55 @@ snail_prawn_model = function(t, n, parameters) {
   }) 
 } 
 
-# Set initial values and parameters
+
+## Set initial values and parameters
 area = 10000
 nstart = c(S1 = 0.144*area, S2 = 0.002*area, S3 = 0, E1 = 6.57*area, E2 = 2.61*area, E3 = 0.843*area, 
            I2 = 0.640*area, I3 = 0.329*area, W = 74, P = 11000*area/10000, L = 25)
 time = seq(0, 365*0.67, 1)
 
 parameters=c(
-  ## Location parameters
+  # Location parameters
   A = area,          # Area of site of interest, m^2
   H = 1000,          # Human population at site of interest
   
-  ## Snail reproductive parameters
+  # Snail reproductive parameters
   f = 0.26,          # Birth rate of adult snails (snails/reproductive snail/day, including survival to detection - more like a recruitment rate); 
                      #   adjusted from Sokolow et al. 2015 to account for the fact that class 1 snails are assumed to be juveniles and therefore don't reproduce
   Kn = 50,           # Carrying capacity of snails (snails/m^2), from Sokolow et al. 2015
   z = 0.5,           # Fraction of prepatent snails that can reproduce, from Sokolow et al. 2015
   
-  ## Snail growth parameters
+  # Snail growth parameters
   a.s = 0.187178454, # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
   b.s = 2.536764792, # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
   g1 = 1/37,         # Growth rate of small snails (size class transition rate, in terms of days to grow 4mm; adapted from McCreesh et al. 2014, assuming water temp. of 25 C)
   g2 = 1/62,         # Growth rate of medium snails (size class transition rate, in terms of days to grow 4mm; adapted from McCreesh et al. 2014, assuming water temp. of 25 C)
   
-  ## Snail mortality parameters
+  # Snail mortality parameters
   muN1 = 1/40,       # Natural mortality rate of small snails (deaths/snail/day; assume mean lifespan = 50 days)
   muN2 = 1/50,       # Natural mortality rate of medium snails (deaths/snail/day; assume mean lifespan = 50 days)
   muN3 = 1/60,       # Natural mortality rate of large snails (deaths/snail/day; assume mean lifespan = 50 days)
   muI = 1/10,        # Additional mortality rate of shedding snails as a result of infection, from Sokolow et al. 2015
   
-  ## Prawn growth parameters
+  # Prawn growth parameters
   a.p = 0.096868,    # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
   b.p = 3.2944,      # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
   k = 0.00339726,    # Growth coefficient, from Nwosu & Wolfi 2006 (M. vollenhovenii); alternate value for M. rosenbergii, from Sampaio & Wagner 1996: 0.0104333333
   linf = 206,        # Max length (mm), from Nwosu & Wolfi 2006 (M. vollenhovenii)
   gam = 1e-6,        # Density-dependent growth parameter (based on biomass per hectare); not yet fit
   
-  ## Prawn mortality parameters
+  # Prawn mortality parameters
   muP = 0.006136986, # Natural prawn mortality rate, from Nwosu & Wolfi 2006 (M. vollenhovenii)
   d = -0.25,         # Exponential parameter relating size with mortality; no source
   phi = 2e7,         # Density-dependent mortality parameter (based on biomass per hectare); not yet fit
   
-  ## Predation parameters
+  # Predation parameters
   ar = 0.037192,     # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014
   th = 0.40450,      # Coefficient for relationship between biomass ratio and handling time, fitted to data from Sokolow et al. 2014
   s = 1/50,          # Scale factor limiting prawn attack rate in the wild (vs. lab conditions);
                      #   decreased from 1/10 to 1/50 in size class model to match expected elimination threshold
   
-  ## Infection parameters
+  # Infection parameters
   beta = 8e-5,       # Human-to-snail infection probability in reference area (infected snails/miracidia/snail/day); adjusted from Sokolow et al. 2015 (original value: 4e-6)
   m = 0.8,           # Miracidial shedding rate per adult female worm divided by miracidial mortality; from Sokolow et al. 2015
   sigma = 1/30,      # Latent period for exposed snails (infectious snails/exposed snail/day); adjusted from Sokolow et al. 2015 (original value: 1/50)
@@ -156,12 +157,13 @@ parameters=c(
                      #   adjusted from Sokolow et al. 2015 (original value: 0.1)
   theta = 2,         # Scale factor describing increase in cercarial shedding rate in larger snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
   
-  ## Schisto mortality parameters
+  # Schisto mortality parameters
   muW = 1/(3.3*365), # Natural mortality rate of adult worms in humans, assuming average lifespan of 3.3 years, from Sokolow et al. 2015
   muH = 1/(60*365)   # Natural mortality of humans (contributing to worm mortality), assuming average lifespan of 60 years, from Sokolow et al. 2015
 )
 
-# Run model & calculate secondary outcomes of interest
+
+## Run model & calculate secondary outcomes of interest
 output = as.data.frame(ode(nstart, time, snail_prawn_model, parameters))
 output$S.t = output$S1 + output$S2 + output$S3                            # Total susceptible snails
 output$E.t = output$E1 + output$E2 + output$E3                            # Total exposed snails 
@@ -219,5 +221,96 @@ legend('bottomright', legend = c(paste('Starting mass =', round(start.mass.kg), 
                                  paste('Total harvest mass =', round(harvest.mass.kg), 'kg', sep = ' '), 
                                  paste('Mean harvest mass =', round(harvest.size), 'g', sep = ' '), 
                                  paste('Time of harvest =', round(harvest.time), 'days', sep = ' ')), cex=0.5)
+
+
+## Assess outcomes over multiple stocking densities
+x = c(0:30)
+nstart.loop = nstart
+time = seq(0, 500, 1)
+harvest = numeric(length(x))
+harvest.t = numeric(length(x))
+snails = numeric(length(x))
+worms = numeric(length(x))
+for (i in x) {
+  nstart.loop['P'] = 1000*i
+  output.loop = as.data.frame(ode(nstart.loop, time, snail_prawn_model, parameters))
+  output.loop$S.t = output.loop$S1 + output.loop$S2 + output.loop$S3
+  output.loop$E.t = output.loop$E1 + output.loop$E2 + output.loop$E3
+  output.loop$I.t = output.loop$I2 + output.loop$I3
+  output.loop$Inf.t = output.loop$E.t + output.loop$I.t
+  output.loop$N.t = output.loop$S.t + output.loop$E.t + output.loop$I.t
+  output.loop$B = ((parameters['a.p']*(output.loop$L/10)^parameters['b.p'])/10)
+  output.loop$Bt = output.loop$B*output.loop$P
+  harvest[i+1] = max(output.loop$Bt)/1000
+  ht.tmp = output.loop$time[output.loop$Bt == max(output.loop$Bt)]
+  harvest.t[i+1] = ifelse(ht.tmp != 0, ht.tmp, max(output.loop$time))
+  snails[i+1] = output.loop$N.t[output.loop$time == harvest.t[i+1]]
+  worms[i+1] = output.loop$W[output.loop$time == harvest.t[i+1]]
+}
+
+# Price estimates for profit calculation from Tamil Nadu Agricultural University, http://agritech.tnau.ac.in/fishery/fish_freshwaterprawn.html
+p = 140                                           # Weighted average market price of prawns, in rupees/kg 
+c = 600                                           # Cost of post-larvae, in rupees/1000 PL
+delta = -log(1-0.1)/365                           # Discount rate, equivalent to 10%/year
+profit = p*harvest*exp(-delta*(harvest.t)) - c*x  # Profit function, in terms of revenue (discounted by time to harvest) minus stocking costs 
+
+# Plot estimated profit and time to harvest over stocking density
+# (after one aquaculture cycle, starting from equilibrium)
+par(mar = c(5,5,6,5))
+plot(x, profit, col = 'green', xlab = 'Stocking density (thousand prawns/ha)', ylab = 'Profit (rupees/ha)',
+     type = 'l', lwd = 2, main = 'Profit and time to harvest \n by stocking density')
+abline(v = which.max(profit)-1, lty = 2, lwd = 2)
+par(new = T)
+plot(x, harvest.t, col = 'blue', axes = F, xlab = NA, ylab = NA, ylim = c(0, max(harvest.t[-1])), type = 'l', lwd = 2)
+axis(side = 4)
+mtext(side = 4, line = 3, 'Harvest time (days)')
+legend('bottomright', legend = c('Profit', 'Harvest time'), lty = 1, col = c('green', 'blue'), cex = 0.7)
+
+# Plot estimated profit and snail abundance over stocking density
+# (after one aquaculture cycle, starting from equilibrium)
+par(mar = c(5,5,6,5))
+plot(x, profit, col = 'green', xlab = 'Stocking density (thousand prawns/ha)', ylab = 'Profit (rupees/ha)',
+     type = 'l', lwd = 2, main = 'Profit and snail abundance \n by stocking density')
+abline(v = which.max(profit)-1, lty = 2, lwd = 2)
+par(new = T)
+plot(x, snails, col = 'orange', axes = F, xlab = NA, ylab = NA, ylim = c(0, max(snails)), type = 'l', lwd = 2)
+axis(side = 4)
+mtext(side = 4, line = 3, 'Number of snails')
+legend('bottomright', legend = c('Profit', 'Snails'), lty = 1, col = c('green', 'orange'), cex = 0.7)
+
+# Rerun analysis starting after PZQ administration
+nstart.loop = nstart
+nstart.loop['W'] = 2
+for (i in x) {
+  nstart.loop['P'] = 1000*i
+  output.loop = as.data.frame(ode(nstart.loop, time, snail_prawn_model, parameters))
+  output.loop$S.t = output.loop$S1 + output.loop$S2 + output.loop$S3
+  output.loop$E.t = output.loop$E1 + output.loop$E2 + output.loop$E3
+  output.loop$I.t = output.loop$I2 + output.loop$I3
+  output.loop$Inf.t = output.loop$E.t + output.loop$I.t
+  output.loop$N.t = output.loop$S.t + output.loop$E.t + output.loop$I.t
+  output.loop$B = ((parameters['a.p']*(output.loop$L/10)^parameters['b.p'])/10)
+  output.loop$Bt = output.loop$B*output.loop$P
+  harvest[i+1] = max(output.loop$Bt)/1000
+  ht.tmp = output.loop$time[output.loop$Bt == max(output.loop$Bt)]
+  harvest.t[i+1] = ifelse(ht.tmp != 0, ht.tmp, max(output.loop$time))
+  snails[i+1] = output.loop$N.t[output.loop$time == harvest.t[i+1]]
+  worms[i+1] = output.loop$W[output.loop$time == harvest.t[i+1]]
+}
+profit = p*harvest*exp(-delta*(harvest.t)) - c*x
+
+# Plot estimated profit and mean worm burden over stocking density
+# (after one aquaculture cycle, starting from PZQ administration)
+par(mar = c(5,5,6,5))
+plot(x, profit, col = 'green', xlab = 'Stocking density (thousand prawns/ha)', ylab = 'Profit (rupees/ha)',
+     type = 'l', lwd = 2, main = 'Profit and worm burden (after PZQ) \n by stocking density')
+abline(v = which.max(profit)-1, lty = 2, lwd = 2)
+par(new = T)
+plot(x, worms, col = 'red', axes = F, xlab = NA, ylab = NA, ylim = c(0, max(worms)), type = 'l', lwd = 2)
+axis(side = 4)
+mtext(side = 4, line = 3, 'Mean worm burden')
+legend('bottomright', legend = c('Profit', 'Mean worm burden'), lty = 1, col = c('green', 'red'), cex = 0.7)
+
+
 
 
