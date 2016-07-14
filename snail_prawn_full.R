@@ -104,7 +104,7 @@ snail_prawn_model = function(t, n, parameters) {
 area = 10000
 nstart = c(S1 = 0.144*area, S2 = 0.002*area, S3 = 0, E1 = 6.57*area, E2 = 2.61*area, E3 = 0.843*area, 
            I2 = 0.640*area, I3 = 0.329*area, W = 74, P = 11000*area/10000, L = 25)
-time = seq(0, 365*0.67, 1)
+time = seq(0, 365*2, 1)
 
 parameters=c(
   # Location parameters
@@ -163,16 +163,11 @@ parameters=c(
 )
 
 
-## Run model & calculate secondary outcomes of interest
+
+## Run model and assess outcomes over one or more aquaculture cycles
+
+# Start with single run to calculate the time to optimal harvest and other fisheries statistics
 output = as.data.frame(ode(nstart, time, snail_prawn_model, parameters))
-output$S.t = output$S1 + output$S2 + output$S3                            # Total susceptible snails
-output$E.t = output$E1 + output$E2 + output$E3                            # Total exposed snails 
-output$I.t = output$I2 + output$I3                                        # Total infected snails
-output$N1.t = output$S1 + output$E1                                       # Total snails of size class 1
-output$N2.t = output$S2 + output$E2 + + output$I2                         # Total snails of size class 2
-output$N3.t = output$S3 + output$E3 + + output$I3                         # Total snails of size class 3
-output$N.t = output$S.t + output$E.t + output$I.t                         # Total snails
-output$prev = pnbinom(2, size = 0.25, mu = output$W, lower.tail = FALSE)  # Estimated prevalence, using a negative binomial dist. with k = 0.25
 output$B = ((parameters['a.p']*(output$L/10)^parameters['b.p'])/10)       # Mean prawn biomass, transformed from length using allometric equation
 output$Bt = output$B*output$P                                             # Total prawn biomass
 
@@ -181,33 +176,7 @@ harvest.mass.kg = max(output$Bt)/1000                                     # Tota
 harvest.size = output$B[output$Bt == max(output$Bt)]                      # Average prawn biomass at harvest, in g
 harvest.time = output$time[output$Bt == max(output$Bt)]                   # Time to optimal harvest, in days
 
-# Plot snail dynamics by size class
-plot(x = output$time, y = output$N.t, type = 'l', col = 'black', lwd=2, xlab = 'Time (days)', 
-     ylab = 'Number of snails', ylim = c(0,max(output$N.t)),
-     main = 'Snail Size Classes')
-lines(output$time, output$N1.t, col = 'green', lwd = 2)
-lines(output$time, output$N2.t, col = 'blue', lwd = 2)
-lines(output$time, output$N3.t, col = 'red', lwd = 2)
-legend('topright', legend = c('total', '1', '2', '3'), lwd = 2, col = c('black', 'green', 'blue', 'red'), cex = 0.7)
-
-# Plot snail dynamics by infection class
-plot(x = output$time, y = output$N.t, type = 'l', col = 'black', lwd=2, xlab = 'Time (days)', 
-     ylab = 'Number of snails', ylim = c(0,max(output$N.t)), 
-     main = 'Snail Infection Classes')
-lines(output$time, output$I.t, col = 'red', lwd = 2)
-lines(output$time, output$E.t, col = 'orange', lwd = 2)
-lines(output$time, output$S.t, col = 'green', lwd = 2)
-legend('topright', legend = c('total', 'S', 'E', 'I'), lwd = 2, col = c('black', 'green', 'orange', 'red'), cex = 0.7)
-
-# Plot mean human worm burden and prevalence of infection
-plot(x = output$time, y = output$W, type = 'l', col = 'red', lwd=2, xlab = 'Time (days)', 
-     ylab = 'Worm burden', ylim = c(0,max (output$W)),
-     main = 'Worm Burden')
-plot(x = output$time, y = output$prev, type = 'l', col = 'red', lwd=2, xlab = 'Time (days)', 
-     ylab = 'Prevalence', ylim = c(0,max (output$prev)),
-     main = 'Estimated Prevalence')
-
-# Plot prawn dynamics with time to optimal harvest
+# Plot prawn aquaculture dynamics
 plot(x = output$time, y = output$P/100, col = 'red', xlab = 'Time (days)', ylab = 'State variables', 
      type = 'l', lwd=2, xlim = c(0, max(output$time)), ylim = c(0, max(output$Bt/1000)+50),
      main = paste('Prawn fishery dynamics\n', '(mean start size = ', as.numeric(nstart[11]), ' mm)', sep = ''))
@@ -222,12 +191,10 @@ legend('bottomright', legend = c(paste('Starting mass =', round(start.mass.kg), 
                                  paste('Mean harvest mass =', round(harvest.size), 'g', sep = ' '), 
                                  paste('Time of harvest =', round(harvest.time), 'days', sep = ' ')), cex=0.5)
 
-
-## Assess outcomes over multiple aquaculture cycles
-#  NOTE: run the single-cycle model above first!
+# Run model for the desired number of cycles
+ncycles = 1
 nstart.lt = nstart
 time.lt = seq(0, harvest.time, 1)
-ncycles = 15
 output.lt = data.frame()
 for (i in 1:ncycles) {
   output.tmp = as.data.frame(ode(nstart.lt, time.lt, snail_prawn_model, parameters))
@@ -248,17 +215,12 @@ output.lt$S.t = output.lt$S1 + output.lt$S2 + output.lt$S3                      
 output.lt$E.t = output.lt$E1 + output.lt$E2 + output.lt$E3                      # Total exposed snails 
 output.lt$I.t = output.lt$I2 + output.lt$I3                                     # Total infected snails
 output.lt$N1.t = output.lt$S1 + output.lt$E1                                    # Total snails of size class 1
-output.lt$N2.t = output.lt$S2 + output.lt$E2 + + output.lt$I2                   # Total snails of size class 2
-output.lt$N3.t = output.lt$S3 + output.lt$E3 + + output.lt$I3                   # Total snails of size class 3
+output.lt$N2.t = output.lt$S2 + output.lt$E2 + output.lt$I2                     # Total snails of size class 2
+output.lt$N3.t = output.lt$S3 + output.lt$E3 + output.lt$I3                     # Total snails of size class 3
 output.lt$N.t = output.lt$S.t + output.lt$E.t + output.lt$I.t                   # Total snails
 output.lt$prev = pnbinom(2, size = 0.25, mu = output.lt$W, lower.tail = FALSE)  # Estimated prevalence, using a negative binomial dist. with k = 0.25
 output.lt$B = ((parameters['a.p']*(output.lt$L/10)^parameters['b.p'])/10)       # Mean prawn biomass, transformed from length using allometric equation
 output.lt$Bt = output.lt$B*output.lt$P                                          # Total prawn biomass
-
-start.mass.kg = output.lt$Bt[output.lt$time == 0]/1000                          # Total prawn biomass at beginning of cycle, in kg
-harvest.mass.kg = max(output.lt$Bt)/1000                                        # Total prawn biomass at end of cycle, in kg
-harvest.size = output.lt$B[output.lt$Bt == max(output.lt$Bt)]                   # Average prawn biomass at harvest, in g
-harvest.time = output.lt$time[output.lt$Bt == max(output.lt$Bt)]                # Time to optimal harvest, in days
 
 # Plot snail dynamics by size class
 plot(x = output.lt$time, y = output.lt$N.t, type = 'l', col = 'black', lwd=2, xlab = 'Time (days)', 
@@ -286,46 +248,36 @@ plot(x = output.lt$time, y = output.lt$prev, type = 'l', col = 'red', lwd=2, xla
      ylab = 'Prevalence', ylim = c(0,max (output.lt$prev)),
      main = 'Estimated Prevalence')
 
-# Plot prawn dynamics with time to optimal harvest
-plot(x = output.lt$time, y = output.lt$P/100, col = 'red', xlab = 'Time (days)', ylab = 'State variables', 
-     type = 'l', lwd=2, xlim = c(0, max(output.lt$time)), ylim = c(0, max(output.lt$Bt/1000)+50),
-     main = paste('Prawn fishery dynamics\n', '(mean start size = ', as.numeric(nstart[11]), ' mm)', sep = ''))
-lines(x = output.lt$time, y = output.lt$Bt/1000, col = 'blue', lwd=2)
-lines(x = output.lt$time, y = output.lt$B, col = 'purple', lwd=2, lty=2)
-lines(x = output.lt$time, y = output.lt$L, col = 'green', lwd=2)
-abline(v = harvest.time, lty = 2, lwd = 2)
-legend('topright', legend = c('Prawns (100s)', 'Total biomass (kg)', 'Mean size (g)', 'Mean length (mm)'), 
-       lty = 1, col = c('red', 'blue', 'purple', 'green'), cex = 0.5)
-legend('bottomright', legend = c(paste('Starting mass =', round(start.mass.kg), 'kg', sep = ' '),
-                                 paste('Total harvest mass =', round(harvest.mass.kg), 'kg', sep = ' '), 
-                                 paste('Mean harvest mass =', round(harvest.size), 'g', sep = ' '), 
-                                 paste('Time of harvest =', round(harvest.time), 'days', sep = ' ')), cex=0.5)
 
 
 ## Assess single-cycle outcomes over multiple stocking densities
-#  NOTE: run the single-cycle model above first!
+#  NOTE: set parameters and initial values first!
+
+# Run the model over the desired range of stocking densities (in thousands of post-larvae);
+# set initial MWB to 74 to match disease equilibrium, or 2 to mimic PZQ administration
 x = c(0:30)
-nstart.loop = nstart
-time.loop = seq(0, 500, 1)
+nstart.sd = nstart
+nstart.sd['W'] = 74
+time.sd = seq(0, 500, 1)
 harvest = numeric(length(x))
 harvest.t = numeric(length(x))
 snails = numeric(length(x))
 worms = numeric(length(x))
 for (i in x) {
-  nstart.loop['P'] = 1000*i
-  output.loop = as.data.frame(ode(nstart.loop, time.loop, snail_prawn_model, parameters))
-  output.loop$S.t = output.loop$S1 + output.loop$S2 + output.loop$S3
-  output.loop$E.t = output.loop$E1 + output.loop$E2 + output.loop$E3
-  output.loop$I.t = output.loop$I2 + output.loop$I3
-  output.loop$Inf.t = output.loop$E.t + output.loop$I.t
-  output.loop$N.t = output.loop$S.t + output.loop$E.t + output.loop$I.t
-  output.loop$B = ((parameters['a.p']*(output.loop$L/10)^parameters['b.p'])/10)
-  output.loop$Bt = output.loop$B*output.loop$P
-  harvest[i+1] = max(output.loop$Bt)/1000
-  ht.tmp = output.loop$time[output.loop$Bt == max(output.loop$Bt)]
-  harvest.t[i+1] = ifelse(ht.tmp != 0, ht.tmp, max(output.loop$time))
-  snails[i+1] = output.loop$N.t[output.loop$time == harvest.t[i+1]]
-  worms[i+1] = output.loop$W[output.loop$time == harvest.t[i+1]]
+  nstart.sd['P'] = 1000*i
+  output.sd = as.data.frame(ode(nstart.sd, time.sd, snail_prawn_model, parameters))
+  output.sd$S.t = output.sd$S1 + output.sd$S2 + output.sd$S3
+  output.sd$E.t = output.sd$E1 + output.sd$E2 + output.sd$E3
+  output.sd$I.t = output.sd$I2 + output.sd$I3
+  output.sd$Inf.t = output.sd$E.t + output.sd$I.t
+  output.sd$N.t = output.sd$S.t + output.sd$E.t + output.sd$I.t
+  output.sd$B = ((parameters['a.p']*(output.sd$L/10)^parameters['b.p'])/10)
+  output.sd$Bt = output.sd$B*output.sd$P
+  harvest[i+1] = max(output.sd$Bt)/1000
+  ht.tmp = output.sd$time[output.sd$Bt == max(output.sd$Bt)]
+  harvest.t[i+1] = ifelse(ht.tmp != 0, ht.tmp, max(output.sd$time))
+  snails[i+1] = output.sd$N.t[output.sd$time == harvest.t[i+1]]
+  worms[i+1] = output.sd$W[output.sd$time == harvest.t[i+1]]
 }
 
 # Price estimates for profit calculation from Tamil Nadu Agricultural University, http://agritech.tnau.ac.in/fishery/fish_freshwaterprawn.html
@@ -335,7 +287,7 @@ delta = -log(1-0.1)/365                           # Discount rate, equivalent to
 profit = p*harvest*exp(-delta*(harvest.t)) - c*x  # Profit function, in terms of revenue (discounted by time to harvest) minus stocking costs 
 
 # Plot estimated profit and time to harvest over stocking density
-# (after one aquaculture cycle, starting from equilibrium)
+# (after one aquaculture cycle)
 par(mar = c(5,5,6,5))
 plot(x, profit, col = 'green', xlab = 'Stocking density (thousand prawns/ha)', ylab = 'Profit (rupees/ha)',
      type = 'l', lwd = 2, main = 'Profit and time to harvest \n by stocking density')
@@ -347,7 +299,7 @@ mtext(side = 4, line = 3, 'Harvest time (days)')
 legend('bottomright', legend = c('Profit', 'Harvest time'), lty = 1, col = c('green', 'blue'), cex = 0.7)
 
 # Plot estimated profit and snail abundance over stocking density
-# (after one aquaculture cycle, starting from equilibrium)
+# (after one aquaculture cycle)
 par(mar = c(5,5,6,5))
 plot(x, profit, col = 'green', xlab = 'Stocking density (thousand prawns/ha)', ylab = 'Profit (rupees/ha)',
      type = 'l', lwd = 2, main = 'Profit and snail abundance \n by stocking density')
@@ -358,29 +310,8 @@ axis(side = 4)
 mtext(side = 4, line = 3, 'Number of snails')
 legend('bottomright', legend = c('Profit', 'Snails'), lty = 1, col = c('green', 'orange'), cex = 0.7)
 
-# Rerun analysis starting after PZQ administration
-nstart.loop = nstart
-nstart.loop['W'] = 2
-for (i in x) {
-  nstart.loop['P'] = 1000*i
-  output.loop = as.data.frame(ode(nstart.loop, time.loop, snail_prawn_model, parameters))
-  output.loop$S.t = output.loop$S1 + output.loop$S2 + output.loop$S3
-  output.loop$E.t = output.loop$E1 + output.loop$E2 + output.loop$E3
-  output.loop$I.t = output.loop$I2 + output.loop$I3
-  output.loop$Inf.t = output.loop$E.t + output.loop$I.t
-  output.loop$N.t = output.loop$S.t + output.loop$E.t + output.loop$I.t
-  output.loop$B = ((parameters['a.p']*(output.loop$L/10)^parameters['b.p'])/10)
-  output.loop$Bt = output.loop$B*output.loop$P
-  harvest[i+1] = max(output.loop$Bt)/1000
-  ht.tmp = output.loop$time[output.loop$Bt == max(output.loop$Bt)]
-  harvest.t[i+1] = ifelse(ht.tmp != 0, ht.tmp, max(output.loop$time))
-  snails[i+1] = output.loop$N.t[output.loop$time == harvest.t[i+1]]
-  worms[i+1] = output.loop$W[output.loop$time == harvest.t[i+1]]
-}
-profit = p*harvest*exp(-delta*(harvest.t)) - c*x
-
 # Plot estimated profit and mean worm burden over stocking density
-# (after one aquaculture cycle, starting from PZQ administration)
+# (after one aquaculture cycle)
 par(mar = c(5,5,6,5))
 plot(x, profit, col = 'green', xlab = 'Stocking density (thousand prawns/ha)', ylab = 'Profit (rupees/ha)',
      type = 'l', lwd = 2, main = 'Profit and worm burden (after PZQ) \n by stocking density')
