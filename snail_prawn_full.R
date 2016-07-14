@@ -176,6 +176,11 @@ output$prev = pnbinom(2, size = 0.25, mu = output$W, lower.tail = FALSE)  # Esti
 output$B = ((parameters['a.p']*(output$L/10)^parameters['b.p'])/10)       # Mean prawn biomass, transformed from length using allometric equation
 output$Bt = output$B*output$P                                             # Total prawn biomass
 
+start.mass.kg = output$Bt[output$time == 0]/1000                          # Total prawn biomass at beginning of cycle, in kg
+harvest.mass.kg = max(output$Bt)/1000                                     # Total prawn biomass at end of cycle, in kg
+harvest.size = output$B[output$Bt == max(output$Bt)]                      # Average prawn biomass at harvest, in g
+harvest.time = output$time[output$Bt == max(output$Bt)]                   # Time to optimal harvest, in days
+
 # Plot snail dynamics by size class
 plot(x = output$time, y = output$N.t, type = 'l', col = 'black', lwd=2, xlab = 'Time (days)', 
      ylab = 'Number of snails', ylim = c(0,max(output$N.t)),
@@ -203,11 +208,6 @@ plot(x = output$time, y = output$prev, type = 'l', col = 'red', lwd=2, xlab = 'T
      main = 'Estimated Prevalence')
 
 # Plot prawn dynamics with time to optimal harvest
-start.mass.kg = output$Bt[output$time == 0]/1000
-harvest.mass.kg = max(output$Bt)/1000
-harvest.size = output$B[output$Bt == max(output$Bt)]  
-harvest.time = output$time[output$Bt == max(output$Bt)]
-
 plot(x = output$time, y = output$P/100, col = 'red', xlab = 'Time (days)', ylab = 'State variables', 
      type = 'l', lwd=2, xlim = c(0, max(output$time)), ylim = c(0, max(output$Bt/1000)+50),
      main = paste('Prawn fishery dynamics\n', '(mean start size = ', as.numeric(nstart[11]), ' mm)', sep = ''))
@@ -223,17 +223,97 @@ legend('bottomright', legend = c(paste('Starting mass =', round(start.mass.kg), 
                                  paste('Time of harvest =', round(harvest.time), 'days', sep = ' ')), cex=0.5)
 
 
-## Assess outcomes over multiple stocking densities
+## Assess outcomes over multiple aquaculture cycles
+#  NOTE: run the single-cycle model above first!
+nstart.lt = nstart
+time.lt = seq(0, harvest.time, 1)
+ncycles = 15
+output.lt = data.frame()
+for (i in 1:ncycles) {
+  output.tmp = as.data.frame(ode(nstart.lt, time.lt, snail_prawn_model, parameters))
+  output.tmp$time = output.tmp$time + (i-1)*harvest.time
+  output.lt = rbind(head(output.lt, -1), output.tmp)
+  nstart.lt['S1'] = tail(output.lt$S1, 1)
+  nstart.lt['S2'] = tail(output.lt$S2, 1)
+  nstart.lt['S3'] = tail(output.lt$S3, 1)
+  nstart.lt['E1'] = tail(output.lt$E1, 1)
+  nstart.lt['E2'] = tail(output.lt$E2, 1)
+  nstart.lt['E3'] = tail(output.lt$E3, 1)
+  nstart.lt['I2'] = tail(output.lt$I2, 1)
+  nstart.lt['I3'] = tail(output.lt$I3, 1)
+  nstart.lt['W'] = tail(output.lt$W, 1)
+}
+
+output.lt$S.t = output.lt$S1 + output.lt$S2 + output.lt$S3                      # Total susceptible snails
+output.lt$E.t = output.lt$E1 + output.lt$E2 + output.lt$E3                      # Total exposed snails 
+output.lt$I.t = output.lt$I2 + output.lt$I3                                     # Total infected snails
+output.lt$N1.t = output.lt$S1 + output.lt$E1                                    # Total snails of size class 1
+output.lt$N2.t = output.lt$S2 + output.lt$E2 + + output.lt$I2                   # Total snails of size class 2
+output.lt$N3.t = output.lt$S3 + output.lt$E3 + + output.lt$I3                   # Total snails of size class 3
+output.lt$N.t = output.lt$S.t + output.lt$E.t + output.lt$I.t                   # Total snails
+output.lt$prev = pnbinom(2, size = 0.25, mu = output.lt$W, lower.tail = FALSE)  # Estimated prevalence, using a negative binomial dist. with k = 0.25
+output.lt$B = ((parameters['a.p']*(output.lt$L/10)^parameters['b.p'])/10)       # Mean prawn biomass, transformed from length using allometric equation
+output.lt$Bt = output.lt$B*output.lt$P                                          # Total prawn biomass
+
+start.mass.kg = output.lt$Bt[output.lt$time == 0]/1000                          # Total prawn biomass at beginning of cycle, in kg
+harvest.mass.kg = max(output.lt$Bt)/1000                                        # Total prawn biomass at end of cycle, in kg
+harvest.size = output.lt$B[output.lt$Bt == max(output.lt$Bt)]                   # Average prawn biomass at harvest, in g
+harvest.time = output.lt$time[output.lt$Bt == max(output.lt$Bt)]                # Time to optimal harvest, in days
+
+# Plot snail dynamics by size class
+plot(x = output.lt$time, y = output.lt$N.t, type = 'l', col = 'black', lwd=2, xlab = 'Time (days)', 
+     ylab = 'Number of snails', ylim = c(0,max(output.lt$N.t)),
+     main = 'Snail Size Classes')
+lines(output.lt$time, output.lt$N1.t, col = 'green', lwd = 2)
+lines(output.lt$time, output.lt$N2.t, col = 'blue', lwd = 2)
+lines(output.lt$time, output.lt$N3.t, col = 'red', lwd = 2)
+legend('topright', legend = c('total', '1', '2', '3'), lwd = 2, col = c('black', 'green', 'blue', 'red'), cex = 0.7)
+
+# Plot snail dynamics by infection class
+plot(x = output.lt$time, y = output.lt$N.t, type = 'l', col = 'black', lwd=2, xlab = 'Time (days)', 
+     ylab = 'Number of snails', ylim = c(0,max(output.lt$N.t)), 
+     main = 'Snail Infection Classes')
+lines(output.lt$time, output.lt$I.t, col = 'red', lwd = 2)
+lines(output.lt$time, output.lt$E.t, col = 'orange', lwd = 2)
+lines(output.lt$time, output.lt$S.t, col = 'green', lwd = 2)
+legend('topright', legend = c('total', 'S', 'E', 'I'), lwd = 2, col = c('black', 'green', 'orange', 'red'), cex = 0.7)
+
+# Plot mean human worm burden and prevalence of infection
+plot(x = output.lt$time, y = output.lt$W, type = 'l', col = 'red', lwd=2, xlab = 'Time (days)', 
+     ylab = 'Worm burden', ylim = c(0,max (output.lt$W)),
+     main = 'Worm Burden')
+plot(x = output.lt$time, y = output.lt$prev, type = 'l', col = 'red', lwd=2, xlab = 'Time (days)', 
+     ylab = 'Prevalence', ylim = c(0,max (output.lt$prev)),
+     main = 'Estimated Prevalence')
+
+# Plot prawn dynamics with time to optimal harvest
+plot(x = output.lt$time, y = output.lt$P/100, col = 'red', xlab = 'Time (days)', ylab = 'State variables', 
+     type = 'l', lwd=2, xlim = c(0, max(output.lt$time)), ylim = c(0, max(output.lt$Bt/1000)+50),
+     main = paste('Prawn fishery dynamics\n', '(mean start size = ', as.numeric(nstart[11]), ' mm)', sep = ''))
+lines(x = output.lt$time, y = output.lt$Bt/1000, col = 'blue', lwd=2)
+lines(x = output.lt$time, y = output.lt$B, col = 'purple', lwd=2, lty=2)
+lines(x = output.lt$time, y = output.lt$L, col = 'green', lwd=2)
+abline(v = harvest.time, lty = 2, lwd = 2)
+legend('topright', legend = c('Prawns (100s)', 'Total biomass (kg)', 'Mean size (g)', 'Mean length (mm)'), 
+       lty = 1, col = c('red', 'blue', 'purple', 'green'), cex = 0.5)
+legend('bottomright', legend = c(paste('Starting mass =', round(start.mass.kg), 'kg', sep = ' '),
+                                 paste('Total harvest mass =', round(harvest.mass.kg), 'kg', sep = ' '), 
+                                 paste('Mean harvest mass =', round(harvest.size), 'g', sep = ' '), 
+                                 paste('Time of harvest =', round(harvest.time), 'days', sep = ' ')), cex=0.5)
+
+
+## Assess single-cycle outcomes over multiple stocking densities
+#  NOTE: run the single-cycle model above first!
 x = c(0:30)
 nstart.loop = nstart
-time = seq(0, 500, 1)
+time.loop = seq(0, 500, 1)
 harvest = numeric(length(x))
 harvest.t = numeric(length(x))
 snails = numeric(length(x))
 worms = numeric(length(x))
 for (i in x) {
   nstart.loop['P'] = 1000*i
-  output.loop = as.data.frame(ode(nstart.loop, time, snail_prawn_model, parameters))
+  output.loop = as.data.frame(ode(nstart.loop, time.loop, snail_prawn_model, parameters))
   output.loop$S.t = output.loop$S1 + output.loop$S2 + output.loop$S3
   output.loop$E.t = output.loop$E1 + output.loop$E2 + output.loop$E3
   output.loop$I.t = output.loop$I2 + output.loop$I3
@@ -283,7 +363,7 @@ nstart.loop = nstart
 nstart.loop['W'] = 2
 for (i in x) {
   nstart.loop['P'] = 1000*i
-  output.loop = as.data.frame(ode(nstart.loop, time, snail_prawn_model, parameters))
+  output.loop = as.data.frame(ode(nstart.loop, time.loop, snail_prawn_model, parameters))
   output.loop$S.t = output.loop$S1 + output.loop$S2 + output.loop$S3
   output.loop$E.t = output.loop$E1 + output.loop$E2 + output.loop$E3
   output.loop$I.t = output.loop$I2 + output.loop$I3
