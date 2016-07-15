@@ -198,24 +198,15 @@ legend('bottomright', legend = c(paste('Starting mass =', round(start.mass.kg), 
                                  paste('Time of harvest =', round(harvest.time), 'days', sep = ' ')), cex=0.5)
 
 # Run model for the desired number of cycles
-ncycles = 1
+ncycles = 15
 nstart.lt = nstart
-time.lt = seq(0, harvest.time, 1)
-output.lt = data.frame()
-for (i in 1:ncycles) {
-  output.tmp = as.data.frame(ode(nstart.lt, time.lt, snail_prawn_model, parameters))
-  output.tmp$time = output.tmp$time + (i-1)*harvest.time
-  output.lt = rbind(head(output.lt, -1), output.tmp)
-  nstart.lt['S1'] = tail(output.lt$S1, 1)
-  nstart.lt['S2'] = tail(output.lt$S2, 1)
-  nstart.lt['S3'] = tail(output.lt$S3, 1)
-  nstart.lt['E1'] = tail(output.lt$E1, 1)
-  nstart.lt['E2'] = tail(output.lt$E2, 1)
-  nstart.lt['E3'] = tail(output.lt$E3, 1)
-  nstart.lt['I2'] = tail(output.lt$I2, 1)
-  nstart.lt['I3'] = tail(output.lt$I3, 1)
-  nstart.lt['W'] = tail(output.lt$W, 1)
-}
+time.lt = seq(0, harvest.time*ncycles, 1)
+stocking = data.frame(var = rep(c('P', 'L'), ncycles),
+                      time = rep(seq(harvest.time, harvest.time*ncycles, harvest.time), each = 2),
+                      value = rep(c(nstart['P'], nstart['L']), ncycles),
+                      method = rep('rep', ncycles*2))
+output.lt = as.data.frame(ode(nstart.lt, time.lt, snail_prawn_model, parameters,
+                              events = list(data = stocking)))
 
 output.lt$S.t = output.lt$S1 + output.lt$S2 + output.lt$S3                      # Total susceptible snails
 output.lt$E.t = output.lt$E1 + output.lt$E2 + output.lt$E3                      # Total exposed snails 
@@ -263,7 +254,7 @@ plot(x = output.lt$time, y = output.lt$prev, type = 'l', col = 'red', lwd=2, xla
 # set initial MWB to 74 to match disease equilibrium, or 2 to mimic PZQ administration
 x = c(0:30)
 nstart.sd = nstart
-nstart.sd['W'] = 74
+nstart.sd['W'] = 2
 time.sd = seq(0, 500, 1)
 harvest = numeric(length(x))
 harvest.t = numeric(length(x))
