@@ -1,7 +1,7 @@
 #### Full snail-prawn model including epidemiological, predation, and aquaculture components
 
 ## To-do list:
-  # Add a pulse function for MDA (potentially with split populations)
+  # Investigate the long-term stability of snail elimination, particularly at low attack rates
   # Incorporate seasonality into model
   # Sensitivity analysis, particularly for prawn attack rate
   # Run simulations with Gates POC specifications
@@ -197,16 +197,22 @@ legend('bottomright', legend = c(paste('Starting mass =', round(start.mass.kg), 
                                  paste('Mean harvest mass =', round(harvest.size), 'g', sep = ' '), 
                                  paste('Time of harvest =', round(harvest.time), 'days', sep = ' ')), cex=0.5)
 
-# Run model for the desired number of cycles
+# Set the desired number of aquaculture cycles
 ncycles = 15
-nstart.lt = nstart
 time.lt = seq(0, harvest.time*ncycles, 1)
+
+# Define stocking events at the end of each cycle
 stocking = data.frame(var = rep(c('P', 'L'), ncycles),
                       time = rep(seq(harvest.time, harvest.time*ncycles, harvest.time), each = 2),
                       value = rep(c(nstart['P'], nstart['L']), ncycles),
                       method = rep('rep', ncycles*2))
-output.lt = as.data.frame(ode(nstart.lt, time.lt, snail_prawn_model, parameters,
-                              events = list(data = stocking)))
+
+# Define PZQ administration event
+pzq = data.frame(var = 'W', time = 30, value = 2, method = 'rep')
+
+# Run model and calculate outcomes of interest
+output.lt = as.data.frame(ode(nstart, time.lt, snail_prawn_model, parameters,
+                              events = list(data = rbind(stocking, pzq))))
 
 output.lt$S.t = output.lt$S1 + output.lt$S2 + output.lt$S3                      # Total susceptible snails
 output.lt$E.t = output.lt$E1 + output.lt$E2 + output.lt$E3                      # Total exposed snails 
@@ -250,11 +256,9 @@ plot(x = output.lt$time, y = output.lt$prev, type = 'l', col = 'red', lwd=2, xla
 ## Assess single-cycle outcomes over multiple stocking densities
 #  NOTE: set parameters and initial values first!
 
-# Run the model over the desired range of stocking densities (in thousands of post-larvae);
-# set initial MWB to 74 to match disease equilibrium, or 2 to mimic PZQ administration
+# Run the model over the desired range of stocking densities (in thousands of post-larvae)
 x = c(0:30)
 nstart.sd = nstart
-nstart.sd['W'] = 2
 time.sd = seq(0, 500, 1)
 harvest = numeric(length(x))
 harvest.t = numeric(length(x))
@@ -262,7 +266,8 @@ snails = numeric(length(x))
 worms = numeric(length(x))
 for (i in x) {
   nstart.sd['P'] = 1000*i
-  output.sd = as.data.frame(ode(nstart.sd, time.sd, snail_prawn_model, parameters))
+  output.sd = as.data.frame(ode(nstart.sd, time.sd, snail_prawn_model, parameters,
+                                events = list(data = pzq)))
   output.sd$S.t = output.sd$S1 + output.sd$S2 + output.sd$S3
   output.sd$E.t = output.sd$E1 + output.sd$E2 + output.sd$E3
   output.sd$I.t = output.sd$I2 + output.sd$I3
@@ -293,7 +298,7 @@ par(new = T)
 plot(x, harvest.t, col = 'blue', axes = F, xlab = NA, ylab = NA, ylim = c(0, max(harvest.t[-1])), type = 'l', lwd = 2)
 axis(side = 4)
 mtext(side = 4, line = 3, 'Harvest time (days)')
-legend('bottomright', legend = c('Profit', 'Harvest time'), lty = 1, col = c('green', 'blue'), cex = 0.7)
+legend('topright', legend = c('Profit', 'Harvest time'), lty = 1, col = c('green', 'blue'), cex = 0.7)
 
 # Plot estimated profit and snail abundance over stocking density
 # (after one aquaculture cycle)
@@ -305,7 +310,7 @@ par(new = T)
 plot(x, snails, col = 'orange', axes = F, xlab = NA, ylab = NA, ylim = c(0, max(snails)), type = 'l', lwd = 2)
 axis(side = 4)
 mtext(side = 4, line = 3, 'Number of snails')
-legend('bottomright', legend = c('Profit', 'Snails'), lty = 1, col = c('green', 'orange'), cex = 0.7)
+legend('topright', legend = c('Profit', 'Snails'), lty = 1, col = c('green', 'orange'), cex = 0.7)
 
 # Plot estimated profit and mean worm burden over stocking density
 # (after one aquaculture cycle)
@@ -317,7 +322,7 @@ par(new = T)
 plot(x, worms, col = 'red', axes = F, xlab = NA, ylab = NA, ylim = c(0, max(worms)), type = 'l', lwd = 2)
 axis(side = 4)
 mtext(side = 4, line = 3, 'Mean worm burden')
-legend('bottomright', legend = c('Profit', 'Mean worm burden'), lty = 1, col = c('green', 'red'), cex = 0.7)
+legend('topright', legend = c('Profit', 'Mean worm burden'), lty = 1, col = c('green', 'red'), cex = 0.7)
 
 
 
