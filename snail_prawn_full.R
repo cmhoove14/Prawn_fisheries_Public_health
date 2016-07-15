@@ -1,5 +1,11 @@
 #### Full snail-prawn model including epidemiological, predation, and aquaculture components
 
+## To-do list:
+  # Add a pulse function for MDA (potentially with split populations)
+  # Incorporate seasonality into model
+  # Sensitivity analysis, particularly for prawn attack rate
+  # Run simulations with Gates POC specifications
+
 require(deSolve)
 
 snail_prawn_model = function(t, n, parameters) { 
