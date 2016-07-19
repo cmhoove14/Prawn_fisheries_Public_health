@@ -107,6 +107,8 @@ snail_prawn_model = function(t, n, parameters) {
 
 
 ## Set initial values and parameters
+#  Default settings: area = 10000, P = 11000/ha, L = 25 (0.2g post-larvae)
+#  Gates settings: area = 20000; P = 500, 1000, 2500, 5000, 10000/ha; L = 67 or 100 (5g or 20g adults)
 area = 10000
 nstart = c(S1 = 0.144*area, S2 = 0.002*area, S3 = 0, E1 = 6.57*area, E2 = 2.61*area, E3 = 0.843*area, 
            I2 = 0.640*area, I3 = 0.329*area, W = 74, P = 11000*area/10000, L = 25)
@@ -197,7 +199,10 @@ legend('bottomright', legend = c(paste('Starting mass =', round(start.mass.kg), 
                                  paste('Mean harvest mass =', round(harvest.size), 'g', sep = ' '), 
                                  paste('Time of harvest =', round(harvest.time), 'days', sep = ' ')), cex=0.5)
 
-# Set the desired number of aquaculture cycles
+# Set the desired number of aquaculture cycles, and harvest time if not using optimum
+# Default settings: harvest.time = optimal, ncycles = 15 (~10 years @ 8 months/cycle)
+# Gates settings: harvest.time = 4 months, ncycles = 3 (1 year)
+harvest.time = harvest.time
 ncycles = 15
 time.lt = seq(0, harvest.time*ncycles, 1)
 
@@ -208,6 +213,8 @@ stocking = data.frame(var = rep(c('P', 'L'), ncycles),
                       method = rep('rep', ncycles*2))
 
 # Define PZQ administration event
+# Note: if administering before start of stocking, set time = 0 and adjust length of simulation,
+#   time of stocking events accordingly
 pzq = data.frame(var = 'W', time = 30, value = 2, method = 'rep')
 
 # Run model and calculate outcomes of interest
