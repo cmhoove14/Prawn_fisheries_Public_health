@@ -4,7 +4,6 @@
   # Investigate the long-term stability of snail elimination, particularly at low attack rates
   # Incorporate seasonality into model
   # Sensitivity analysis, particularly for prawn attack rate
-  # Run simulations with Gates POC specifications
 
 require(deSolve)
 
@@ -109,9 +108,9 @@ snail_prawn_model = function(t, n, parameters) {
 ## Set initial values and parameters
 #  Default settings: area = 10000, P = 11000/ha, L = 25 (0.2g post-larvae)
 #  Gates settings: area = 20000; P = 500, 1000, 2500, 5000, 10000/ha; L = 67 or 100 (5g or 20g adults)
-area = 10000
+area = 20000
 nstart = c(S1 = 0.144*area, S2 = 0.002*area, S3 = 0, E1 = 6.57*area, E2 = 2.61*area, E3 = 0.843*area, 
-           I2 = 0.640*area, I3 = 0.329*area, W = 74, P = 11000*area/10000, L = 25)
+           I2 = 0.640*area, I3 = 0.329*area, W = 74, P = 500*area/10000, L = 100)
 time = seq(0, 365*2, 1)
 
 parameters=c(
@@ -202,23 +201,26 @@ legend('bottomright', legend = c(paste('Starting mass =', round(start.mass.kg), 
 # Set the desired number of aquaculture cycles, and harvest time if not using optimum
 # Default settings: harvest.time = optimal, ncycles = 15 (~10 years @ 8 months/cycle)
 # Gates settings: harvest.time = 4 months, ncycles = 3 (1 year)
-harvest.time = harvest.time
-ncycles = 15
-time.lt = seq(0, harvest.time*ncycles, 1)
+harvest.time = 365/3
+ncycles = 3
+pzq.delay = 0
+nstart.lt = nstart
+nstart.lt['P'] = 0
+time.lt = seq(0, pzq.delay + harvest.time*ncycles, 1)
 
-# Define stocking events at the end of each cycle
+# Define stocking events at the beginning of each cycle
 stocking = data.frame(var = rep(c('P', 'L'), ncycles),
-                      time = rep(seq(harvest.time, harvest.time*ncycles, harvest.time), each = 2),
+                      time = rep(seq(pzq.delay, pzq.delay + harvest.time*(ncycles-1), harvest.time), each = 2),
                       value = rep(c(nstart['P'], nstart['L']), ncycles),
                       method = rep('rep', ncycles*2))
 
 # Define PZQ administration event
-# Note: if administering before start of stocking, set time = 0 and adjust length of simulation,
-#   time of stocking events accordingly
+# Note: if administering before start of stocking, set time = 0 and instead set pzq.delay above
+#   to time between MDA and first stocking
 pzq = data.frame(var = 'W', time = 30, value = 2, method = 'rep')
 
 # Run model and calculate outcomes of interest
-output.lt = as.data.frame(ode(nstart, time.lt, snail_prawn_model, parameters,
+output.lt = as.data.frame(ode(nstart.lt, time.lt, snail_prawn_model, parameters,
                               events = list(data = rbind(stocking, pzq))))
 
 output.lt$S.t = output.lt$S1 + output.lt$S2 + output.lt$S3                      # Total susceptible snails
