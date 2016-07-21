@@ -19,24 +19,24 @@ prawn_biomass = function(t, n, parameters) {
 
     dLdt = k/(1+gam*Bm)*(linf - L) # Mean prawn length, using von Bertalanffy growth limited by density-dependent parameter gamma
     
-    dPdt = -P*(mu*L^d + Bm/phi) # Prawn abundance, subject to size- and density-dependent mortality
+    dPdt = -P*(mu*L^d + phi*Bm) # Prawn abundance, subject to size- and density-dependent mortality
 
     return(list(c(dPdt,dLdt)))
   }) 
 } 
 
 # Set initial values and parameters
-# Stocking conditions: 11,000/ha maximizes profit in current model; L = 25mm ~ W = 0.2g
-nstart = c(P = 11000, L = 25)
+# Stocking conditions: L = 25mm ~ W = 0.2g
+nstart = c(P = 10000, L = 25)
 time = seq(0, 365*2, 1)
 
 parameters=c(
   a = 0.096868,     # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
   b = 3.2944,       # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
   gam = 1e-6,       # Density-dependent growth parameter (based on biomass per hectare); not yet fit
-  mu = 0.006136986, # Natural prawn mortality rate, from Nwosu & Wolfi 2006 (M. vollenhovenii)
-  d = -0.25,        # Exponential relationship of size with mortality; no source
-  phi = 20000000,   # Density-dependent mortality parameter (based on biomass per hectare); not yet fit
+  mu = 0.1,         # Prawn mortality coefficient; no source
+  d = -0.75,        # Exponential relationship of length with mortality, assuming mortality ~ W^-0.25, and W ~ L^3
+  phi = 5e-8,       # Density-dependent mortality parameter (based on biomass per hectare); not yet fit
   k = 0.00339726,   # Growth rate (mm/day), from Nwosu & Wolfi 2006 (M. vollenhovenii); alternate value for M. rosenbergii, from Sampaio & Wagner 1996: 0.0104333333
   linf = 206        # Max length (mm), from Nwosu & Wolfi 2006 (M. vollenhovenii)
 )
