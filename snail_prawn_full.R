@@ -94,10 +94,10 @@ snail_prawn_model = function(t, n, parameters) {
     dWdt = lambda*I2/A + theta*lambda*I3/A - (muW + muH)*W
     
     # Prawn abundance
-    dPdt = -P*(muP*L^d + Bm.t/phi)
+    dPdt = -P*(muP*L^d + phi*Bm.t/(A/10000))
     
     # Mean prawn length (mm)
-    dLdt = k/(1+gam*Bm.t)*(linf - L)
+    dLdt = k/(1+gam*Bm.t/(A/10000))*(linf - L)
     
     
     return(list(c(dS1dt, dS2dt, dS3dt, dE1dt, dE2dt, dE3dt, dI2dt, dI3dt, dWdt, dPdt, dLdt)))
@@ -106,7 +106,7 @@ snail_prawn_model = function(t, n, parameters) {
 
 
 ## Set initial values and parameters
-#  Default settings: area = 10000, P = 11000/ha, L = 25 (0.2g post-larvae)
+#  Default settings: area = 10000, P = 9000/ha, L = 25 (0.2g post-larvae)
 #  Gates settings: area = 20000; P = 500, 1000, 2500, 5000, 10000/ha; L = 67 or 100 (5g or 20g adults)
 area = 20000
 nstart = c(S1 = 0.144*area, S2 = 0.002*area, S3 = 0, E1 = 6.57*area, E2 = 2.61*area, E3 = 0.843*area, 
@@ -144,9 +144,9 @@ parameters=c(
   gam = 1e-6,        # Density-dependent growth parameter (based on biomass per hectare); not yet fit
   
   # Prawn mortality parameters
-  muP = 0.006136986, # Natural prawn mortality rate, from Nwosu & Wolfi 2006 (M. vollenhovenii)
-  d = -0.25,         # Exponential parameter relating size with mortality; no source
-  phi = 2e7,         # Density-dependent mortality parameter (based on biomass per hectare); not yet fit
+  muP = 0.1,         # Prawn mortality coefficient; no source
+  d = -0.75,         # Exponential relationship of length with mortality, assuming mortality ~ W^-0.25, and W ~ L^3
+  phi = 5e-8,        # Density-dependent mortality parameter (based on biomass per hectare); not yet fit
   
   # Predation parameters
   ar = 0.037192,     # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014
