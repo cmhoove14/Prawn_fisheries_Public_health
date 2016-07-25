@@ -1,9 +1,17 @@
 #### Full snail-prawn model including epidemiological, predation, and aquaculture components
 
 ## To-do list:
-  # Investigate the long-term stability of snail elimination, particularly at low attack rates
-  # Incorporate seasonality into model
-  # Sensitivity analysis, particularly for prawn attack rate
+  # Modeling priorities:
+    # Attack rate: refit to include size refuge, use a log function (also: try type III FR)
+    # Prawn mortality: use the allometric relationship, and otherwise tweak
+    # Prawn growth: investigate why density-dependent effects don't work
+    # Profit analysis: play with different price-cost ratios to see how curve changes
+    # Diagonal epi transitions: see how their inclusion affects the model
+  # Rerun the Gates simulations once issues have been resolved
+  # Sensitivity analysis!
+  # Other modeling ideas, time permitting:
+    # Incorporate seasonality
+    # Simulate restoration at natural densities (i.e. with prawn ladder)
 
 require(deSolve)
 
