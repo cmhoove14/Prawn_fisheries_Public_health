@@ -26,9 +26,9 @@ snail_size_predation = function(t, n, parameters) {
     rps3 = P.bm / S3.bm # Prawn-to-snail mass ratio for size class 3
       
     # Attack rates as a function of biomass ratio, fit from Sokolow et al. 2014
-    alpha1 = 0.037192*rps1
-    alpha2 = 0.037192*rps2
-    alpha3 = 0.037192*rps3
+    alpha1 = ifelse(-log(3) + 1.1906*log(rps1) > 0, -log(3) + 1.1906*log(rps1), 0)
+    alpha2 = ifelse(-log(3) + 1.1906*log(rps2) > 0, -log(3) + 1.1906*log(rps2), 0)
+    alpha3 = ifelse(-log(3) + 1.1906*log(rps3) > 0, -log(3) + 1.1906*log(rps3), 0)
     
     # Adjusted attack rates, accounting for area of interest and limiting factors in the wild
     alpha_star1 = alpha1*s/A
@@ -36,9 +36,9 @@ snail_size_predation = function(t, n, parameters) {
     alpha_star3 = alpha3*s/A
     
     # Handling times as a function of biomass ratio, fit from Sokolow et al. 2014
-    handle1 = 1/(0.40450*rps1)
-    handle2 = 1/(0.40450*rps2)
-    handle3 = 1/(0.40450*rps3)
+    handle1 = 1/(0.38561*rps1)
+    handle2 = 1/(0.38561*rps2)
+    handle3 = 1/(0.38561*rps3)
     
     # Prawn dynamics, ignoring for now
     # P.bmt = P*P.bm # Total prawn biomass
@@ -92,8 +92,8 @@ parameters=c(
   g2 = 1/62,        # Growth rate of medium snails (size class transition rate, in terms of days to grow 4mm; adapted from McCreesh et al. 2014, assuming water temp. of 25 C) 
   Kn = 50,          # Carrying capacity of snails (per m^2, Sokolow et al. 2015)
   A = 200,          # Area of site of interest, m^2
-  s = 1/50          # Scale factor limiting prawn attack rate in the wild (vs. lab conditions);
-                    #   decreased by factor of 5 in size class model to match expected elimination threshold
+  s = 1/30          # Scale factor limiting prawn attack rate in the wild (vs. lab conditions);
+                    #   decreased by factor of 3 in size class model to match expected elimination threshold
 )
 
 

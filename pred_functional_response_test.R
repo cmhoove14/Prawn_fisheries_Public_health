@@ -22,14 +22,14 @@ predation = function(P, P.L, N1, N2, N3) {
   rps3 = P.bm / N3.bm
   
   # Attack rates as a function of biomass ratio
-  alpha1 = 0.037192*rps1 # Alternative function: 1+0.03*rps
-  alpha2 = 0.037192*rps2
-  alpha3 = 0.037192*rps3
+  alpha1 = ifelse(-log(3) + 1.1906*log(rps1) > 0, -log(3) + 1.1906*log(rps1), 0) # Alternative linear function: 0.037192*rps
+  alpha2 = ifelse(-log(3) + 1.1906*log(rps2) > 0, -log(3) + 1.1906*log(rps2), 0)
+  alpha3 = ifelse(-log(3) + 1.1906*log(rps3) > 0, -log(3) + 1.1906*log(rps3), 0)
   
   # Handling times as a function of biomass ratio
-  handle1 = 1/(0.40450*rps1) # Alternative function: 0.53623*exp(-0.05167*rps)
-  handle2 = 1/(0.40450*rps2)
-  handle3 = 1/(0.40450*rps3)
+  handle1 = 1/(0.38561*rps1) # Alternative function: 0.53623*exp(-0.05167*rps)
+  handle2 = 1/(0.38561*rps2)
+  handle3 = 1/(0.38561*rps3)
   
   # Preference variables, currently ignoring these
   gam1 = 1 #1/3 + 0.5*exp(-0.15*P.bm)

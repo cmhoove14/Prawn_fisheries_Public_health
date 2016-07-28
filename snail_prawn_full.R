@@ -53,9 +53,9 @@ snail_prawn_model = function(t, n, parameters) {
     Bm.r3 = Bm.p / Bm.n3
     
     # Attack rates for each size class as a function of biomass ratio
-    alpha1 = ar*Bm.r1
-    alpha2 = ar*Bm.r2
-    alpha3 = ar*Bm.r3
+    alpha1 = ifelse(-log(3) + ar*log(Bm.r1) > 0, -log(3) + ar*log(Bm.r1), 0)
+    alpha2 = ifelse(-log(3) + ar*log(Bm.r2) > 0, -log(3) + ar*log(Bm.r2), 0)
+    alpha3 = ifelse(-log(3) + ar*log(Bm.r3) > 0, -log(3) + ar*log(Bm.r3), 0)
     
     # Adjusted attack rates, accounting for area of interest and limiting factors in the wild
     alpha_star1 = alpha1*s/A
@@ -116,9 +116,9 @@ snail_prawn_model = function(t, n, parameters) {
 ## Set initial values and parameters
 #  Default settings: area = 10000, P = 9000/ha, L = 25 (0.2g post-larvae)
 #  Gates settings: area = 20000; P = 500, 1000, 2500, 5000, 10000/ha; L = 67 or 100 (5g or 20g adults)
-area = 20000
+area = 10000
 nstart = c(S1 = 0.144*area, S2 = 0.002*area, S3 = 0, E1 = 6.57*area, E2 = 2.61*area, E3 = 0.843*area, 
-           I2 = 0.640*area, I3 = 0.329*area, W = 74, P = 500*area/10000, L = 100)
+           I2 = 0.640*area, I3 = 0.329*area, W = 74, P = 1000*area/10000, L = 25)
 time = seq(0, 365*2, 1)
 
 parameters=c(
@@ -157,10 +157,10 @@ parameters=c(
   phi = 5e-8,        # Density-dependent mortality parameter (based on biomass per hectare); not yet fit
   
   # Predation parameters
-  ar = 0.037192,     # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014
-  th = 0.40450,      # Coefficient for relationship between biomass ratio and handling time, fitted to data from Sokolow et al. 2014
-  s = 1/50,          # Scale factor limiting prawn attack rate in the wild (vs. lab conditions);
-                     #   decreased from 1/10 to 1/50 in size class model to match expected elimination threshold
+  ar = 1.1906,       # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014
+  th = 0.38561,      # Coefficient for relationship between biomass ratio and handling time, fitted to data from Sokolow et al. 2014
+  s = 1/30,          # Scale factor limiting prawn attack rate in the wild (vs. lab conditions);
+                     #   decreased from 1/10 to 1/30 in size class model to match expected elimination threshold
   
   # Infection parameters
   beta = 8e-5,       # Human-to-snail infection probability in reference area (infected snails/miracidia/snail/day); adjusted from Sokolow et al. 2015 (original value: 4e-6)
@@ -209,8 +209,8 @@ legend('bottomright', legend = c(paste('Starting mass =', round(start.mass.kg), 
 # Set the desired number of aquaculture cycles, and harvest time if not using optimum
 # Default settings: harvest.time = optimal, ncycles = 15 (~10 years @ 8 months/cycle)
 # Gates settings: harvest.time = 4 months, ncycles = 3 (1 year)
-harvest.time = 365/3
-ncycles = 3
+harvest.time = harvest.time
+ncycles = 15
 pzq.delay = 0
 nstart.lt = nstart
 nstart.lt['P'] = 0
@@ -309,7 +309,7 @@ profit = p*harvest*exp(-delta*(harvest.t)) - c*x  # Profit function, in terms of
 # (after one aquaculture cycle)
 par(mar = c(5,5,6,5))
 plot(x, profit, col = 'green', xlab = 'Stocking density (thousand prawns/ha)', ylab = 'Profit (rupees/ha)',
-     type = 'l', lwd = 2, main = 'Profit and time to harvest \n by stocking density')
+     ylim = c(0, max(profit)), type = 'l', lwd = 2, main = 'Profit and time to harvest \n by stocking density')
 abline(v = which.max(profit)-1, lty = 2, lwd = 2)
 par(new = T)
 plot(x, harvest.t, col = 'blue', axes = F, xlab = NA, ylab = NA, ylim = c(0, max(harvest.t[-1])), type = 'l', lwd = 2)
@@ -321,7 +321,7 @@ legend('topright', legend = c('Profit', 'Harvest time'), lty = 1, col = c('green
 # (after one aquaculture cycle)
 par(mar = c(5,5,6,5))
 plot(x, profit, col = 'green', xlab = 'Stocking density (thousand prawns/ha)', ylab = 'Profit (rupees/ha)',
-     type = 'l', lwd = 2, main = 'Profit and snail abundance \n by stocking density')
+     ylim = c(0, max(profit)), type = 'l', lwd = 2, main = 'Profit and snail abundance \n by stocking density')
 abline(v = which.max(profit)-1, lty = 2, lwd = 2)
 par(new = T)
 plot(x, snails, col = 'orange', axes = F, xlab = NA, ylab = NA, ylim = c(0, max(snails)), type = 'l', lwd = 2)
@@ -333,7 +333,7 @@ legend('topright', legend = c('Profit', 'Snails'), lty = 1, col = c('green', 'or
 # (after one aquaculture cycle)
 par(mar = c(5,5,6,5))
 plot(x, profit, col = 'green', xlab = 'Stocking density (thousand prawns/ha)', ylab = 'Profit (rupees/ha)',
-     type = 'l', lwd = 2, main = 'Profit and worm burden (after PZQ) \n by stocking density')
+     ylim = c(0, max(profit)), type = 'l', lwd = 2, main = 'Profit and worm burden (after PZQ) \n by stocking density')
 abline(v = which.max(profit)-1, lty = 2, lwd = 2)
 par(new = T)
 plot(x, worms, col = 'red', axes = F, xlab = NA, ylab = NA, ylim = c(0, max(worms)), type = 'l', lwd = 2)
