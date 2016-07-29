@@ -39,7 +39,7 @@ snail_prawn_model = function(t, n, parameters) {
     M = m*0.5*W
     
     # Mean and total prawn biomass, converting from length (mm) to weight (g)
-    Bm.p = (a.p*(L/10)^b.p)/10  
+    Bm.p = (a.p/10)*(L/10)^b.p
     Bm.t = P*Bm.p
     
     # Mean snail biomass in each size class, converting from length (cm) to weight (g)
@@ -102,7 +102,7 @@ snail_prawn_model = function(t, n, parameters) {
     dWdt = lambda*I2/A + theta*lambda*I3/A - (muW + muH)*W
     
     # Prawn abundance
-    dPdt = -P*(muP*L^d + phi*Bm.t/(A/10000))
+    dPdt = -P*(muP*Bm.p^d + phi*Bm.t/(A/10000))
     
     # Mean prawn length (mm)
     dLdt = k/(1+gam*Bm.t/(A/10000))*(linf - L)
@@ -118,63 +118,63 @@ snail_prawn_model = function(t, n, parameters) {
 #  Gates settings: area = 20000; P = 500, 1000, 2500, 5000, 10000/ha; L = 67 or 100 (5g or 20g adults)
 area = 10000
 nstart = c(S1 = 0.144*area, S2 = 0.002*area, S3 = 0, E1 = 6.57*area, E2 = 2.61*area, E3 = 0.843*area, 
-           I2 = 0.640*area, I3 = 0.329*area, W = 74, P = 1000*area/10000, L = 25)
+           I2 = 0.640*area, I3 = 0.329*area, W = 74, P = 5000*area/10000, L = 25)
 time = seq(0, 365*2, 1)
 
 parameters=c(
   # Location parameters
-  A = area,          # Area of site of interest, m^2
-  H = 1000,          # Human population at site of interest
+  A = area,             # Area of site of interest, m^2
+  H = 1000,             # Human population at site of interest
   
   # Snail reproductive parameters
-  f = 0.26,          # Birth rate of adult snails (snails/reproductive snail/day, including survival to detection - more like a recruitment rate); 
-                     #   adjusted from Sokolow et al. 2015 to account for the fact that class 1 snails are assumed to be juveniles and therefore don't reproduce
-  Kn = 50,           # Carrying capacity of snails (snails/m^2), from Sokolow et al. 2015
-  z = 0.5,           # Fraction of prepatent snails that can reproduce, from Sokolow et al. 2015
+  f = 0.26,             # Birth rate of adult snails (snails/reproductive snail/day, including survival to detection - more like a recruitment rate); 
+                        #   adjusted from Sokolow et al. 2015 to account for the fact that class 1 snails are assumed to be juveniles and therefore don't reproduce
+  Kn = 50,              # Carrying capacity of snails (snails/m^2), from Sokolow et al. 2015
+  z = 0.5,              # Fraction of prepatent snails that can reproduce, from Sokolow et al. 2015
   
   # Snail growth parameters
-  a.s = 0.187178454, # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
-  b.s = 2.536764792, # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
-  g1 = 1/37,         # Growth rate of small snails (size class transition rate, in terms of days to grow 4mm; adapted from McCreesh et al. 2014, assuming water temp. of 25 C)
-  g2 = 1/62,         # Growth rate of medium snails (size class transition rate, in terms of days to grow 4mm; adapted from McCreesh et al. 2014, assuming water temp. of 25 C)
+  a.s = 0.187178454,    # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
+  b.s = 2.536764792,    # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
+  g1 = 1/37,            # Growth rate of small snails (size class transition rate, in terms of days to grow 4mm; adapted from McCreesh et al. 2014, assuming water temp. of 25 C)
+  g2 = 1/62,            # Growth rate of medium snails (size class transition rate, in terms of days to grow 4mm; adapted from McCreesh et al. 2014, assuming water temp. of 25 C)
   
   # Snail mortality parameters
-  muN1 = 1/40,       # Natural mortality rate of small snails (deaths/snail/day; assume mean lifespan = 50 days)
-  muN2 = 1/50,       # Natural mortality rate of medium snails (deaths/snail/day; assume mean lifespan = 50 days)
-  muN3 = 1/60,       # Natural mortality rate of large snails (deaths/snail/day; assume mean lifespan = 50 days)
-  muI = 1/10,        # Additional mortality rate of shedding snails as a result of infection, from Sokolow et al. 2015
+  muN1 = 1/40,          # Natural mortality rate of small snails (deaths/snail/day; assume mean lifespan = 50 days)
+  muN2 = 1/50,          # Natural mortality rate of medium snails (deaths/snail/day; assume mean lifespan = 50 days)
+  muN3 = 1/60,          # Natural mortality rate of large snails (deaths/snail/day; assume mean lifespan = 50 days)
+  muI = 1/10,           # Additional mortality rate of shedding snails as a result of infection, from Sokolow et al. 2015
   
   # Prawn growth parameters
-  a.p = 0.096868,    # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
-  b.p = 3.2944,      # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
-  k = 0.00339726,    # Growth coefficient, from Nwosu & Wolfi 2006 (M. vollenhovenii); alternate value for M. rosenbergii, from Sampaio & Wagner 1996: 0.0104333333
-  linf = 206,        # Max length (mm), from Nwosu & Wolfi 2006 (M. vollenhovenii)
-  gam = 1e-6,        # Density-dependent growth parameter (based on biomass per hectare); not yet fit
+  a.p = 0.096868,       # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
+  b.p = 3.2944,         # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
+  k = 0.00339726,       # Growth coefficient, from Nwosu & Wolfi 2006 (M. vollenhovenii); alternate value for M. rosenbergii, from Sampaio & Wagner 1996: 0.0104333333
+  linf = 206,           # Max length (mm), from Nwosu & Wolfi 2006 (M. vollenhovenii)
+  gam = 1e-6,           # Density-dependent growth parameter (based on biomass per hectare); not yet fit
   
   # Prawn mortality parameters
-  muP = 0.1,         # Prawn mortality coefficient; no source
-  d = -0.75,         # Exponential relationship of length with mortality, assuming mortality ~ W^-0.25, and W ~ L^3
-  phi = 5e-8,        # Density-dependent mortality parameter (based on biomass per hectare); not yet fit
+  muP = 0.00610958904,  # Prawn mortality at unit weight, from Lorenzen 1996 (pond aquaculture)
+  d = -0.382,           # Exponential relationship of weight with mortality, from Lorenzen 1996 (pond aquaculture)
+  phi = 5e-8,           # Density-dependent mortality parameter (based on biomass per hectare); not yet fit
   
   # Predation parameters
-  ar = 1.1906,       # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014
-  th = 0.38561,      # Coefficient for relationship between biomass ratio and handling time, fitted to data from Sokolow et al. 2014
-  s = 1/30,          # Scale factor limiting prawn attack rate in the wild (vs. lab conditions);
-                     #   decreased from 1/10 to 1/30 in size class model to match expected elimination threshold
+  ar = 1.1906,          # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014
+  th = 0.38561,         # Coefficient for relationship between biomass ratio and handling time, fitted to data from Sokolow et al. 2014
+  s = 1/30,             # Scale factor limiting prawn attack rate in the wild (vs. lab conditions);
+                        #   decreased from 1/10 to 1/30 in size class model to match expected elimination threshold
   
   # Infection parameters
-  beta = 8e-5,       # Human-to-snail infection probability in reference area (infected snails/miracidia/snail/day); adjusted from Sokolow et al. 2015 (original value: 4e-6)
-  m = 0.8,           # Miracidial shedding rate per adult female worm divided by miracidial mortality; from Sokolow et al. 2015
-  sigma = 1/30,      # Latent period for exposed snails (infectious snails/exposed snail/day); adjusted from Sokolow et al. 2015 (original value: 1/50)
-  X = 0,             # Fraction of exposed small snails that convert directly to medium shedding (ignored for now)
-  rho = 0,           # Fraction of exposed medium snails that convert directly to large shedding (ignored for now)
-  lambda = 0.05,     # Snail-to-human infection probability scaled to 1 m^2 (composite including cercarial shedding, mortality, infection, survival to patency); 
-                     #   adjusted from Sokolow et al. 2015 (original value: 0.1)
-  theta = 2,         # Scale factor describing increase in cercarial shedding rate in larger snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
+  beta = 8e-5,          # Human-to-snail infection probability in reference area (infected snails/miracidia/snail/day); adjusted from Sokolow et al. 2015 (original value: 4e-6)
+  m = 0.8,              # Miracidial shedding rate per adult female worm divided by miracidial mortality; from Sokolow et al. 2015
+  sigma = 1/30,         # Latent period for exposed snails (infectious snails/exposed snail/day); adjusted from Sokolow et al. 2015 (original value: 1/50)
+  X = 0,                # Fraction of exposed small snails that convert directly to medium shedding (ignored for now)
+  rho = 0,              # Fraction of exposed medium snails that convert directly to large shedding (ignored for now)
+  lambda = 0.05,        # Snail-to-human infection probability scaled to 1 m^2 (composite including cercarial shedding, mortality, infection, survival to patency); 
+                        #   adjusted from Sokolow et al. 2015 (original value: 0.1)
+  theta = 2,            # Scale factor describing increase in cercarial shedding rate in larger snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
   
   # Schisto mortality parameters
-  muW = 1/(3.3*365), # Natural mortality rate of adult worms in humans, assuming average lifespan of 3.3 years, from Sokolow et al. 2015
-  muH = 1/(60*365)   # Natural mortality of humans (contributing to worm mortality), assuming average lifespan of 60 years, from Sokolow et al. 2015
+  muW = 1/(3.3*365),    # Natural mortality rate of adult worms in humans, assuming average lifespan of 3.3 years, from Sokolow et al. 2015
+  muH = 1/(60*365)      # Natural mortality of humans (contributing to worm mortality), assuming average lifespan of 60 years, from Sokolow et al. 2015
 )
 
 
@@ -210,7 +210,7 @@ legend('bottomright', legend = c(paste('Starting mass =', round(start.mass.kg), 
 # Default settings: harvest.time = optimal, ncycles = 15 (~10 years @ 8 months/cycle)
 # Gates settings: harvest.time = 4 months, ncycles = 3 (1 year)
 harvest.time = harvest.time
-ncycles = 15
+ncycles = 1
 pzq.delay = 0
 nstart.lt = nstart
 nstart.lt['P'] = 0
