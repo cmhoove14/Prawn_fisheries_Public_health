@@ -27,16 +27,16 @@ prawn_biomass = function(t, n, parameters) {
 
 # Set initial values and parameters
 # Stocking conditions: L = 25mm ~ W = 0.2g
-nstart = c(P = 10000, L = 25)
+nstart = c(P = 25000, L = 25)
 time = seq(0, 365*2, 1)
 
 parameters=c(
   a = 0.096868,        # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
   b = 3.2944,          # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
-  gam = 1e-6,          # Density-dependent growth parameter (based on biomass per hectare); not yet fit
+  gam = 1e-5,          # Density-dependent growth parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
   mu = 0.00610958904,  # Prawn mortality at unit weight, from Lorenzen 1996 (pond aquaculture)
   d = -0.382,          # Exponential relationship of weight with mortality, from Lorenzen 1996 (pond aquaculture)
-  phi = 5e-8,          # Density-dependent mortality parameter (based on biomass per hectare); not yet fit
+  phi = 5e-8,          # Density-dependent mortality parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
   k = 0.00339726,      # Growth rate (mm/day), from Nwosu & Wolfi 2006 (M. vollenhovenii); alternate value for M. rosenbergii, from Sampaio & Wagner 1996: 0.0104333333
   linf = 206           # Max length (mm), from Nwosu & Wolfi 2006 (M. vollenhovenii)
 )

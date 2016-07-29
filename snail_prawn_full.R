@@ -2,9 +2,6 @@
 
 ## To-do list:
   # Modeling priorities:
-    # Attack rate: refit to include size refuge, use a log function (also: try type III FR)
-    # Prawn mortality: use the allometric relationship, and otherwise tweak
-    # Prawn growth: investigate why density-dependent effects don't work
     # Profit analysis: play with different price-cost ratios to see how curve changes
     # Diagonal epi transitions: see how their inclusion affects the model
   # Rerun the Gates simulations once issues have been resolved
@@ -114,7 +111,7 @@ snail_prawn_model = function(t, n, parameters) {
 
 
 ## Set initial values and parameters
-#  Default settings: area = 10000, P = 9000/ha, L = 25 (0.2g post-larvae)
+#  Default settings: area = 10000, P = 5000/ha, L = 25 (0.2g post-larvae)
 #  Gates settings: area = 20000; P = 500, 1000, 2500, 5000, 10000/ha; L = 67 or 100 (5g or 20g adults)
 area = 10000
 nstart = c(S1 = 0.144*area, S2 = 0.002*area, S3 = 0, E1 = 6.57*area, E2 = 2.61*area, E3 = 0.843*area, 
@@ -149,12 +146,12 @@ parameters=c(
   b.p = 3.2944,         # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
   k = 0.00339726,       # Growth coefficient, from Nwosu & Wolfi 2006 (M. vollenhovenii); alternate value for M. rosenbergii, from Sampaio & Wagner 1996: 0.0104333333
   linf = 206,           # Max length (mm), from Nwosu & Wolfi 2006 (M. vollenhovenii)
-  gam = 1e-6,           # Density-dependent growth parameter (based on biomass per hectare); not yet fit
+  gam = 1e-5,           # Density-dependent growth parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
   
   # Prawn mortality parameters
   muP = 0.00610958904,  # Prawn mortality at unit weight, from Lorenzen 1996 (pond aquaculture)
   d = -0.382,           # Exponential relationship of weight with mortality, from Lorenzen 1996 (pond aquaculture)
-  phi = 5e-8,           # Density-dependent mortality parameter (based on biomass per hectare); not yet fit
+  phi = 5e-8,           # Density-dependent mortality parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
   
   # Predation parameters
   ar = 1.1906,          # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014
