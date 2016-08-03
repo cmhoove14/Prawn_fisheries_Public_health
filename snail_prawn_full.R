@@ -1,14 +1,11 @@
 #### Full snail-prawn model including epidemiological, predation, and aquaculture components
 
 ## To-do list:
-  # Modeling priorities:
-    # Profit analysis: play with different price-cost ratios to see how curve changes
-    # Diagonal epi transitions: see how their inclusion affects the model
-  # Rerun the Gates simulations once issues have been resolved
-  # Sensitivity analysis!
+  # Add diagonal structure, retune infectivity parameters accordingly
+  # Simulations: basic, Gates, natural restoration (simple approximation)
+  # Sensitivity analysis
   # Other modeling ideas, time permitting:
-    # Incorporate seasonality
-    # Simulate restoration at natural densities (i.e. with prawn ladder)
+    # Incorporate seasonality?
 
 require(deSolve)
 
@@ -235,7 +232,7 @@ output.lt$N1.t = output.lt$S1 + output.lt$E1                                    
 output.lt$N2.t = output.lt$S2 + output.lt$E2 + output.lt$I2                     # Total snails of size class 2
 output.lt$N3.t = output.lt$S3 + output.lt$E3 + output.lt$I3                     # Total snails of size class 3
 output.lt$N.t = output.lt$S.t + output.lt$E.t + output.lt$I.t                   # Total snails
-output.lt$prev = pnbinom(2, size = 0.25, mu = output.lt$W, lower.tail = FALSE)  # Estimated prevalence, using a negative binomial dist. with k = 0.25
+output.lt$prev = pnbinom(2, size = 0.2, mu = output.lt$W, lower.tail = FALSE)   # Estimated prevalence, using a negative binomial dist. with k = 0.2 fitted from EPLS data
 output.lt$B = ((parameters['a.p']*(output.lt$L/10)^parameters['b.p'])/10)       # Mean prawn biomass, transformed from length using allometric equation
 output.lt$Bt = output.lt$B*output.lt$P                                          # Total prawn biomass
 
