@@ -1,7 +1,7 @@
 #### Full snail-prawn model including epidemiological, predation, and aquaculture components
 
 ## To-do list:
-  # Add diagonal structure, retune infectivity parameters accordingly
+  # Understand implications of diagonal transition structure
   # Simulations: basic, Gates, natural restoration (simple approximation)
   # Sensitivity analysis
   # Other modeling ideas, time permitting:
@@ -66,6 +66,9 @@ snail_prawn_model = function(t, n, parameters) {
     psi2 = (P*alpha_star2) / (1+sum(alpha_star1*handle1*N1, alpha_star2*handle2*N2, alpha_star3*handle3*N3))
     psi3 = (P*alpha_star3) / (1+sum(alpha_star1*handle1*N1, alpha_star2*handle2*N2, alpha_star3*handle3*N3))
     
+    # Fraction of E2 snails that transition directly to I3
+    rho = g2/sigma
+    
     ## Model equations:
     
     # Susceptible snails, class 1
@@ -78,19 +81,19 @@ snail_prawn_model = function(t, n, parameters) {
     dS3dt = g2*S2 - muN3*S3 - psi3*S3 - beta*M*H*S3
     
     # Exposed (prepatent) snails, class 1
-    dE1dt = beta*M*H*S1 - muN1*E1 - psi1*E1 - g1*E1 - sigma*X*E1
+    dE1dt = beta*M*H*S1 - muN1*E1 - psi1*E1 - sigma*E1
     
     # Exposed (prepatent) snails, class 2
-    dE2dt = beta*M*H*S2 + g1*E1 - muN2*E2 - psi2*E2 - g2*E2 - sigma*E2
+    dE2dt = beta*M*H*S2 - muN2*E2 - psi2*E2 - sigma*E2
     
     # Exposed (prepatent) snails, class 3
-    dE3dt = beta*M*H*S3 + g2*E2 - muN3*E3 - psi3*E3 - sigma*E3
+    dE3dt = beta*M*H*S3 - muN3*E3 - psi3*E3 - sigma*E3
     
     # Infectious (shedding) snails, class 2
-    dI2dt = sigma*X*E1 + sigma*(1-rho)*E2 - (muN2 + muI)*I2 - psi2*I2 - g2*I2
+    dI2dt = sigma*E1 + sigma*(1-rho)*E2 - (muN2 + muI)*I2 - psi2*I2
     
     # Infectious (shedding) snails, class 3
-    dI3dt = sigma*rho*E2 + sigma*E3 + g2*I2 - (muN3 + muI)*I3 - psi3*I3
+    dI3dt = sigma*rho*E2 + sigma*E3 - (muN3 + muI)*I3 - psi3*I3
     
     # Mean human worm burden
     dWdt = lambda*I2/A + theta*lambda*I3/A - (muW + muH)*W
@@ -111,8 +114,8 @@ snail_prawn_model = function(t, n, parameters) {
 #  Default settings: area = 10000, P = 5000/ha, L = 25 (0.2g post-larvae)
 #  Gates settings: area = 20000; P = 500, 1000, 2500, 5000, 10000/ha; L = 67 or 100 (5g or 20g adults)
 area = 10000
-nstart = c(S1 = 0.144*area, S2 = 0.002*area, S3 = 0, E1 = 6.57*area, E2 = 2.61*area, E3 = 0.843*area, 
-           I2 = 0.640*area, I3 = 0.329*area, W = 74, P = 5000*area/10000, L = 25)
+nstart = c(S1 = 3.54*area, S2 = 1.02*area, S3 = 0.22*area, E1 = 3.51*area, E2 = 1.1*area, E3 = 0.25*area, 
+           I2 = 1.13*area, I3 = 0.23*area, W = 72, P = 5000*area/10000, L = 25)
 time = seq(0, 365*2, 1)
 
 parameters=c(
@@ -157,12 +160,10 @@ parameters=c(
                         #   decreased from 1/10 to 1/30 in size class model to match expected elimination threshold
   
   # Infection parameters
-  beta = 8e-5,          # Human-to-snail infection probability in reference area (infected snails/miracidia/snail/day); adjusted from Sokolow et al. 2015 (original value: 4e-6)
+  beta = 2e-6,          # Human-to-snail infection probability in reference area (infected snails/miracidia/snail/day); adjusted from Sokolow et al. 2015 (original value: 4e-6)
   m = 0.8,              # Miracidial shedding rate per adult female worm divided by miracidial mortality; from Sokolow et al. 2015
   sigma = 1/30,         # Latent period for exposed snails (infectious snails/exposed snail/day); adjusted from Sokolow et al. 2015 (original value: 1/50)
-  X = 0,                # Fraction of exposed small snails that convert directly to medium shedding (ignored for now)
-  rho = 0,              # Fraction of exposed medium snails that convert directly to large shedding (ignored for now)
-  lambda = 0.05,        # Snail-to-human infection probability scaled to 1 m^2 (composite including cercarial shedding, mortality, infection, survival to patency); 
+  lambda = 4e-2,        # Snail-to-human infection probability scaled to 1 m^2 (composite including cercarial shedding, mortality, infection, survival to patency); 
                         #   adjusted from Sokolow et al. 2015 (original value: 0.1)
   theta = 2,            # Scale factor describing increase in cercarial shedding rate in larger snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
   
@@ -204,7 +205,7 @@ legend('bottomright', legend = c(paste('Starting mass =', round(start.mass.kg), 
 # Default settings: harvest.time = optimal, ncycles = 15 (~10 years @ 8 months/cycle)
 # Gates settings: harvest.time = 4 months, ncycles = 3 (1 year)
 harvest.time = harvest.time
-ncycles = 1
+ncycles = 15
 pzq.delay = 0
 nstart.lt = nstart
 nstart.lt['P'] = 0
@@ -232,7 +233,7 @@ output.lt$N1.t = output.lt$S1 + output.lt$E1                                    
 output.lt$N2.t = output.lt$S2 + output.lt$E2 + output.lt$I2                     # Total snails of size class 2
 output.lt$N3.t = output.lt$S3 + output.lt$E3 + output.lt$I3                     # Total snails of size class 3
 output.lt$N.t = output.lt$S.t + output.lt$E.t + output.lt$I.t                   # Total snails
-output.lt$prev = pnbinom(2, size = 0.2, mu = output.lt$W, lower.tail = FALSE)   # Estimated prevalence, using a negative binomial dist. with k = 0.2 fitted from EPLS data
+output.lt$prev = pnbinom(2, size = 0.2, mu = output.lt$W, lower.tail = FALSE)   # Estimated prevalence, using a negative binomial dist. with k = 0.2 (fitted from EPLS data)
 output.lt$B = ((parameters['a.p']*(output.lt$L/10)^parameters['b.p'])/10)       # Mean prawn biomass, transformed from length using allometric equation
 output.lt$Bt = output.lt$B*output.lt$P                                          # Total prawn biomass
 

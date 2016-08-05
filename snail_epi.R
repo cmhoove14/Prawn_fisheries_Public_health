@@ -6,7 +6,7 @@
       # Should small snails be able to get infected at all?
       # Should exposed snails be able to reproduce at a reduced rate?
       # Should growth rates differ by infection status?
-      # Think a little more about diagonal transitions, if even necessary
+      # Think a little more about diagonal transitions
       # Reconsider area scaling
   # Come up with R0 expression?
 
@@ -25,27 +25,28 @@ snail_epi = function(t, n, parameters) {
     I3=n[8]
     W=n[9]
     
-    S = S1+S2+S3  # Total susceptible snails
-    E = E1+E2+E3  # Total exposed snails
-    I = I2+I3     # Total infected snails
-    N = S+E+I     # Total number of snails
-    M = m*0.5*W   # Miracidial density per person as a function of mean worm burden (W) and miracidial shedding rate (m)
-
+    S = S1+S2+S3    # Total susceptible snails
+    E = E1+E2+E3    # Total exposed snails
+    I = I2+I3       # Total infected snails
+    N = S+E+I       # Total number of snails
+    M = m*0.5*W     # Miracidial density per person as a function of mean worm burden (W) and miracidial shedding rate (m)
+    rho = g2/sigma  # Fraction of E2 snails that transition directly to I3
+    
     dS1dt = f*(1-N/(Kn*A))*(S2+S3+z*(E2+E3)) - muN1*S1 - psi1*S1 - g1*S1 - (beta)*M*H*S1
     
     dS2dt = g1*S1 - muN2*S2 - psi2*S2 - g2*S2 - (beta)*M*H*S2
     
     dS3dt = g2*S2 - muN3*S3 - psi3*S3 - (beta)*M*H*S3
     
-    dE1dt = (beta)*M*H*S1 - muN1*E1 - psi1*E1 - g1*E1 - sigma*X*E1
+    dE1dt = (beta)*M*H*S1 - muN1*E1 - psi1*E1 - sigma*E1
     
-    dE2dt = (beta)*M*H*S2 + g1*E1 - muN2*E2 - psi2*E2 - g2*E2 - sigma*E2
+    dE2dt = (beta)*M*H*S2 - muN2*E2 - psi2*E2 - sigma*E2
     
-    dE3dt = (beta)*M*H*S3 + g2*E2 - muN3*E3 - psi3*E3 - sigma*E3
+    dE3dt = (beta)*M*H*S3 - muN3*E3 - psi3*E3 - sigma*E3
     
-    dI2dt = sigma*X*E1 + sigma*(1-rho)*E2 - (muN2 + muI)*I2 - psi2*I2 - g2*I2
+    dI2dt = sigma*E1 + sigma*(1-rho)*E2 - (muN2 + muI)*I2 - psi2*I2
     
-    dI3dt = sigma*rho*E2 + sigma*E3 + g2*I2 - (muN3 + muI)*I3 - psi3*I3
+    dI3dt = sigma*rho*E2 + sigma*E3 - (muN3 + muI)*I3 - psi3*I3
     
     dWdt = lambda*I2/A + theta*lambda*I3/A - (muW + muH)*W
     
@@ -55,7 +56,7 @@ snail_epi = function(t, n, parameters) {
 } 
 
 # Set initial values and parameters
-area = 200
+area = 1
 nstart = c(S1 = 10*area, S2 = 0, S3 = 0, E1 = 0, E2 = 0, E3 = 0, I2 = 0, I3 = 0, W = 2)
 time = seq(0,365*10,1)
 
@@ -85,12 +86,10 @@ parameters=c(
   g2 = 1/62,         # Growth rate of medium snails (size class transition rate, in terms of days to grow 4mm; adapted from McCreesh et al. 2014, assuming water temp. of 25 C)
   
   ## Infection parameters
-  beta = 8e-5,       # Human-to-snail infection probability in reference area (infected snails/miracidia/snail/day); adjusted from Sokolow et al. 2015 (original value: 4e-6)
+  beta = 2e-6,       # Human-to-snail infection probability in reference area (infected snails/miracidia/snail/day); adjusted from Sokolow et al. 2015 (original value: 4e-6)
   m = 0.8,           # Miracidial shedding rate per adult female worm divided by miracidial mortality; from Sokolow et al. 2015
   sigma = 1/30,      # Latent period for exposed snails (infectious snails/exposed snail/day); adjusted from Sokolow et al. 2015 (original value: 1/50)
-  X = 0,             # Fraction of exposed small snails that convert directly to medium shedding (ignored for now)
-  rho = 0,           # Fraction of exposed medium snails that convert directly to large shedding (ignored for now)
-  lambda = 0.05,     # Snail-to-human infection probability scaled to 1 m^2 (composite including cercarial shedding, mortality, infection, survival to patency); adjusted from Sokolow et al. 2015 (original value: 0.1)
+  lambda = 4e-2,     # Snail-to-human infection probability scaled to 1 m^2 (composite including cercarial shedding, mortality, infection, survival to patency); adjusted from Sokolow et al. 2015 (original value: 0.1)
   theta = 2,         # Scale factor describing increase in cercarial shedding rate in larger snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
   
   ## Schisto mortality parameters
@@ -108,7 +107,7 @@ output_s.epi$N.t = output_s.epi$S.t + output_s.epi$E.t + output_s.epi$I.t       
 output_s.epi$t.1 = output_s.epi$S1 + output_s.epi$E1                                  # Total snails of size class 1
 output_s.epi$t.2 = output_s.epi$S2 + output_s.epi$E2 + + output_s.epi$I2              # Total snails of size class 2
 output_s.epi$t.3 = output_s.epi$S3 + output_s.epi$E3 + + output_s.epi$I3              # Total snails of size class 3
-output_s.epi$prev = pnbinom(2, size = 0.25, mu = output_s.epi$W, lower.tail = FALSE)  # Estimated prevalence, using a negative binomial dist. with k = 0.25
+output_s.epi$prev = pnbinom(2, size = 0.2, mu = output_s.epi$W, lower.tail = FALSE)   # Estimated prevalence, using a negative binomial dist. with k = 0.2 (fitted from EPLS data)
   
 plot(x = output_s.epi$time, y = output_s.epi$N.t, type = 'l', col = 'black', lwd=2, xlab = 'Time (days)', 
      ylab = 'Number of snails', ylim = c(0,max(output_s.epi$N.t)),
