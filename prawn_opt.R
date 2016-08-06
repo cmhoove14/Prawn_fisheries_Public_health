@@ -37,7 +37,7 @@ parameters=c(
   mu = 0.00610958904,  # Prawn mortality at unit weight, from Lorenzen 1996 (pond aquaculture)
   d = -0.382,          # Exponential relationship of weight with mortality, from Lorenzen 1996 (pond aquaculture)
   phi = 5e-8,          # Density-dependent mortality parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
-  k = 0.00339726,      # Growth rate (mm/day), from Nwosu & Wolfi 2006 (M. vollenhovenii); alternate value for M. rosenbergii, from Sampaio & Wagner 1996: 0.0104333333
+  k = 0.00339726,      # Growth rate (mm/day), from Nwosu & Wolfi 2006 (M. vollenhovenii); alternate value for M. rosenbergii, from Sampaio & Valenti 1996: 0.0104333333
   linf = 206           # Max length (mm), from Nwosu & Wolfi 2006 (M. vollenhovenii)
 )
 

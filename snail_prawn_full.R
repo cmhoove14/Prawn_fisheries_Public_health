@@ -144,7 +144,7 @@ parameters=c(
   # Prawn growth parameters
   a.p = 0.096868,       # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
   b.p = 3.2944,         # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
-  k = 0.00339726,       # Growth coefficient, from Nwosu & Wolfi 2006 (M. vollenhovenii); alternate value for M. rosenbergii, from Sampaio & Wagner 1996: 0.0104333333
+  k = 0.00339726,       # Growth coefficient, from Nwosu & Wolfi 2006 (M. vollenhovenii); alternate value for M. rosenbergii, from Sampaio & Valenti 1996: 0.0104333333
   linf = 206,           # Max length (mm), from Nwosu & Wolfi 2006 (M. vollenhovenii)
   gam = 1e-5,           # Density-dependent growth parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
   
