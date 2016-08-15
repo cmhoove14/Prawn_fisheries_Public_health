@@ -27,7 +27,7 @@ prawn_biomass = function(t, n, parameters) {
 
 # Set initial values and parameters
 # Stocking conditions: L = 25mm ~ W = 0.2g
-nstart = c(P = 25000, L = 25)
+nstart = c(P = 5000, L = 25)
 time = seq(0, 365*2, 1)
 
 parameters=c(
@@ -41,11 +41,17 @@ parameters=c(
   linf = 206           # Max length (mm), from Nwosu & Wolfi 2006 (M. vollenhovenii)
 )
 
+# Economic parameters (price estimates from Tamil Nadu Agricultural University, http://agritech.tnau.ac.in/fishery/fish_freshwaterprawn.html)
+p = 140                                           # Weighted average market price of prawns, in rupees/kg 
+c = 600                                           # Cost of post-larvae, in rupees/1000 PL
+delta = -log(1-0.1)/365                           # Discount rate, equivalent to 10%/year
+
 
 # Run & plot
 output = as.data.frame(ode(nstart,time,prawn_biomass,parameters))
-output$B = ((parameters['a']*(output$L/10)^parameters['b'])/10)    # Mean prawn biomass, transformed from length
-output$Bt = output$B*output$P                                      # Total prawn biomass
+output$B = ((parameters['a']*(output$L/10)^parameters['b'])/10)                    # Mean prawn biomass, transformed from length
+output$Bt = output$B*output$P                                                      # Total prawn biomass
+output$profit = p*(output$Bt/1000)*exp(-delta*(output$t)) - c*(nstart["P"]/1000)   # Profit function, in terms of revenue (discounted by time since stocking) minus stocking costs 
 
 start.mass.kg = output$Bt[output$time==1]/1000
 harvest.mass.kg = max(output$Bt)/1000
@@ -87,12 +93,8 @@ plot(x, harvest.m, col = 'blue', xlab = 'Stocking density (thousand prawns/ha)',
 plot(x, harvest.t, col = 'blue', xlab = 'Stocking density (thousand prawns/ha)', ylab = 'Harvest time (days)',
      type = 'l', lwd = 2, main = 'Harvest time by stocking density')
 
-
-# Profit optimization (price estimates from Tamil Nadu Agricultural University, http://agritech.tnau.ac.in/fishery/fish_freshwaterprawn.html)
-p = 140                                           # Weighted average market price of prawns, in rupees/kg 
-c = 600                                           # Cost of post-larvae, in rupees/1000 PL
-delta = -log(1-0.1)/365                           # Discount rate, equivalent to 10%/year
-profit = p*harvest*exp(-delta*(harvest.t)) - c*x  # Profit function, in terms of revenue (discounted by time to harvest) minus stocking costs 
+# Profit optimization
+profit = p*harvest*exp(-delta*(harvest.t)) - c*x
 plot(x, profit, col = 'green', xlab = 'Stocking density (thousand prawns/ha)', ylab = 'Profit (rupees/ha)',
      type = 'l', lwd = 2, main = 'Estimated profit by stocking density')
   abline(v = which.max(profit), lty = 2, lwd = 2)
