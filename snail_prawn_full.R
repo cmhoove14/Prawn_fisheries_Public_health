@@ -220,10 +220,12 @@ stocking = data.frame(var = rep(c('P', 'L'), ncycles),
 # Define PZQ administration event
 # Note: if administering before start of stocking, set time = 0 and instead set pzq.delay above
 #   to time between MDA and first stocking
-pzq = data.frame(var = rep('W', 5), 
-                 time = c(30, 395, 760, 1125, 1490), 
-                 value = rep(0.05, 5), 
-                 method = rep('mult', 5))
+pzq.admin = 5
+pzq.init = 30
+pzq = data.frame(var = rep('W', pzq.admin), 
+                 time = seq(pzq.init, pzq.init+(pzq.admin-1)*365, 365), 
+                 value = rep(0.05, pzq.admin), 
+                 method = rep('mult', pzq.admin))
 
 # Run model and calculate outcomes of interest
 output.lt = as.data.frame(ode(nstart.lt, time.lt, snail_prawn_model, parameters,
