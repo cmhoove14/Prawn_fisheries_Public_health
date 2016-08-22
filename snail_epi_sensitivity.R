@@ -6,7 +6,7 @@ require(ggplot2)
 source('snail_epi.R')
 
 #Get parameter sets to sample from #######################
-sims3 = 200
+sims3 = 100
 #snail parameters
   f.range<-seq(0.05, 0.45, length.out = sims3)
   Kn.range<-seq(20, 60, length.out = sims3)
@@ -58,6 +58,50 @@ params3<-constantparams[, -which(colnames(constantparams) %in% vars3)]
 
 #Add in sampled values of parameters of interest from above
 params.fin3<-cbind(params3, params03)  
+
+#First check scatter plots of outcomes across each parameter range ############
+  outputfill1<-matrix(ncol = length(vars3), nrow = sims3)
+  outputfill2<-matrix(ncol = length(vars3), nrow = sims3)
+  outputfill3<-matrix(ncol = length(vars3), nrow = sims3)
+  
+  for(j in 1:length(vars3)){
+    for(i in 1:sims3){
+      print(c(j, i))
+
+      other<-constantparams[, -which(colnames(constantparams) %in% vars3[j])]
+      test<-params03[, which(colnames(params03) %in% vars3[j])]
+      
+      parametersuse<-cbind(other, test) 
+      colnames(parametersuse)[dim(parametersuse)[2]]<-vars3[j]
+      
+      parameters<-parametersuse[i,]
+      
+      outputest = as.data.frame(ode(nstart, time, snail_epi, parameters))
+      outputfill1[i,j] = sum(outputest$S1[dim(outputest)[1]] + outputest$S2[dim(outputest)[1]] + outputest$S3[dim(outputest)[1]] + 
+                           outputest$E1[dim(outputest)[1]] + outputest$E2[dim(outputest)[1]] + outputest$E3[dim(outputest)[1]] + 
+                           outputest$I2[dim(outputest)[1]] + outputest$I3[dim(outputest)[1]])
+      outputfill2[i,j] = sum(outputest$I2[dim(outputest)[1]] + outputest$I3[dim(outputest)[1]])
+      outputfill3[i,j] = outputest$W[dim(outputest)[1]]
+      
+      
+    }
+    par(mfrow = c(3,1), mar = c(4,3.75,1,0.4)+0.1)
+      
+      plot(x = sort(parametersuse[,dim(parametersuse)[2]]), y = sort(outputfill1[,j]), 
+           xlab = vars3[j], ylab = 'snail pop @10 yrs',
+           pch = 16, cex = 0.75, col = 'blue', 
+           ylim = c(0,60))
+      
+      plot(x = sort(parametersuse[,dim(parametersuse)[2]]), y = sort(outputfill2[,j]), 
+           xlab = vars3[j], ylab = 'infecteds @10 yrs',
+           pch = 16, cex = 0.75, col = 'red', 
+           ylim = c(0,3))
+      
+      plot(x = sort(parametersuse[,dim(parametersuse)[2]]), y = sort(outputfill3[,j]), 
+           xlab = vars3[j], ylab = 'mean worm burden @10 yrs',
+           pch = 16, cex = 0.75, col = 'purple', 
+           ylim = c(0,120))
+  }
 
 #Run model through with parameter sets, save outcome variables and merge with params ##################
   snails<-numeric()
