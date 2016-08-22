@@ -109,6 +109,8 @@ output_s.epi$t.2 = output_s.epi$S2 + output_s.epi$E2 + + output_s.epi$I2        
 output_s.epi$t.3 = output_s.epi$S3 + output_s.epi$E3 + + output_s.epi$I3              # Total snails of size class 3
 output_s.epi$prev = pnbinom(2, size = 0.2, mu = output_s.epi$W, lower.tail = FALSE)   # Estimated prevalence, using a negative binomial dist. with k = 0.2 (fitted from EPLS data)
   
+opar<-par()
+
 plot(x = output_s.epi$time, y = output_s.epi$N.t, type = 'l', col = 'black', lwd=2, xlab = 'Time (days)', 
      ylab = 'Number of snails', ylim = c(0,max(output_s.epi$N.t)),
      main = 'Snail Size Classes')
@@ -133,3 +135,27 @@ plot(x = output_s.epi$time, y = output_s.epi$prev, type = 'l', col = 'red', lwd=
      ylab = 'Prevalence', ylim = c(0,max (output_s.epi$prev)),
      main = 'Estimated Prevalence')
 
+par(mfrow = c(3,1), mar = c(4,3.75,1,0.4)+0.1)
+
+plot(x = output_s.epi$time, y = output_s.epi$S1, type = 'l', col = 'green', lwd=2, 
+     xlab = '', ylab = 'Snail density / m^2', 
+     ylim = c(0,max(output_s.epi$S1)),
+     main = 'Snail Infection Classes, size class 1')
+  lines(output_s.epi$time, output_s.epi$E1, col = 'orange', lwd = 2)
+  legend('topright', legend = c('S', 'E', 'I'), lwd = 2, col = c('green', 'orange', 'red'), cex = 0.7)
+  
+plot(x = output_s.epi$time, y = output_s.epi$S2, type = 'l', col = 'green', lwd=2,
+     xlab = '', ylab = 'Snail density / m^2', 
+     ylim = c(0,max(output_s.epi$S2)),
+     main = 'Snail Infection Classes, size class 2')
+  lines(output_s.epi$time, output_s.epi$E2, col = 'orange', lwd = 2)
+  lines(output_s.epi$time, output_s.epi$I2, col = 'red', lwd = 2)
+  
+plot(x = output_s.epi$time, y = output_s.epi$S3, type = 'l', col = 'green', lwd=2, 
+     xlab = 'Time (days)', ylab = 'Snail density / m^2', 
+     ylim = c(0,max(output_s.epi$S3)),
+     main = 'Snail Infection Classes, size class 3')
+  lines(output_s.epi$time, output_s.epi$E3, col = 'orange', lwd = 2)
+  lines(output_s.epi$time, output_s.epi$I3, col = 'red', lwd = 2)
+
+  par(opar) #Return to default plot settings
