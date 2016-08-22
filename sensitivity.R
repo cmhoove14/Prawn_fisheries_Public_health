@@ -75,6 +75,7 @@ require(sensitivity)
     ht[i] = harvest.time
     pp[i] = output$P[output$Bt == max(output$Bt)] 
     ll[i] = output$L[output$Bt == max(output$Bt)]
+    print(c(i, hs[i], ht[i], pp[i], ll[i]))
   }
   
 #add parameters of interest to corresponding parameter sets in data frame
@@ -108,9 +109,6 @@ require(sensitivity)
          xlab = vars[i], ylab = 'Harvest size')
   }
   
-  #get rid of nonsense runs 
-    #*$*$This should be deleted once plausible parameter ranges are added
-    ph.test<-subset(ph.test, ht != 0)
   #restore original plot settings
     par(opar)
     
@@ -170,7 +168,210 @@ require(sensitivity)
     scale_y_continuous(limits = c(-1,1), breaks = c(-1,0,1))+
     geom_bar(fill = 'black', stat = 'identity', width = 0.25)+
     labs(title = 'Mean length sensitivity', x = 'Parameter', y = 'PRCC')
-
+  
+#See how stocking size and stocking density affect sensitivity ##########  
+  hs<-numeric()
+  ht<-numeric()
+  pp<-numeric()
+  ll<-numeric()
+  
+  dens.range<-seq(1000, 20000, by = 500)
+  
+  hs.fill<-matrix(nrow = ncol(LHC_indices), ncol = length(dens.range))
+  ht.fill<-matrix(nrow = ncol(LHC_indices), ncol = length(dens.range))
+  pp.fill<-matrix(nrow = ncol(LHC_indices), ncol = length(dens.range))
+  ll.fill<-matrix(nrow = ncol(LHC_indices), ncol = length(dens.range))
+  
+  area = 10000
+  time1 = seq(0, 365*2, 1)
+  for(j in 1:length(dens.range)){
+    for(i in 1:sims){
+    parameters1<-params.fin[i,]
+    nstart1= c(S1 = 3.54*area, S2 = 1.02*area, S3 = 0.22*area, 
+               E1 = 3.51*area, E2 = 1.1*area, E3 = 0.25*area, 
+               I2 = 1.13*area, I3 = 0.23*area, 
+               W = 72, 
+               P = dens.range[j]*area/10000, L = 25)
+    
+    output = as.data.frame(ode(nstart1, time1, snail_prawn_model, parameters1))
+    output$B = ((parameters['a.p']*(output$L/10)^parameters['b.p'])/10)       
+    output$Bt = output$B*output$P   
+    
+    harvest.size = output$B[output$Bt == max(output$Bt)]                      
+    harvest.time = output$time[output$Bt == max(output$Bt)]
+    
+    plot(x = output$time, y = output$P/100, col = 'red', xlab = 'Time (days)', ylab = 'State variables', 
+         type = 'l', lwd=2, xlim = c(0, max(output$time)), ylim = c(0, max(output$Bt/1000)+50),
+         main = paste('Prawn fishery dynamics\n', '(mean start size = ', as.numeric(nstart[11]), ' mm)', sep = ''))
+    lines(x = output$time, y = output$Bt/1000, col = 'blue', lwd=2)
+    lines(x = output$time, y = output$B, col = 'purple', lwd=2, lty=2)
+    lines(x = output$time, y = output$L, col = 'green', lwd=2)
+    abline(v = harvest.time, lty = 2, lwd = 2)
+    legend('topright', legend = c('Prawns (100s)', 'Total biomass (kg)', 'Mean size (g)', 'Mean length (mm)'), 
+           lty = 1, col = c('red', 'blue', 'purple', 'green'), cex = 0.5)
+    
+    hs[i] = harvest.size
+    ht[i] = harvest.time
+    pp[i] = output$P[output$Bt == max(output$Bt)] 
+    ll[i] = output$L[output$Bt == max(output$Bt)]
+    print(c(j, i, hs[i], ht[i], pp[i], ll[i]))
+    
+  #add parameters of interest to corresponding parameter sets in data frame
+    params.harvest<-as.data.frame(cbind(params.fin, hs, ht, pp, ll))
+    ph.test<-cbind(params.harvest[, -which(colnames(params.harvest) %in% colnames(params))])
+    
+    #harvest size
+    hs.pcc<-pcc(X = as.data.frame(ph.test[,c(1:length(vars))]),
+                y = as.data.frame(ph.test[,c(dim(ph.test)[2]-3)]),
+                rank = TRUE)
+    
+    hs.fill[,j]<-hs.pcc$PRCC[[1]]
+    
+    #harvest time
+    ht.pcc<-pcc(X = as.data.frame(ph.test[,c(1:length(vars))]),
+                y = as.data.frame(ph.test[,c(dim(ph.test)[2]-2)]),
+                rank = TRUE)
+    
+    ht.fill[,j]<-ht.pcc$PRCC[[1]]
+    
+    #harvest population
+    pp.pcc<-pcc(X = as.data.frame(ph.test[,c(1:length(vars))]),
+                y = as.data.frame(ph.test[,c(dim(ph.test)[2]-1)]),
+                rank = TRUE)
+    
+    pp.fill[,j]<-pp.pcc$PRCC[[1]]
+    
+    #harvest mean prawn size
+    ll.pcc<-pcc(X = as.data.frame(ph.test[,c(1:length(vars))]),
+                y = as.data.frame(ph.test[,c(dim(ph.test)[2])]),
+                rank = TRUE)
+    
+    ll.fill[,j]<-ll.pcc$PRCC[[1]]
+  }
+  
+  }
+#Post process ############  
+  plot(density(hs))
+  plot(density(ht))
+  plot(density(pp))
+  plot(density(ll))
+  
+  hsdf<-as.data.frame(hs.fill)  
+    colnames(hsdf)<-dens.range
+    hsdf$mean<-numeric(length=length(vars))
+    hsdf$sd<-numeric(length=length(vars))
+  
+  for(i in 1:nrow(hsdf)){
+    hsdf[i, length(dens.range)+1] = mean(as.numeric(hsdf[i, c(1:length(dens.range))]))
+    hsdf[i, length(dens.range)+2] = sd(as.numeric(hsdf[i, c(1:length(dens.range))]))
+  }
+    hsdf$vars<-vars
+    
+  htdf<-as.data.frame(ht.fill)  
+    colnames(htdf)<-dens.range
+    htdf$mean<-numeric(length=length(vars))
+    htdf$sd<-numeric(length=length(vars))
+    
+  for(i in 1:nrow(htdf)){
+    htdf[i, length(dens.range)+1] = mean(as.numeric(htdf[i, c(1:length(dens.range))]))
+    htdf[i, length(dens.range)+2] = sd(as.numeric(htdf[i, c(1:length(dens.range))]))
+  }
+    htdf$vars<-vars
+  
+  ppdf<-as.data.frame(pp.fill)  
+    colnames(ppdf)<-dens.range
+    ppdf$mean<-numeric(length=length(vars))
+    ppdf$sd<-numeric(length=length(vars))
+    
+  for(i in 1:nrow(ppdf)){
+    ppdf[i, length(dens.range)+1] = mean(as.numeric(ppdf[i, c(1:length(dens.range))]))
+    ppdf[i, length(dens.range)+2] = sd(as.numeric(ppdf[i, c(1:length(dens.range))]))
+  }
+    ppdf$vars<-vars
+  
+  lldf<-as.data.frame(ll.fill)  
+    colnames(lldf)<-dens.range
+    lldf$mean<-numeric(length=length(vars))
+    lldf$sd<-numeric(length=length(vars))
+    
+  for(i in 1:nrow(lldf)){
+    lldf[i, length(dens.range)+1] = mean(as.numeric(lldf[i, c(1:length(dens.range))]))
+    lldf[i, length(dens.range)+2] = sd(as.numeric(lldf[i, c(1:length(dens.range))]))
+  }
+    lldf$vars<-vars
+#Static mean +/- sd of prcc plots ############
+    ggplot(hsdf, aes(x = vars, y = mean)) +
+      theme_bw()+
+      scale_y_continuous(limits = c(-1,1), breaks = c(-1,0,1))+
+      geom_bar(fill = 'red', stat = 'identity', width = 0.25)+
+      labs(title = 'Harvest size sensitivity', x = 'Parameter', y = 'Mean +/- sd PRCC')+
+      geom_errorbar(aes(x = vars, ymin = (mean - sd), ymax = (mean + sd)), width = 0.15)
+    
+    ggplot(htdf, aes(x = vars, y = mean)) +
+      theme_bw()+
+      scale_y_continuous(limits = c(-1,1), breaks = c(-1,0,1))+
+      geom_bar(fill = 'blue', stat = 'identity', width = 0.25)+
+      labs(title = 'Harvest time sensitivity', x = 'Parameter', y = 'Mean +/- sd PRCC')+
+      geom_errorbar(aes(x = vars, ymin = (mean - sd), ymax = (mean + sd)), width = 0.15)
+    
+    ggplot(ppdf, aes(x = vars, y = mean)) +
+      theme_bw()+
+      scale_y_continuous(limits = c(-1,1), breaks = c(-1,0,1))+
+      geom_bar(fill = 'green', stat = 'identity', width = 0.25)+
+      labs(title = 'Prawn pop sensitivity', x = 'Parameter', y = 'Mean +/- sd PRCC')+
+      geom_errorbar(aes(x = vars, ymin = (mean - sd), ymax = (mean + sd)), width = 0.15)
+    
+    ggplot(lldf, aes(x = vars, y = mean)) +
+      theme_bw()+
+      scale_y_continuous(limits = c(-1,1), breaks = c(-1,0,1))+
+      geom_bar(fill = 'grey50', stat = 'identity', width = 0.25)+
+      labs(title = 'Mean length sensitivity', x = 'Parameter', y = 'Mean +/- sd PRCC')+
+      geom_errorbar(aes(x = vars, ymin = (mean - sd), ymax = (mean + sd)), width = 0.15)
+ 
+  
+    
+#See how sensitivity varies based on starting density ############
+  plot(x = as.numeric(colnames(hsdf)[c(1:length(dens.range))]), 
+       y = hsdf[1,c(1:length(dens.range))], type = 'l',
+       ylim = c(-1,1), xlab = 'Starting density', ylab = 'prcc',
+       main = 'Harvest size sensitivity over starting density')
+    for(i in 2:nrow(hsdf)){
+      lines(x = as.numeric(colnames(hsdf)[1:length(dens.range)]), 
+            y = hsdf[i,c(1:length(dens.range))], col = i)
+    }
+    legend('bottomright', legend = vars, col = c(1:8), lwd=1, cex=0.5)
+    
+  plot(x = as.numeric(colnames(htdf)[c(1:length(dens.range))]), 
+       y = htdf[1,c(1:length(dens.range))], type = 'l',
+       ylim = c(-1,1), xlab = 'Starting density', ylab = 'prcc',
+       main = 'Harvest time sensitivity over starting density')
+    for(i in 2:nrow(htdf)){
+      lines(x = as.numeric(colnames(htdf)[1:length(dens.range)]), 
+            y = htdf[i,c(1:length(dens.range))], col = i)
+    }
+    legend('bottomright', legend = vars, col = c(1:8), lwd=1, cex=0.5) 
+    
+  plot(x = as.numeric(colnames(ppdf)[c(1:length(dens.range))]), 
+       y = ppdf[1,c(1:length(dens.range))], type = 'l',
+       ylim = c(-1,1), xlab = 'Starting density', ylab = 'prcc',
+       main = 'Prawn pop at harvest sensitivity over starting density')
+    for(i in 2:nrow(ppdf)){
+      lines(x = as.numeric(colnames(ppdf)[1:length(dens.range)]), 
+            y = ppdf[i,c(1:length(dens.range))], col = i)
+    }
+    legend('bottomright', legend = vars, col = c(1:8), lwd=1, cex=0.5) 
+    
+  plot(x = as.numeric(colnames(lldf)[c(1:length(dens.range))]), 
+       y = lldf[1,c(1:length(dens.range))], type = 'l',
+       ylim = c(-1,1), xlab = 'Starting density', ylab = 'prcc',
+       main = 'Mean length at harvest sensitivity over starting density')
+    for(i in 2:nrow(lldf)){
+      lines(x = as.numeric(colnames(lldf)[1:length(dens.range)]), 
+            y = htdf[i,c(1:length(dens.range))], col = i)
+    }
+    legend('bottomright', legend = vars, col = c(1:8), lwd=1, cex=0.5) 
+    
+    
 #Assess sensitivity of infection outcomes, holding prawn dynamics constant to start ############
   source('snail_prawn_full.R') #Reset
 #check model behavior ###############
@@ -178,7 +379,8 @@ require(sensitivity)
   ncycles = 10
   nstart.lt = nstart
   nstart.lt['P'] = 0
-  nstart.lt['W'] = 15
+  nstart.lt['L'] = 0
+  nstart.lt['W'] = 72
   
   time.lt = seq(0, harvest.time*ncycles, 1)
   
@@ -241,10 +443,10 @@ require(sensitivity)
     b.s.range<-seq(parameters['b.s']/2, parameters['b.s']*2, length.out = sims2)
     g1.range<-seq(parameters['g1']/2, parameters['g1']*2, length.out = sims2)
     g2.range<-seq(parameters['g2']/2, parameters['g2']*2, length.out = sims2)
-    muN1.range<-seq(parameters['muN1']/2, parameters['muN1']*2, length.out = sims2)
-    muN2.range<-seq(parameters['muN2']/2, parameters['muN2']*2, length.out = sims2)
-    muN3.range<-seq(parameters['muN3']/2, parameters['muN3']*2, length.out = sims2)
-    muI.range<-seq(parameters['muI']/2, parameters['muI']*2, length.out = sims2)
+    muN1.range<-seq(parameters['muN1']/1.2, parameters['muN1']*1.2, length.out = sims2)
+    muN2.range<-seq(parameters['muN2']/1.2, parameters['muN2']*1.2, length.out = sims2)
+    muN3.range<-seq(parameters['muN3']/1.2, parameters['muN3']*1.2, length.out = sims2)
+    muI.range<-seq(parameters['muI']/1.2, parameters['muI']*1.2, length.out = sims2)
     s.range<-seq(parameters['s']/10, parameters['s']*10, length.out = sims2)
     beta.range<-seq(parameters['beta']/100, parameters['beta']*100, length.out = sims2)
     lambda.range<-seq(parameters['lambda']/100, parameters['lambda']*10, length.out = sims2)
@@ -330,7 +532,7 @@ require(sensitivity)
       parameters2<-params.fin2[i,]
       
       output2 = as.data.frame(ode(nstart2, time2, snail_prawn_model, parameters2,
-                                  events = list(data = stocking)))
+                                  events = list(data = rbind(stocking, pzq))))
     
     infs[i] = output2$I2[dim(output2)[1]-harvest.time.red[j]] + output2$I3[dim(output2)[1]-harvest.time.red[j]] # Total infected snails
     
@@ -348,8 +550,18 @@ require(sensitivity)
     prev[i] = pnbinom(2, size = 0.2, 
                       mu = output2$W[dim(output2)[1]-harvest.time.red[j]], 
                       lower.tail = FALSE)     # Estimated prevalence
-    print(c(infs[i], snails[i], ws[i], prev[i]))
-    
+
+  par(mfrow=c(2,1), mar = c(4,3.75,1,0.4)+0.1)  
+    plot(x = output2$time, y = (output2$S1 + output2$S2 + output2$S3 +
+                                output2$E1 + output2$E2 + output2$E3 +
+                                output2$I2 + output2$I3), 
+         type = 'l', col = 'black', lwd=2, ylab = 'Snails', xlab = 'time')
+      lines(x = output2$time, y = output2$I2, col = 'red', lwd=2)
+      
+    plot(output2$time, output2$P/100, type = 'l', lwd = 2, col = 'gold2', 
+         xlab = '', ylab = 'Prawn & worm pop') 
+      lines(x = output2$time, y = output2$W, col = 'purple', lwd=2)
+      
   #add outcome parameters of interest to corresponding parameter sets in data frame
     params.snail<-as.data.frame(cbind(params.fin2, infs, snails, ws, prev))
     ph.test2<-cbind(params.snail[, -which(colnames(params.snail) %in% colnames(params2))]) 
