@@ -220,7 +220,7 @@ vars3<-colnames(paranges3)
   time3<-seq(0, 365*50, by=1)
   
   
-  for(i in 98:sims3){
+  for(i in 1:sims3){
     print(i)
     parameters3<-params.fin3[i,]
     
