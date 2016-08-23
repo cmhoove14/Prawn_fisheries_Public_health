@@ -22,30 +22,22 @@ sims3 = 100
   sigma.range<-seq(1/25, 1/75, length.out = sims3)
   theta.range<-seq(2, 10, length.out = sims3)
   m.range<-seq(parameters['m']/10, parameters['m']*10, length.out = sims3)
+  
+  paranges3<-cbind(f=f.range, 
+                   Kn=Kn.range, 
+                   z=z.range, 
+                   g1=g1.range, 
+                   g2=g2.range, 
+                   muN1=muN1.range,
+                   muN2=muN2.range,
+                   muN3=muN3.range,
+                   muI=muI.range,
+                   beta=beta.range,
+                   lambda=lambda.range,
+                   sigma=sigma.range,
+                   theta=theta.range,
+                   m=m.range)
 
-#create a matrix of indices for the LHC where nrow=number of sims and ncol=number of variables
-  LHC_indices3<-matrix(0, nrow=sims3, ncol=14)  
-#Add structure of latin hypercube
-for(j in 1:dim(LHC_indices3)[2]){
-  LHC_indices3[,j]<-sample(1:sims3, size=sims3, replace=FALSE)
-}  
-#Fill LHC values
-params03<-cbind(f=f.range[LHC_indices3[,1]], 
-                Kn=Kn.range[LHC_indices3[,2]], 
-                z=z.range[LHC_indices3[,3]], 
-                g1=g1.range[LHC_indices3[,4]], 
-                g2=g2.range[LHC_indices3[,5]], 
-                muN1=muN1.range[LHC_indices3[,6]],
-                muN2=muN2.range[LHC_indices3[,7]],
-                muN3=muN3.range[LHC_indices3[,8]],
-                muI=muI.range[LHC_indices3[,9]],
-                beta=beta.range[LHC_indices3[,10]],
-                lambda=lambda.range[LHC_indices3[,11]],
-                sigma=sigma.range[LHC_indices3[,12]],
-                theta=theta.range[LHC_indices3[,13]],
-                m=m.range[LHC_indices3[,14]])
-
-#Hold all other parameters constant  
 constantparams<-matrix(ncol = length(parameters), nrow = sims3)
 
 for(i in 1:length(parameters)){
@@ -53,11 +45,7 @@ for(i in 1:length(parameters)){
 }
 
 colnames(constantparams)<-names(parameters)
-vars3<-colnames(params03)
-params3<-constantparams[, -which(colnames(constantparams) %in% vars3)]
-
-#Add in sampled values of parameters of interest from above
-params.fin3<-cbind(params3, params03)  
+vars3<-colnames(paranges3)
 
 #First check scatter plots of outcomes across each parameter range ############
   #i.e. check for monotinicity
@@ -65,19 +53,30 @@ params.fin3<-cbind(params3, params03)
   outputfill2<-matrix(ncol = length(vars3), nrow = sims3)
   outputfill3<-matrix(ncol = length(vars3), nrow = sims3)
   
+  nstart3 = c(S1 = snailepiq$S1, S2 = snailepiq$S2, S3 = snailepiq$S3, 
+              E1 = snailepiq$E1, E2 = snailepiq$E2, E3 = snailepiq$E3, 
+              I2 = snailepiq$I2, I3 = snailepiq$I3, W = snailepiq$W)
+  
   for(j in 1:length(vars3)){
     for(i in 1:sims3){
       print(c(j, i))
 
       other<-constantparams[, -which(colnames(constantparams) %in% vars3[j])]
-      test<-params03[, which(colnames(params03) %in% vars3[j])]
+      test<-paranges3[, which(colnames(paranges3) %in% vars3[j])]
       
       parametersuse<-cbind(other, test) 
       colnames(parametersuse)[dim(parametersuse)[2]]<-vars3[j]
       
-      parameters<-parametersuse[i,]
+      parameters3<-parametersuse[i,]
       
-      outputest = as.data.frame(ode(nstart, time, snail_epi, parameters))
+      outputest = as.data.frame(ode(nstart3, time, snail_epi, parameters3))
+        
+        #par(opar)
+        #plot(outputest$time, (outputest$S1 + outputest$S2 + outputest$S3 +
+         #                     outputest$E1 + outputest$E2 + outputest$E3 +
+          #                    outputest$I2 + outputest$I3), type = 'l', lwd=2,
+           #  ylab = 'total snail pop', xlab = 'time (days)', ylim = c(0,60))
+      
       outputfill1[i,j] = sum(outputest$S1[dim(outputest)[1]] + outputest$S2[dim(outputest)[1]] + outputest$S3[dim(outputest)[1]] + 
                            outputest$E1[dim(outputest)[1]] + outputest$E2[dim(outputest)[1]] + outputest$E3[dim(outputest)[1]] + 
                            outputest$I2[dim(outputest)[1]] + outputest$I3[dim(outputest)[1]])
@@ -88,22 +87,130 @@ params.fin3<-cbind(params3, params03)
     }
     par(mfrow = c(3,1), mar = c(4,3.75,1,0.4)+0.1)
       
-      plot(x = sort(parametersuse[,dim(parametersuse)[2]]), y = sort(outputfill1[,j]), 
+      plot(x = parametersuse[,dim(parametersuse)[2]], y = outputfill1[,j], 
            xlab = vars3[j], ylab = 'snail pop @10 yrs',
            pch = 16, cex = 0.75, col = 'blue', 
            ylim = c(0,60))
       
-      plot(x = sort(parametersuse[,dim(parametersuse)[2]]), y = sort(outputfill2[,j]), 
+      plot(x = parametersuse[,dim(parametersuse)[2]], y = outputfill2[,j], 
            xlab = vars3[j], ylab = 'infecteds @10 yrs',
            pch = 16, cex = 0.75, col = 'red', 
            ylim = c(0,3))
       
-      plot(x = sort(parametersuse[,dim(parametersuse)[2]]), y = sort(outputfill3[,j]), 
+      plot(x = parametersuse[,dim(parametersuse)[2]], y = outputfill3[,j], 
            xlab = vars3[j], ylab = 'mean worm burden @10 yrs',
            pch = 16, cex = 0.75, col = 'purple', 
            ylim = c(0,120))
   }
-
+  
+#Update parameter ranges ########
+  #reprodction rate was too low
+    f.range<-seq(0.1, max(f.range), length.out = sims3)
+  #beta was all over the place but appears as though range below might be most feasible
+    beta.range<-seq(6e-7, 5e-6)
+  #m was also all over the place, try the range below
+    m.range<-seq(0.25, 2, length.out = sims3)  
+  #lambda was close to monotonic but had a slight rise at the beginning, so change its lower value
+    lambda.range<-seq(0.012, 0.2, length.out = sims3)
+    
+#Re-run code above to update monotinicity plots and re-verify monotinicity before running code below ##############
+    paranges3<-cbind(f=f.range, 
+                     Kn=Kn.range, 
+                     z=z.range, 
+                     g1=g1.range, 
+                     g2=g2.range, 
+                     muN1=muN1.range,
+                     muN2=muN2.range,
+                     muN3=muN3.range,
+                     muI=muI.range,
+                     beta=beta.range,
+                     lambda=lambda.range,
+                     sigma=sigma.range,
+                     theta=theta.range,
+                     m=m.range)
+    
+    outputfill1<-matrix(ncol = length(vars3), nrow = sims3)
+    outputfill2<-matrix(ncol = length(vars3), nrow = sims3)
+    outputfill3<-matrix(ncol = length(vars3), nrow = sims3)
+    
+    nstart3 = c(S1 = snailepiq$S1, S2 = snailepiq$S2, S3 = snailepiq$S3, 
+                E1 = snailepiq$E1, E2 = snailepiq$E2, E3 = snailepiq$E3, 
+                I2 = snailepiq$I2, I3 = snailepiq$I3, W = snailepiq$W)
+    
+    for(j in 1:length(vars3)){
+      for(i in 1:sims3){
+        print(c(j, i))
+        
+        other<-constantparams[, -which(colnames(constantparams) %in% vars3[j])]
+        test<-paranges3[, which(colnames(paranges3) %in% vars3[j])]
+        
+        parametersuse<-cbind(other, test) 
+        colnames(parametersuse)[dim(parametersuse)[2]]<-vars3[j]
+        
+        parameters3<-parametersuse[i,]
+        
+        outputest = as.data.frame(ode(nstart3, time, snail_epi, parameters3))
+        
+        #par(opar)
+        #plot(outputest$time, (outputest$S1 + outputest$S2 + outputest$S3 +
+        #                     outputest$E1 + outputest$E2 + outputest$E3 +
+        #                    outputest$I2 + outputest$I3), type = 'l', lwd=2,
+        #  ylab = 'total snail pop', xlab = 'time (days)', ylim = c(0,60))
+        
+        outputfill1[i,j] = sum(outputest$S1[dim(outputest)[1]] + outputest$S2[dim(outputest)[1]] + outputest$S3[dim(outputest)[1]] + 
+                                 outputest$E1[dim(outputest)[1]] + outputest$E2[dim(outputest)[1]] + outputest$E3[dim(outputest)[1]] + 
+                                 outputest$I2[dim(outputest)[1]] + outputest$I3[dim(outputest)[1]])
+        outputfill2[i,j] = sum(outputest$I2[dim(outputest)[1]] + outputest$I3[dim(outputest)[1]])
+        outputfill3[i,j] = outputest$W[dim(outputest)[1]]
+        
+        
+      }
+      par(mfrow = c(3,1), mar = c(4,3.75,1,0.4)+0.1)
+      
+      plot(x = parametersuse[,dim(parametersuse)[2]], y = outputfill1[,j], 
+           xlab = vars3[j], ylab = 'snail pop @10 yrs',
+           pch = 16, cex = 0.75, col = 'blue', 
+           ylim = c(0,60))
+      
+      plot(x = parametersuse[,dim(parametersuse)[2]], y = outputfill2[,j], 
+           xlab = vars3[j], ylab = 'infecteds @10 yrs',
+           pch = 16, cex = 0.75, col = 'red', 
+           ylim = c(0,3))
+      
+      plot(x = parametersuse[,dim(parametersuse)[2]], y = outputfill3[,j], 
+           xlab = vars3[j], ylab = 'mean worm burden @10 yrs',
+           pch = 16, cex = 0.75, col = 'purple', 
+           ylim = c(0,120))
+    }
+    
+#Augment LHc ##########
+#create a matrix of indices for the LHC where nrow=number of sims and ncol=number of variables
+  LHC_indices3<-matrix(0, nrow=sims3, ncol=14)  
+#Add structure of latin hypercube
+  for(j in 1:dim(LHC_indices3)[2]){
+    LHC_indices3[,j]<-sample(1:sims3, size=sims3, replace=FALSE)
+  }  
+#Fill LHC values
+  params03<-cbind(f=f.range[LHC_indices3[,1]], 
+                  Kn=Kn.range[LHC_indices3[,2]], 
+                  z=z.range[LHC_indices3[,3]], 
+                  g1=g1.range[LHC_indices3[,4]], 
+                  g2=g2.range[LHC_indices3[,5]], 
+                  muN1=muN1.range[LHC_indices3[,6]],
+                  muN2=muN2.range[LHC_indices3[,7]],
+                  muN3=muN3.range[LHC_indices3[,8]],
+                  muI=muI.range[LHC_indices3[,9]],
+                  beta=beta.range[LHC_indices3[,10]],
+                  lambda=lambda.range[LHC_indices3[,11]],
+                  sigma=sigma.range[LHC_indices3[,12]],
+                  theta=theta.range[LHC_indices3[,13]],
+                  m=m.range[LHC_indices3[,14]])
+  
+  params3<-constantparams[, -which(colnames(constantparams) %in% vars3)]
+  
+  #Add in sampled values of parameters of interest from above
+  params.fin3<-cbind(params3, params03)  
+  
 #Run model through with parameter sets, save outcome variables and merge with params ##################
   snails<-numeric()
   infs<-numeric()

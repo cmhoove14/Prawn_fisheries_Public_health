@@ -100,6 +100,9 @@ parameters=c(
 
 # Run & plot
 output_s.epi = as.data.frame(ode(nstart,time,snail_epi,parameters))
+
+  snailepiq<-output_s.epi[dim(output_s.epi)[1],] #save equilibrium values
+
 output_s.epi$S.t = output_s.epi$S1 + output_s.epi$S2 + output_s.epi$S3                # Total susceptible snails
 output_s.epi$E.t = output_s.epi$E1 + output_s.epi$E2 + output_s.epi$E3                # Total exposed snails 
 output_s.epi$I.t = output_s.epi$I2 + output_s.epi$I3                                  # Total infected snails

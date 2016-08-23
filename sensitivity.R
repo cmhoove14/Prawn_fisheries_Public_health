@@ -118,7 +118,7 @@ require(sensitivity)
     
   #Add in sampled values of parameters of interest from above
     params.fin<-cbind(params, params00)  
-#Run model through with parameter sets from above ######################
+#Run model through with parameter sets from latin hypercube ######################
   hs<-numeric()
   ht<-numeric()
   pp<-numeric()
@@ -238,7 +238,9 @@ require(sensitivity)
     geom_bar(fill = 'black', stat = 'identity', width = 0.25)+
     labs(title = 'Mean length sensitivity', x = 'Parameter', y = 'PRCC')
   
-#See how stocking size and stocking density affect sensitivity ##########  
+  
+  
+#See how stocking size affects sensitivity ##########  
   hs<-numeric()
   ht<-numeric()
   pp<-numeric()
@@ -253,6 +255,7 @@ require(sensitivity)
   
   area = 10000
   time1 = seq(0, 365*2, 1)
+  
   for(j in 1:length(dens.range)){
     for(i in 1:sims){
     parameters1<-params.fin[i,]
@@ -268,16 +271,6 @@ require(sensitivity)
     
     harvest.size = output$B[output$Bt == max(output$Bt)]                      
     harvest.time = output$time[output$Bt == max(output$Bt)]
-    
-    plot(x = output$time, y = output$P/100, col = 'red', xlab = 'Time (days)', ylab = 'State variables', 
-         type = 'l', lwd=2, xlim = c(0, max(output$time)), ylim = c(0, max(output$Bt/1000)+50),
-         main = paste('Prawn fishery dynamics\n', '(mean start size = ', as.numeric(nstart[11]), ' mm)', sep = ''))
-    lines(x = output$time, y = output$Bt/1000, col = 'blue', lwd=2)
-    lines(x = output$time, y = output$B, col = 'purple', lwd=2, lty=2)
-    lines(x = output$time, y = output$L, col = 'green', lwd=2)
-    abline(v = harvest.time, lty = 2, lwd = 2)
-    legend('topright', legend = c('Prawns (100s)', 'Total biomass (kg)', 'Mean size (g)', 'Mean length (mm)'), 
-           lty = 1, col = c('red', 'blue', 'purple', 'green'), cex = 0.5)
     
     hs[i] = harvest.size
     ht[i] = harvest.time
@@ -318,13 +311,8 @@ require(sensitivity)
     ll.fill[,j]<-ll.pcc$PRCC[[1]]
   }
   
-  }
+}
 #Post process ############  
-  plot(density(hs))
-  plot(density(ht))
-  plot(density(pp))
-  plot(density(ll))
-  
   hsdf<-as.data.frame(hs.fill)  
     colnames(hsdf)<-dens.range
     hsdf$mean<-numeric(length=length(vars))
@@ -401,42 +389,42 @@ require(sensitivity)
     
 #See how sensitivity varies based on starting density ############
   plot(x = as.numeric(colnames(hsdf)[c(1:length(dens.range))]), 
-       y = hsdf[1,c(1:length(dens.range))], type = 'l',
+       y = hsdf[1,c(1:length(dens.range))], type = 'l', lwd = 2,
        ylim = c(-1,1), xlab = 'Starting density', ylab = 'prcc',
        main = 'Harvest size sensitivity over starting density')
     for(i in 2:nrow(hsdf)){
       lines(x = as.numeric(colnames(hsdf)[1:length(dens.range)]), 
-            y = hsdf[i,c(1:length(dens.range))], col = i)
+            y = hsdf[i,c(1:length(dens.range))], col = i, lwd = 2)
     }
     legend('bottomright', legend = vars, col = c(1:8), lwd=1, cex=0.5)
     
   plot(x = as.numeric(colnames(htdf)[c(1:length(dens.range))]), 
-       y = htdf[1,c(1:length(dens.range))], type = 'l',
+       y = htdf[1,c(1:length(dens.range))], type = 'l', lwd = 2,
        ylim = c(-1,1), xlab = 'Starting density', ylab = 'prcc',
        main = 'Harvest time sensitivity over starting density')
     for(i in 2:nrow(htdf)){
       lines(x = as.numeric(colnames(htdf)[1:length(dens.range)]), 
-            y = htdf[i,c(1:length(dens.range))], col = i)
+            y = htdf[i,c(1:length(dens.range))], col = i, lwd = 2)
     }
     legend('bottomright', legend = vars, col = c(1:8), lwd=1, cex=0.5) 
     
   plot(x = as.numeric(colnames(ppdf)[c(1:length(dens.range))]), 
-       y = ppdf[1,c(1:length(dens.range))], type = 'l',
+       y = ppdf[1,c(1:length(dens.range))], type = 'l', lwd = 2,
        ylim = c(-1,1), xlab = 'Starting density', ylab = 'prcc',
        main = 'Prawn pop at harvest sensitivity over starting density')
     for(i in 2:nrow(ppdf)){
       lines(x = as.numeric(colnames(ppdf)[1:length(dens.range)]), 
-            y = ppdf[i,c(1:length(dens.range))], col = i)
+            y = ppdf[i,c(1:length(dens.range))], col = i, lwd = 2)
     }
     legend('bottomright', legend = vars, col = c(1:8), lwd=1, cex=0.5) 
     
   plot(x = as.numeric(colnames(lldf)[c(1:length(dens.range))]), 
-       y = lldf[1,c(1:length(dens.range))], type = 'l',
+       y = lldf[1,c(1:length(dens.range))], type = 'l', lwd = 2,
        ylim = c(-1,1), xlab = 'Starting density', ylab = 'prcc',
        main = 'Mean length at harvest sensitivity over starting density')
     for(i in 2:nrow(lldf)){
       lines(x = as.numeric(colnames(lldf)[1:length(dens.range)]), 
-            y = htdf[i,c(1:length(dens.range))], col = i)
+            y = htdf[i,c(1:length(dens.range))], col = i, lwd = 2)
     }
     legend('bottomright', legend = vars, col = c(1:8), lwd=1, cex=0.5) 
     
