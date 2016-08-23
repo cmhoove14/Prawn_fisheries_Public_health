@@ -216,18 +216,11 @@ vars3<-colnames(paranges3)
   infs<-numeric()
   ws<-numeric()
 
-  time3<-seq(0, 365*20, by=1)
-  nstart3= c(S1 = 10*area, 
-             S2 = 0, 
-             S3 = 0, 
-             E1 = 0, 
-             E2 = 0, 
-             E3 = 0, 
-             I2 = 0, 
-             I3 = 0, 
-             W = 2)
+  #Increase time substantially to make sure equilibrium is reached
+  time3<-seq(0, 365*50, by=1)
   
-  for(i in 1:sims3){
+  
+  for(i in 98:sims3){
     print(i)
     parameters3<-params.fin3[i,]
     
@@ -235,7 +228,8 @@ vars3<-colnames(paranges3)
     
     plot(output3$time, (output3$S1 + output3$S2 + output3$S3 + 
                         output3$E1 + output3$E2 + output3$E3 + 
-                        output3$I2 + output3$I3), type = 'l', lwd=2, xlab = 'time', ylab = 'snails')
+                        output3$I2 + output3$I3), type = 'l', lwd=2, ylim = c(0,60),
+         xlab = 'time', ylab = 'snails')
       lines(output3$time, (output3$I2 + output3$I3), col = 'red', lwd = 2)
     
     snails[i] = sum(output3$S1[dim(output3)[1]], output3$S2[dim(output3)[1]], output3$S3[dim(output3)[1]], 
@@ -258,7 +252,7 @@ vars3<-colnames(paranges3)
   par(mfrow = c(2,7), mar = c(4,3.75,1,0.4)+0.1)
   
   for(i in 1:length(vars3)){
-    plot(x = snail.test[,i], y = snail.test[,dim(snail.test)[2]], pch = 16, col = 'black', cex = 0.7,
+    plot(x = snail.test[,i], y = snail.test[,dim(snail.test)[2]-2], pch = 16, col = 'black', cex = 0.7,
          xlab = vars3[i], ylab = 'Snail population')
   }
   
@@ -268,6 +262,50 @@ vars3<-colnames(paranges3)
   }
   
   for(i in 1:length(vars3)){
-    plot(x = snail.test[,i], y = snail.test[,dim(snail.test)[2]-2], pch = 16, col = 'purple', cex = 0.7,
+    plot(x = snail.test[,i], y = snail.test[,dim(snail.test)[2]], pch = 16, col = 'purple', cex = 0.7,
          xlab = vars3[i], ylab = 'Mean worm burden')
   }
+  
+#Formally analyze with PRCC ##################  
+  #snail population prcc    
+  snailspcc<-pcc(X = as.data.frame(snail.test[,c(1:length(vars3))]),
+                 y = as.data.frame(snail.test[,c(dim(snail.test)[2]-2)]),
+                 rank = TRUE)
+  
+  snail.pcc.df<-snailspcc$PRCC
+  snail.pcc.df$var = vars3
+
+  ggplot(snail.pcc.df, aes(x = var, y = original)) +
+    theme_bw()+
+    scale_y_continuous(limits = c(-1,1), breaks = c(-1,0,1))+
+    geom_bar(fill = 'grey50', stat = 'identity', width = 0.25)+
+    labs(title = 'Snail population sensitivity', x = 'Parameter', y = 'PRCC')
+
+  #infecteds prcc    
+  infspcc<-pcc(X = as.data.frame(snail.test[,c(1:length(vars3))]),
+               y = as.data.frame(snail.test[,c(dim(snail.test)[2]-1)]),
+               rank = TRUE)
+  
+  infs.pcc.df<-infspcc$PRCC
+  infs.pcc.df$var = vars3
+  
+  ggplot(infs.pcc.df, aes(x = var, y = original)) +
+    theme_bw()+
+    scale_y_continuous(limits = c(-1,1), breaks = c(-1,0,1))+
+    geom_bar(fill = 'red', stat = 'identity', width = 0.25)+
+    labs(title = 'Infecteds sensitivity', x = 'Parameter', y = 'PRCC')
+  
+  #worm burden prcc    
+  wspcc<-pcc(X = as.data.frame(snail.test[,c(1:length(vars3))]),
+             y = as.data.frame(snail.test[,c(dim(snail.test)[2])]),
+             rank = TRUE)
+  
+  ws.pcc.df<-wspcc$PRCC
+  ws.pcc.df$var = vars3
+  
+  ggplot(ws.pcc.df, aes(x = var, y = original)) +
+    theme_bw()+
+    scale_y_continuous(limits = c(-1,1), breaks = c(-1,0,1))+
+    geom_bar(fill = 'purple', stat = 'identity', width = 0.25)+
+    labs(title = 'Mean worm burden sensitivity', x = 'Parameter', y = 'PRCC')
+  
