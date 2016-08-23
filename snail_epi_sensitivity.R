@@ -60,6 +60,7 @@ params3<-constantparams[, -which(colnames(constantparams) %in% vars3)]
 params.fin3<-cbind(params3, params03)  
 
 #First check scatter plots of outcomes across each parameter range ############
+  #i.e. check for monotinicity
   outputfill1<-matrix(ncol = length(vars3), nrow = sims3)
   outputfill2<-matrix(ncol = length(vars3), nrow = sims3)
   outputfill3<-matrix(ncol = length(vars3), nrow = sims3)

@@ -5,7 +5,7 @@ require(sensitivity)
 #Start with parameters that affect prawn aquaculture dynamics ##################
   #Note: these parameter ranges are completely arbitrary;
   #should be updated with more informed max/min values and plausible distributions
-  sims=500
+  sims=250
 
 #Prawn parameters
   a.p.range<-seq(parameters['a.p']-0.03, parameters['a.p']+0.03, length.out = sims)
@@ -17,23 +17,15 @@ require(sensitivity)
   phi.range<-seq(parameters['phi']/100, parameters['phi']*100, length.out = sims)
   gam.range<-seq(parameters['gam']/100, parameters['gam']*100, length.out = sims)
   
+  paranges<-cbind(a.p=a.p.range, 
+                  b.p=b.p.range, 
+                  k=k.range, 
+                  linf=linf.range, 
+                  muP=muP.range, 
+                  d=d.range, 
+                  gam=gam.range, 
+                  phi=phi.range)
   
-#create a matrix of indices for the LHC where nrow=number of sims and ncol=number of variables
-  LHC_indices<-matrix(0, nrow=sims, ncol=8)  
-#Add structure of latin hypercube
-  for(j in 1:dim(LHC_indices)[2]){
-    LHC_indices[,j]<-sample(1:sims, size=sims, replace=FALSE)
-  }  
-#Fill LHC values
-  params00<-cbind(a.p=a.p.range[LHC_indices[,1]], 
-                  b.p=b.p.range[LHC_indices[,2]], 
-                  k=k.range[LHC_indices[,3]], 
-                  linf=linf.range[LHC_indices[,4]], 
-                  muP=muP.range[LHC_indices[,5]], 
-                  d=d.range[LHC_indices[,6]], 
-                  gam=gam.range[LHC_indices[,7]], 
-                  phi=phi.range[LHC_indices[,8]])
-
 #Hold all other parameters constant  
   constantparams<-matrix(ncol = length(parameters), nrow = sims)
   
@@ -42,13 +34,90 @@ require(sensitivity)
   }
   
   colnames(constantparams)<-names(parameters)
-  vars<-colnames(params00)
-  params<-constantparams[, -which(colnames(constantparams) %in% vars)]
+  vars<-colnames(paranges)
 
-#Add in sampled values of parameters of interest from above
-  params.fin<-cbind(params, params00)
-#This provides a data frame to sample from to assess the POIs from above  
+#First check for monotinicity between variables and outcomes #########
+  outputfill1<-matrix(ncol = length(vars), nrow = sims)
+  outputfill2<-matrix(ncol = length(vars), nrow = sims)
+  outputfill3<-matrix(ncol = length(vars), nrow = sims)
+  outputfill4<-matrix(ncol = length(vars), nrow = sims)
   
+  
+  for(j in 1:length(vars)){
+    for(i in 1:sims){
+      print(c(j, i))
+      
+      other<-constantparams[, -which(colnames(constantparams) %in% vars[j])]
+      test<-paranges[, which(colnames(paranges) %in% vars[j])]
+      
+      parametersuse<-cbind(other, test) 
+      colnames(parametersuse)[dim(parametersuse)[2]]<-vars[j]
+      
+      parameters1<-parametersuse[i,]
+      
+      output = as.data.frame(ode(nstart, time, snail_prawn_model, parameters1))
+      output$B = ((parameters['a.p']*(output$L/10)^parameters['b.p'])/10)       
+      output$Bt = output$B*output$P                                             
+      harvest.size = output$B[output$Bt == max(output$Bt)]                      
+      harvest.time = output$time[output$Bt == max(output$Bt)]    
+      outputfill1[i,j] = harvest.size
+      outputfill2[i,j] = harvest.time
+      outputfill3[i,j] = output$P[output$Bt == max(output$Bt)] 
+      outputfill4[i,j] = output$L[output$Bt == max(output$Bt)]
+      print(c(i, j, outputfill1[i,j], outputfill2[i,j],  outputfill3[i,j], outputfill4[i,j]))
+      
+      
+    }
+    par(mfrow = c(4,1), mar = c(4,3.75,1,0.4)+0.1)
+    
+    plot(x = parametersuse[,dim(parametersuse)[2]], y = outputfill1[,j], 
+         xlab = vars[j], ylab = 'harvest size',
+         pch = 16, cex = 0.75, col = 'red', 
+         ylim = c(0,120))
+    
+    plot(x = parametersuse[,dim(parametersuse)[2]], y = outputfill2[,j], 
+         xlab = vars[j], ylab = 'harvest time',
+         pch = 16, cex = 0.75, col = 'blue', 
+         ylim = c(0,365*2))
+    
+    plot(x = parametersuse[,dim(parametersuse)[2]], y = outputfill3[,j], 
+         xlab = vars[j], ylab = 'Population at harvest',
+         pch = 16, cex = 0.75, col = 'green', 
+         ylim = c(0,5000))
+    
+    plot(x = parametersuse[,dim(parametersuse)[2]], y = outputfill4[,j], 
+         xlab = vars[j], ylab = 'Mean size at harvest',
+         pch = 16, cex = 0.75, col = 'grey50', 
+         ylim = c(0,150))
+  }
+  
+#Change parameter ranges based on results from above ###########
+  #make k range from 0.02 to previous max
+    k.range<-seq(0.02, max(k.range), length.out = sims)
+  #make d range from -3 to -0.03
+    d.range<-seq(-3, -0.03, length.out = sims)
+
+#Augment latin hypercube to sample from ###########
+  #create a matrix of indices for the LHC where nrow=number of sims and ncol=number of variables
+    LHC_indices<-matrix(0, nrow=sims, ncol=8)  
+  #Add structure of latin hypercube
+    for(j in 1:dim(LHC_indices)[2]){
+      LHC_indices[,j]<-sample(1:sims, size=sims, replace=FALSE)
+    }  
+  #Fill LHC values
+    params00<-cbind(a.p=a.p.range[LHC_indices[,1]], 
+                    b.p=b.p.range[LHC_indices[,2]], 
+                    k=k.range[LHC_indices[,3]], 
+                    linf=linf.range[LHC_indices[,4]], 
+                    muP=muP.range[LHC_indices[,5]], 
+                    d=d.range[LHC_indices[,6]], 
+                    gam=gam.range[LHC_indices[,7]], 
+                    phi=phi.range[LHC_indices[,8]])
+    
+  params<-constantparams[, -which(colnames(constantparams) %in% vars)]
+    
+  #Add in sampled values of parameters of interest from above
+    params.fin<-cbind(params, params00)  
 #Run model through with parameter sets from above ######################
   hs<-numeric()
   ht<-numeric()
@@ -115,7 +184,7 @@ require(sensitivity)
 #Formally analyze sensitivity of harvest time and size using PRCC ############
 #harvest time prcc    
   ht.pcc<-pcc(X = as.data.frame(ph.test[,c(1:length(vars))]),
-              y = as.data.frame(ph.test[,c(dim(ph.test)[2])]),
+              y = as.data.frame(ph.test[,c(dim(ph.test)[2]-2)]),
               rank = TRUE)
   
   ht.pcc.df<-ht.pcc$PRCC
@@ -129,7 +198,7 @@ require(sensitivity)
   
 #harvest size prcc    
   hs.pcc<-pcc(X = as.data.frame(ph.test[,c(1:length(vars))]),
-              y = as.data.frame(ph.test[,c(dim(ph.test)[2]-1)]),
+              y = as.data.frame(ph.test[,c(dim(ph.test)[2]-3)]),
               rank = TRUE)
   
   hs.pcc.df<-hs.pcc$PRCC
@@ -157,7 +226,7 @@ require(sensitivity)
 
 #mean length prcc
   ll.pcc<-pcc(X = as.data.frame(ph.test[,c(1:length(vars))]),
-              y = as.data.frame(ph.test[,c(dim(ph.test)[2]-1)]),
+              y = as.data.frame(ph.test[,c(dim(ph.test)[2])]),
               rank = TRUE)
   
   ll.pcc.df<-ll.pcc$PRCC
