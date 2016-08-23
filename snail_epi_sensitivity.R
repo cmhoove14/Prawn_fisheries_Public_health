@@ -107,7 +107,7 @@ vars3<-colnames(paranges3)
   #reprodction rate was too low
     f.range<-seq(0.1, max(f.range), length.out = sims3)
   #beta was all over the place but appears as though range below might be most feasible
-    beta.range<-seq(6e-7, 5e-6)
+    beta.range<-seq(6e-7, 5e-6, length.out = sims3)
   #m was also all over the place, try the range below
     m.range<-seq(0.25, 2, length.out = sims3)  
   #lambda was close to monotonic but had a slight rise at the beginning, so change its lower value
@@ -136,8 +136,8 @@ vars3<-colnames(paranges3)
     nstart3 = c(S1 = snailepiq$S1, S2 = snailepiq$S2, S3 = snailepiq$S3, 
                 E1 = snailepiq$E1, E2 = snailepiq$E2, E3 = snailepiq$E3, 
                 I2 = snailepiq$I2, I3 = snailepiq$I3, W = snailepiq$W)
-    
-    for(j in 1:length(vars3)){
+#just run parameters that were updated    
+    for(j in c(1,10,11,14)){
       for(i in 1:sims3){
         print(c(j, i))
         
