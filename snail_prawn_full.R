@@ -8,6 +8,8 @@
     # Incorporate seasonality?
 
 require(deSolve)
+require(cowplot)
+require(scales)
 
 snail_prawn_model = function(t, n, parameters) { 
   with(as.list(parameters),{
@@ -205,7 +207,7 @@ legend('bottomright', legend = c(paste('Starting mass =', round(start.mass.kg), 
 # Default settings: harvest.time = optimal, ncycles = 15 (~10 years @ 8 months/cycle)
 # Gates settings: harvest.time = 4 months, ncycles = 3 (1 year)
 harvest.time = harvest.time
-ncycles = 15
+ncycles = 10
 pzq.delay = 0
 nstart.lt = nstart
 nstart.lt['P'] = 0
@@ -274,7 +276,7 @@ plot(x = output.lt$time, y = output.lt$prev, type = 'l', col = 'red', lwd=2, xla
 #  NOTE: set parameters and initial values first!
 
 # Run the model over the desired range of stocking densities (in thousands of post-larvae)
-x = c(0:30)
+x = c(0:50)
 nstart.sd = nstart
 time.sd = seq(0, 500, 1)
 harvest = numeric(length(x))
@@ -342,5 +344,44 @@ mtext(side = 4, line = 3, 'Mean worm burden')
 legend('topright', legend = c('Profit', 'Mean worm burden'), lty = 1, col = c('green', 'red'), cex = 0.7)
 
 
+
+## Plots for publication
+
+# Plot the course of the aquaculture cycle
+plot.length = ggplot(output) + geom_line(aes(x=time/30, y=L/10)) + 
+              theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(), axis.title.x = element_blank()) + 
+              ylab("Length (cm)")
+plot.weight = ggplot(output) + geom_line(aes(x=time/30, y=B)) + 
+              xlab("Time (months)") + ylab("Weight (g)")
+plot.prawns = ggplot(output) + geom_line(aes(x=time/30, y=P)) + 
+              theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(), axis.title.x = element_blank()) + 
+              ylab("Number of prawns")
+plot.biomass = ggplot(output) + geom_line(aes(x=time/30, y=Bt/1000)) + 
+               xlab("Time (months)") + ylab("Total biomass (kg)")
+plot_grid(plot.length, plot.prawns, plot.weight, plot.biomass, labels = c('A', 'B', 'C', 'D'), align = 'hv')
+
+# Plot curves for optimal harvest size and time by stocking density
+plot.hsize = ggplot() + geom_line(aes(x=x, y=harvest)) + 
+             xlab("Stocking density (thousand prawns/ha)") + ylab("Optimal harvest size (kg)")
+plot.htime = ggplot() + geom_line(aes(x=x[-1], y=harvest.t[-1])) + 
+             xlab("Stocking density (thousand prawns/ha)") + ylab("Optimal harvest time (days)") + ylim(c(0, 250))
+plot_grid(plot.hsize, plot.htime, labels = c('A', 'B'), align = 'hv')
+
+# Plot optimal profit curve
+plot.profit = ggplot() + geom_line(aes(x=x, y=profit)) + geom_vline(xintercept = which.max(profit)-1, linetype = "dashed") +
+              theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(), axis.title.x = element_blank()) + 
+              ylab("Profit (rupees)") + ylim(c(0, max(profit)))
+plot.snails = ggplot() + geom_line(aes(x=x, y=snails)) + geom_vline(xintercept = which.max(profit)-1, linetype = "dashed") +
+              xlab("Stocking density (thousand prawns/ha)") + ylab("Number of snails") +
+              scale_y_continuous(labels = comma)
+plot_grid(plot.profit, plot.snails, labels = c('B', 'D'), align = 'hv', ncol = 1)
+
+# Plot snail population and prevalence over 10 aquaculture cycles
+plot.snails10 = ggplot(output.lt) + geom_line(aes(x=time/30, y=N.t)) + geom_line(aes(x=time/30, y=E.t+I.t), linetype = "dashed") + 
+                xlab("Time (months)") + ylab("Number of snails") +
+                scale_y_continuous(labels = comma)
+plot.prev = ggplot(output.lt) + geom_line(aes(x=time/30, y=prev)) +
+            xlab("Time (months)") + ylab("Prevalence") + ylim(c(0, max(output.lt$prev)))
+plot_grid(plot.snails10, plot.prev, labels = c('A', 'B'), align = 'hv')
 
 
