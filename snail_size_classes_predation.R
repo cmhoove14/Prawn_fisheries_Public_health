@@ -69,7 +69,7 @@ snail_size_predation = function(t, n, parameters) {
 nstart = c(S1 = 4000, S2 = 2000, S3 = 2000)
 time = seq(0, 365*2, 1)
 
-parameters=c(
+par.all=c(
   # Prawn model parameters
   P = 50,        # Number of prawns, currently held constant
   L = 95,        # Length of prawns (mm)
@@ -98,9 +98,9 @@ parameters=c(
 
 
 # Run & plot
-output_ss = as.data.frame(ode(nstart,time,snail_size_predation,parameters))
+output_ss = as.data.frame(ode(nstart,time,snail_size_predation,par.all))
 plot(output_ss$time, output_ss$S1, type = 'l', col = 'red', lwd=2, xlab = "Time (days)", ylab = "Snail pop.",
-     ylim = c(0, 10000), main = paste('P = ', parameters['P'], ',  L = ', parameters['L'], sep = ''))
+     ylim = c(0, 10000), main = paste('P = ', par.all['P'], ',  L = ', par.all['L'], sep = ''))
 lines(output_ss$time, output_ss$S2, col = 'green', lwd=2)
 lines(output_ss$time, output_ss$S3, col = 'blue', lwd=2)
 lines(output_ss$time, output_ss$S1+output_ss$S2+output_ss$S3, col = 'black', lwd=2)
@@ -110,11 +110,11 @@ legend("topright", c("S","M","L","T"), col = c("red","green","blue","black"), lt
 x = c(0:100)
 s.pop = numeric(length(x))
 for (i in x) {
-  parameters["P"] = i
-  output_ss = as.data.frame(ode(nstart,time,snail_size_predation,parameters))
+  par.all["P"] = i
+  output_ss = as.data.frame(ode(nstart,time,snail_size_predation,par.all))
   s.pop[i+1] = tail(output_ss$S1, n = 1)+tail(output_ss$S2, n = 1)+tail(output_ss$S3, n = 1)
 }
 plot(x, s.pop, type = 'l', col = 'blue', lwd=2, xlab = "Number of prawns", ylab = "Equilibrium snail pop.",
-     ylim = c(0, 10000), main = paste('L = ', parameters['L'], sep = ''))
+     ylim = c(0, 10000), main = paste('L = ', par.all['L'], sep = ''))
 
 

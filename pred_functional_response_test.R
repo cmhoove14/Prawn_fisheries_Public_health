@@ -62,12 +62,18 @@ predation = function(P, P.L, N1, N2, N3) {
 
 # Plot functional response for a given prawn size and snail population
 x = c(0:50)
-fr = numeric(length = length(x))
+fr = matrix(ncol = 4, nrow = length(x))
 for (i in x) {
   pred = predation(P = 1, P.L = 75, N1 = 0.4*i, N2 = 0.3*i, N3 = 0.3*i)
-  fr[i+1] = pred$psi
+  fr[i+1,1] = pred$psi
+  fr[i+1,2] = pred$psi1
+  fr[i+1,3] = pred$psi2
+  fr[i+1,4] = pred$psi3
+  
 }
 plot(x, fr, type="l", xlab = "Snail density", ylab = "Functional response")
-
+  for(j in 2:4){
+    lines(x, fr[,j], col = j)
+  }
 
 
