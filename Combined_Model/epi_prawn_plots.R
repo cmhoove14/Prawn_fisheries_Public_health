@@ -7,26 +7,255 @@
   # Other modeling ideas, time permitting:
     # Incorporate seasonality?
     #incorporate finding of higher predation rate on Infected snails
+#  Default settings: area = 10000, P = 5000/ha, L = 25 (0.2g post-larvae)
+#  Gates settings: area = 20000; P = 500, 1000, 2500, 5000, 10000/ha; L = 67 or 100 (5g or 20g adults)
 
 source('Combined_Model/epi_prawn_mod.R')
 require(ggplot2)
 
 ## Set initial values and parameters ###########
-#  Default settings: area = 10000, P = 5000/ha, L = 25 (0.2g post-larvae)
-#  Gates settings: area = 20000; P = 500, 1000, 2500, 5000, 10000/ha; L = 67 or 100 (5g or 20g adults)
-nstart.sp = c(S1 = sn.eqbm$S1, S2 = sn.eqbm$S2, S3 = sn.eqbm$S3, 
+years = 10
+t.all = c(0:(years*365)+366)
+
+#Volenhovenii stocking and harvesting events ###########
+nstart.vol = c(S1 = sn.eqbm$S1, S2 = sn.eqbm$S2, S3 = sn.eqbm$S3, 
               E1 = sn.eqbm$E1, E2 = sn.eqbm$E2, E3 = sn.eqbm$E3, 
               I2 = sn.eqbm$I2, I3 = sn.eqbm$I3, W = sn.eqbm$W, 
-              P = 5000, L = 25)
+              P = 4500, L = 25) #Optimal stocking parameters from volenhovenii ROI optimization
+  harvest.t.vol = 361           #Optimal harvest time from volenhovenii optimization
+  n.harvest.vol = floor(max(t.all)/harvest.t.vol)
+  stocks.vol = data.frame(var = rep(c('P', 'L'), n.harvest.vol),
+                          time = rep(366 + harvest.t.vol*c(0:(n.harvest.vol-1)), each = 2),
+                          value = rep(c(nstart.vol['P'], nstart.vol['L']), n.harvest.vol),
+                          method = rep('rep', n.harvest.vol*2))
+    vol.harvests = stocks.vol[seq(1, nrow(stocks.vol), 2), 2]
 
-n.harvest = 5 #number of harvests to simulate
-t.all = c(0:(n.harvest*harvest.time))
+  par.all.vol = c(par.aqua, par.snails,
+                  a.s = 0.187178454,  # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
+                  b.s = 2.536764792,  # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
+                  ar.slp = 0.9050,    # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014
+                  #ar.int = 0.804928, # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014
+                  th = 0.38561)       # Coefficient for relationship between biomass ratio and handling time, fitted to data from Sokolow et al. 2014
+  
+#Rosenbergii stocking and harvesting events ###########
+nstart.ros = c(S1 = sn.eqbm$S1, S2 = sn.eqbm$S2, S3 = sn.eqbm$S3, 
+               E1 = sn.eqbm$E1, E2 = sn.eqbm$E2, E3 = sn.eqbm$E3, 
+               I2 = sn.eqbm$I2, I3 = sn.eqbm$I3, W = sn.eqbm$W, 
+               P = 1000, L = 25) #Optimal stocking parameters from rosenbergii ROI optimization
 
-#allow for one year run in before prawn stocking to display epi model at eqbm
-stocks = data.frame(var = rep(c('P', 'L'), n.harvest),
-                   time = rep(harvest.time*c(1:n.harvest), each = 2),
-                   value = rep(c(nstart.p['P'], nstart.p['L']), n.harvest),
-                   method = rep('rep', n.harvest*2))
+  harvest.t.ros = 228
+  n.harvest.ros = floor(max(t.all)/harvest.t.ros)
+  stocks.ros = data.frame(var = rep(c('P', 'L'), n.harvest.ros),
+                          time = rep(366 + harvest.t.ros*c(0:(n.harvest.ros-1)), each = 2),
+                          value = rep(c(nstart.ros['P'], nstart.ros['L']), n.harvest.ros),
+                          method = rep('rep', n.harvest.ros*2))
+  ros.harvests = stocks.ros[seq(1, nrow(stocks.ros), 2), 2]
+  
+  par.all.ros = c(par.aqua, par.snails,
+                  a.s = 0.187178454,  # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
+                  b.s = 2.536764792,  # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
+                  ar.slp = 0.9050,    # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014
+                  #ar.int = 0.804928, # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014
+                  th = 0.38561)       # Coefficient for relationship between biomass ratio and handling time, fitted to data from Sokolow et al. 2014
+  
+  par.all.ros['k'] = 0.0104333333  # alternate value for M. rosenbergii, from Sampaio & Valenti 1996: 0.0104333333
+  
+#allow for one year run in to display epi model at eqbm ###########
+t.yr1 = c(0:365) 
+nstart.yr1 = c(S1 = sn.eqbm$S1, S2 = sn.eqbm$S2, S3 = sn.eqbm$S3, 
+               E1 = sn.eqbm$E1, E2 = sn.eqbm$E2, E3 = sn.eqbm$E3, 
+               I2 = sn.eqbm$I2, I3 = sn.eqbm$I3, W = sn.eqbm$W)
+
+yr1 = as.data.frame(ode(nstart.yr1,t.yr1,snail_epi,par.snails))
+
+  yr1$P = 0   #Add prawn variable to integrate with prawn stocking sims
+  yr1$L = 0   #Add prawn variable to integrate with prawn stocking sims
+  yr1$prev = pnbinom(2, size = 0.2, mu = yr1$W, lower.tail = FALSE)   
+  yr1$S.t = (yr1$S1 + yr1$S2 + yr1$S3) / area        # density susceptible snails
+  yr1$E.t = (yr1$E1 + yr1$E2 + yr1$E3) / area        # density exposed snails 
+  yr1$I.t = (yr1$I2 + yr1$I3 ) / area                # density infected snails
+  yr1$N.t = (yr1$S.t + yr1$E.t + yr1$I.t)            # density snails
+  yr1$t.1 = (yr1$S1 + yr1$E1) / area                    # density snails of size class 1
+  yr1$t.2 = (yr1$S2 + yr1$E2 + yr1$I2) / area      # density snails of size class 2
+  yr1$t.3 = (yr1$S3 + yr1$E3 + yr1$I3) / area      # density snails of size class 3
+  
+#Simulate annual MDA for n years ########
+#mda events
+  mdas = data.frame(var = rep('W', years),
+                    time = 365*c(1:years)+1,
+                    value = rep(0.4, years),
+                    method = rep('multiply', years))
+  
+  sim.mda = as.data.frame(ode(nstart.yr1,t.all,snail_epi,par.snails,
+                          events = list(data = mdas)))
+  
+  sim.mda$P = 0   #Add prawn variable to integrate with prawn stocking sims
+  sim.mda$L = 0   #Add prawn variable to integrate with prawn stocking sims
+  sim.mda$prev = pnbinom(2, size = 0.2, mu = sim.mda$W, lower.tail = FALSE)   
+  sim.mda$S.t = (sim.mda$S1 + sim.mda$S2 + sim.mda$S3) / area        # density susceptible snails
+  sim.mda$E.t = (sim.mda$E1 + sim.mda$E2 + sim.mda$E3) / area        # density exposed snails 
+  sim.mda$I.t = (sim.mda$I2 + sim.mda$I3 ) / area                    # density infected snails
+  sim.mda$N.t = (sim.mda$S.t + sim.mda$E.t + sim.mda$I.t)            # density snails
+  sim.mda$t.1 = (sim.mda$S1 + sim.mda$E1) / area                    # density snails of size class 1
+  sim.mda$t.2 = (sim.mda$S2 + sim.mda$E2 + sim.mda$I2) / area      # density snails of size class 2
+  sim.mda$t.3 = (sim.mda$S3 + sim.mda$E3 + sim.mda$I3) / area      # density snails of size class 3
+  
+  sim.mda = rbind(yr1, sim.mda)
+  
+#plot worm burden over time with MDA events  
+  w.mda = ggplot(data = sim.mda, aes(x = time)) +
+            theme_bw() +
+            geom_line(aes(y = W), size = 1.25, col = 'purple') 
+  
+  w.mda
+  
+#plot snail infection dynamics over time with MDA events  
+  snail.mda = ggplot(data = sim.mda, aes(x = time)) +
+                theme_bw() +
+                geom_line(aes(y = N.t), size = 1.25, col = 'black') +
+                geom_line(aes(y = S.t), size = 1.25, col = 'green') +
+                geom_line(aes(y = E.t), size = 1.25, col = 'orange') +
+                geom_line(aes(y = I.t), size = 1.25, col = 'red') 
+  
+  snail.mda
+  
+#plot prevalence over time with MDA events  
+  prev.mda = ggplot(data = sim.mda, aes(x = time)) +
+              theme_bw() +
+              geom_line(aes(y = prev), size = 1.25, col = 'red') 
+  
+  prev.mda
+  
+#plot snail size dynamics over time with MDA events  
+  size.mda = ggplot(data = sim.mda, aes(x = time)) +
+    theme_bw() +
+    geom_line(aes(y = t.1), size = 1.25, col = 'blue') +
+    geom_line(aes(y = t.2), size = 1.25, col = 'green') +
+    geom_line(aes(y = t.3), size = 1.25, col = 'red') 
+
+  size.mda
+#Simulate M. volenhovenii stocking for n years ########
+sim.vol = as.data.frame(ode(nstart.vol,t.all,snail_prawn_model,par.all.vol,
+                              events = list(data = stocks.vol)))
+  
+  sim.vol$prev = pnbinom(2, size = 0.2, mu = sim.vol$W, lower.tail = FALSE)   
+  sim.vol$S.t = (sim.vol$S1 + sim.vol$S2 + sim.vol$S3) / area        # density susceptible snails
+  sim.vol$E.t = (sim.vol$E1 + sim.vol$E2 + sim.vol$E3) / area        # density exposed snails 
+  sim.vol$I.t = (sim.vol$I2 + sim.vol$I3 ) / area                    # density infected snails
+  sim.vol$N.t = (sim.vol$S.t + sim.vol$E.t + sim.vol$I.t)            # density snails
+  sim.vol$t.1 = (sim.vol$S1 + sim.vol$E1) / area                          # density snails of size class 1
+  sim.vol$t.2 = (sim.vol$S2 + sim.vol$E2 + sim.vol$I2) / area      # density snails of size class 2
+  sim.vol$t.3 = (sim.vol$S3 + sim.vol$E3 + sim.vol$I3) / area      # density snails of size class 3
+  
+  sim.vol = rbind(yr1, sim.vol)
+  
+#plot worm burden over time with volenhovenii stocking events  
+  w.vol = ggplot(data = sim.vol, aes(x = time)) +
+    theme_bw() +
+    geom_line(aes(y = W), size = 1.25, col = 'purple') 
+  
+  w.vol
+  
+#plot prevalence over time with volenhovenii stocking events  
+  prev.vol = ggplot(data = sim.vol, aes(x = time)) +
+    theme_bw() +
+    geom_line(aes(y = prev), size = 1.25, col = 'red') 
+  
+  prev.vol
+  
+#plot prawn population dynamics over time with volenhovenii stocking events  
+  prawn.vol = ggplot(data = sim.vol, aes(x = time)) +
+    theme_bw() +
+    geom_line(aes(y = P), size = 1.25, col = 'blue') 
+  
+  prawn.vol
+  
+#plot snail size dynamics over time with volenhovenii stocking events  
+  size.vol = ggplot(data = sim.vol, aes(x = time)) +
+    theme_bw() +
+    geom_line(aes(y = t.1), size = 1.25, col = 'blue') +
+    geom_line(aes(y = t.2), size = 1.25, col = 'green') +
+    geom_line(aes(y = t.3), size = 1.25, col = 'red') 
+  
+  size.vol
+#plot snail infection dynamics over time with volenhovenii stocking events  
+  snail.vol = ggplot(data = sim.vol, aes(x = time)) +
+    theme_bw() +
+    geom_line(aes(y = N.t), size = 1.25, col = 'black') +
+    geom_line(aes(y = S.t), size = 1.25, col = 'green') +
+    geom_line(aes(y = E.t), size = 1.25, col = 'orange') +
+    geom_line(aes(y = I.t), size = 1.25, col = 'red') 
+  
+  snail.vol
+  
+#Simulate M. rosenbergii stocking for n years ########
+  sim.ros = as.data.frame(ode(nstart.ros,t.all,snail_prawn_model,par.all.ros,
+                              events = list(data = stocks.ros)))
+  
+  sim.ros$prev = pnbinom(2, size = 0.2, mu = sim.ros$W, lower.tail = FALSE)   
+  sim.ros$S.t = (sim.ros$S1 + sim.ros$S2 + sim.ros$S3) / area        # density susceptible snails
+  sim.ros$E.t = (sim.ros$E1 + sim.ros$E2 + sim.ros$E3) / area        # density exposed snails 
+  sim.ros$I.t = (sim.ros$I2 + sim.ros$I3 ) / area                    # density infected snails
+  sim.ros$N.t = (sim.ros$S.t + sim.ros$E.t + sim.ros$I.t)            # density snails
+  sim.ros$t.1 = (sim.ros$S1 + sim.ros$E1) / area                          # density snails of size class 1
+  sim.ros$t.2 = (sim.ros$S2 + sim.ros$E2 + sim.ros$I2) / area      # density snails of size class 2
+  sim.ros$t.3 = (sim.ros$S3 + sim.ros$E3 + sim.ros$I3) / area      # density snails of size class 3
+  
+  sim.ros = rbind(yr1, sim.ros)
+  
+#plot worm burden over time with rosenbergii stocking events  
+  w.ros = ggplot(data = sim.ros, aes(x = time)) +
+    theme_bw() +
+    geom_line(aes(y = W), size = 1.25, col = 'purple') 
+  
+  w.ros
+  
+#plot prevalence over time with rosenbergii stocking events  
+  prev.ros = ggplot(data = sim.ros, aes(x = time)) +
+    theme_bw() +
+    geom_line(aes(y = prev), size = 1.25, col = 'red') 
+  
+  prev.ros
+  
+#plot prawn population dynamics over time with rosenbergii stocking events  
+  prawn.ros = ggplot(data = sim.ros, aes(x = time)) +
+    theme_bw() +
+    geom_line(aes(y = P), size = 1.25, col = 'blue') 
+  
+  prawn.ros
+  
+#plot snail infection dynamics over time with rosenbergii stocking events  
+  snail.ros = ggplot(data = sim.ros, aes(x = time)) +
+    theme_bw() +
+    geom_line(aes(y = N.t), size = 1.25, col = 'black') +
+    geom_line(aes(y = S.t), size = 1.25, col = 'green') +
+    geom_line(aes(y = E.t), size = 1.25, col = 'orange') +
+    geom_line(aes(y = I.t), size = 1.25, col = 'red') 
+  
+  snail.ros
+  
+#plot snail size dynamics over time with rosenbergii stocking events  
+  size.ros = ggplot(data = sim.ros, aes(x = time)) +
+    theme_bw() +
+    geom_line(aes(y = t.1), size = 1.25, col = 'blue') +
+    geom_line(aes(y = t.2), size = 1.25, col = 'green') +
+    geom_line(aes(y = t.3), size = 1.25, col = 'red') 
+  
+  size.ros
+  
+  
+##################
+  
+theme(legend.position = c(0.9, 0.5),        
+                  axis.text.y = element_text(size = 12),  
+                  axis.title.y = element_text(size = 15), 
+                  axis.title.x = element_blank(), 
+                  axis.text.x = element_blank(),
+                  legend.text = element_text(size = 12),
+                  legend.title = element_blank())  +    
+            geom_line(aes(y = Bt/10, lty = 'Biomass'), size = 1.25) +
+            labs(y = 'P', lty = "Parameter") +
+            scale_x_continuous(breaks = harvests, limits = c(0, max(t.all) + 300))
 
 harvests = stocks[seq(1, nrow(stocks), 2), 2]
 harvest.labs = as.character()
@@ -41,10 +270,9 @@ par.all = c(par.aqua, par.snails,
             #ar.int = 0.804928, # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014
             th = 0.38561)       # Coefficient for relationship between biomass ratio and handling time, fitted to data from Sokolow et al. 2014
 
-## Run model for two years and post process ##############
-# Start with full integrated run over two years
-op.sp1 = as.data.frame(ode(nstart.sp, t.all, snail_prawn_model, par.all,
-                           events = list(data = stocks)))
+## Run model for n years and post process ##############
+op.sp1 = as.data.frame(ode(nstart.vol, t.all, snail_prawn_model, par.all.vol,
+                           events = list(data = stocks.vol)))
 
   op.sp1$B = ((par.all['a.p']*(op.sp1$L/10)^par.all['b.p'])/10)         # Mean prawn biomass
   op.sp1$Bt = op.sp1$B*op.sp1$P                                         # Total prawn biomass

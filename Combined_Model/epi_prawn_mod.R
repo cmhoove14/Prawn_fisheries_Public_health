@@ -22,7 +22,8 @@ snail_prawn_model = function(t, n, parameters) {
     N = N1+N2+N3   # Total number of snails
     
     # Miracidial density per person as a function of mean worm burden (W) and miracidial shedding rate (m)
-    M = m*0.5*W
+    mate = phi_Wk(W = W, k = k)  #Mating probability
+    M = m*0.5*W*mate
     
     # Mean and total prawn biomass, converting from length (mm) to weight (g)
     Bm.p = (a.p/10)*(L/10)^b.p
@@ -56,14 +57,77 @@ snail_prawn_model = function(t, n, parameters) {
     handle3 = 1/(th*Bm.r3)
     
     # Functional responses for each size/infection class
-    psiS1 = (alpha_star1*(S1/A)) / (1 + alpha_star1*handle1*(N/A))
-    psiS2 = (alpha_star2*(S2/A)) / (1 + alpha_star2*handle2*(N/A))
-    psiS3 = (alpha_star3*(S3/A)) / (1 + alpha_star3*handle3*(N/A))
-    psiE1 = (alpha_star1*(E1/A)) / (1 + alpha_star1*handle1*(N/A))
-    psiE2 = (alpha_star2*(E2/A)) / (1 + alpha_star2*handle2*(N/A))
-    psiE3 = (alpha_star3*(E3/A)) / (1 + alpha_star3*handle3*(N/A))
-    psiI2 = (alpha_star2*(I2/A)) / (1 + alpha_star2*handle2*(N/A))
-    psiI3 = (alpha_star3*(I3/A)) / (1 + alpha_star3*handle3*(N/A))
+    psiS1 = (alpha_star1*(S1/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+                                            alpha_star2*handle2*(S2/A),
+                                            alpha_star3*handle3*(S3/A),
+                                            alpha_star1*handle1*(E1/A),
+                                            alpha_star2*handle2*(E2/A),
+                                            alpha_star3*handle3*(E3/A),
+                                            alpha_star2*handle2*(I2/A),
+                                            alpha_star3*handle3*(I3/A)))
+    
+    psiS2 = (alpha_star2*(S2/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+                                            alpha_star2*handle2*(S2/A),
+                                            alpha_star3*handle3*(S3/A),
+                                            alpha_star1*handle1*(E1/A),
+                                            alpha_star2*handle2*(E2/A),
+                                            alpha_star3*handle3*(E3/A),
+                                            alpha_star2*handle2*(I2/A),
+                                            alpha_star3*handle3*(I3/A)))
+    
+    psiS3 = (alpha_star3*(S3/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+                                            alpha_star2*handle2*(S2/A),
+                                            alpha_star3*handle3*(S3/A),
+                                            alpha_star1*handle1*(E1/A),
+                                            alpha_star2*handle2*(E2/A),
+                                            alpha_star3*handle3*(E3/A),
+                                            alpha_star2*handle2*(I2/A),
+                                            alpha_star3*handle3*(I3/A)))
+    
+    psiE1 = (alpha_star1*(E1/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+                                            alpha_star2*handle2*(S2/A),
+                                            alpha_star3*handle3*(S3/A),
+                                            alpha_star1*handle1*(E1/A),
+                                            alpha_star2*handle2*(E2/A),
+                                            alpha_star3*handle3*(E3/A),
+                                            alpha_star2*handle2*(I2/A),
+                                            alpha_star3*handle3*(I3/A)))
+    
+    psiE2 = (alpha_star2*(E2/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+                                            alpha_star2*handle2*(S2/A),
+                                            alpha_star3*handle3*(S3/A),
+                                            alpha_star1*handle1*(E1/A),
+                                            alpha_star2*handle2*(E2/A),
+                                            alpha_star3*handle3*(E3/A),
+                                            alpha_star2*handle2*(I2/A),
+                                            alpha_star3*handle3*(I3/A)))
+    
+    psiE3 = (alpha_star3*(E3/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+                                            alpha_star2*handle2*(S2/A),
+                                            alpha_star3*handle3*(S3/A),
+                                            alpha_star1*handle1*(E1/A),
+                                            alpha_star2*handle2*(E2/A),
+                                            alpha_star3*handle3*(E3/A),
+                                            alpha_star2*handle2*(I2/A),
+                                            alpha_star3*handle3*(I3/A)))
+    
+    psiI2 = (alpha_star2*(I2/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+                                            alpha_star2*handle2*(S2/A),
+                                            alpha_star3*handle3*(S3/A),
+                                            alpha_star1*handle1*(E1/A),
+                                            alpha_star2*handle2*(E2/A),
+                                            alpha_star3*handle3*(E3/A),
+                                            alpha_star2*handle2*(I2/A),
+                                            alpha_star3*handle3*(I3/A)))
+    
+    psiI3 = (alpha_star3*(I3/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+                                            alpha_star2*handle2*(S2/A),
+                                            alpha_star3*handle3*(S3/A),
+                                            alpha_star1*handle1*(E1/A),
+                                            alpha_star2*handle2*(E2/A),
+                                            alpha_star3*handle3*(E3/A),
+                                            alpha_star2*handle2*(I2/A),
+                                            alpha_star3*handle3*(I3/A)))
     
     #psi1 = (P*alpha_star1) / (1+sum(alpha_star1*handle1*N1, alpha_star2*handle2*N2, alpha_star3*handle3*N3))
     #psi2 = (P*alpha_star2) / (1+sum(alpha_star1*handle1*N1, alpha_star2*handle2*N2, alpha_star3*handle3*N3))
