@@ -54,3 +54,10 @@ p.run = as.data.frame(ode(nstart.p,t.p,prawn_biomass,par.aqua))
   harvest.p = p.run$P[p.run$Bt==max(p.run$Bt)] 
   harvest.l = p.run$L[p.run$Bt==max(p.run$Bt)] 
   harvest.time = p.run$time[p.run$Bt==max(p.run$Bt)]
+
+#run to get reference for length to weight relationship 
+nstart.ref = c(P = 10000, L = 1)
+p.reference = as.data.frame(ode(nstart.ref,t.p,prawn_biomass,par.aqua))
+  p.reference$B = ((par.aqua['a.p']*(p.reference$L/10)^par.aqua['b.p'])/10)                # Mean prawn biomass, transformed from length
+  p.reference$Bt = p.reference$B*p.reference$P                                                   # Total prawn biomass
+ 
