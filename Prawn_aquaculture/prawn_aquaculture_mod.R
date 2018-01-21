@@ -15,7 +15,7 @@ prawn_biomass = function(t, n, parameters) {
     
     dLdt = k/(1+gam*Bm)*(linf - L) # Mean prawn length, using von Bertalanffy growth limited by density-dependent parameter gamma
     
-    dPdt = -P*(muP*Bp^d + phi*Bm) # Prawn abundance, subject to size- and density-dependent mortality
+    dPdt = -P*(muP*Bp^d + om*Bm) # Prawn abundance, subject to size- and density-dependent mortality
     
     return(list(c(dPdt,dLdt)))
   }) 
@@ -32,7 +32,7 @@ par.aqua=c(
   gam = 1e-5,           # Density-dependent growth parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
   muP = 0.00610958904,  # Prawn mortality at unit weight, from Lorenzen 1996 (pond aquaculture)
   d = -0.382,           # Exponential relationship of weight with mortality, from Lorenzen 1996 (pond aquaculture)
-  phi = 5e-8,           # Density-dependent mortality parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
+  om = 5e-8,           # Density-dependent mortality parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
   k = 0.00339726,       # Growth rate (mm/day), from Nwosu & Wolfi 2006 (M. vollenhovenii); alternate value for M. rosenbergii, from Sampaio & Valenti 1996: 0.0104333333
   linf = 206            # Max length (mm), from Nwosu & Wolfi 2006 (M. vollenhovenii)
 )
