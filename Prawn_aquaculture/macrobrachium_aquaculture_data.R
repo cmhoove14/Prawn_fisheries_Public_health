@@ -26,24 +26,27 @@ rk06 = data.frame(dens_ha = c(14000, 25000, 40000, 60000),      # Stocking densi
   
   eta.lm = lm(marketable ~ dens, data = rk06)
   
-  ggplot(rk06, aes(x = dens, y = surv)) + 
-    theme_bw() +
-    labs(x = 'stocking density (P/m^2)', y = '% Survival',
-         title = 'Cohort survival as function of stocking density \n Ranjeet & Kurup 2006 data') +
-    xlim(0,7.5) +
-    ylim(0,1) +
-    geom_point() +
-    stat_smooth(method = "lm", col = "red")
+om.gg = ggplot(rk06, aes(x = dens, y = surv)) + 
+                theme_bw() +
+                labs(x = 'stocking density (P/m^2)', y = '% Survival',
+                     title = 'Cohort survival as function of stocking density \n Ranjeet & Kurup 2006 data') +
+                xlim(0,7.5) +
+                ylim(0,1) +
+                geom_point() +
+                stat_smooth(method = "lm", col = "red")
   
+om.gg
+
   om.lm = lm(surv ~ dens, data = rk06)
   
-  ggplot(rk06, aes(x = dens, y = surv)) + 
-    theme_bw() +
-    labs(x = 'stocking density (P/m^2)', y = 'Mean size (g)',
-         title = 'Mean prawn weight at harvest as function of stocking density \n Ranjeet & Kurup 2006 data') +
-    xlim(0,7.5) +
-    ylim(0,1) +
-    geom_point() +
-    stat_smooth(method = "lm", col = "blue")
-  
+gam.gg = ggplot(rk06, aes(x = dens, y = surv)) + 
+                  theme_bw() +
+                  labs(x = 'stocking density (P/m^2)', y = 'Mean size (g)',
+                       title = 'Mean prawn weight at harvest as function of stocking density \n Ranjeet & Kurup 2006 data') +
+                  xlim(0,7.5) +
+                  ylim(0,1) +
+                  geom_point() +
+                  stat_smooth(method = "lm", col = "blue")
+gam.gg  
+
   gam.lm = lm(mean_B_perday ~ dens, data = rk06)
