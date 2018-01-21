@@ -1,9 +1,13 @@
 #Generate plot of aquaculture cycle over two years to display in model summary figure
 source('Prawn_aquaculture/prawn_aquaculture_mod.R')
+source('Prawn_aquaculture/macrobrachium_aquaculture_data.R')
+
 t.p = c(0:365)
 #run model through 2 years for M. volenhovenii ######
-nstart.p.vol = c(P = 4500, L = 25)   #optimal starting conditions for M. volenhovenii as estimated in prawn_aquaculture_opt.R script
+par.aqua['k'] = 0.00339726  # alternate value for M. rosenbergii, from Sampaio & Valenti 1996
+nstart.p.vol = c(P = 27000, L = 60)   #optimal starting conditions for M. volenhovenii as estimated in prawn_aquaculture_opt.R script
 op.vol = as.data.frame(ode(nstart.p.vol,t.p,prawn_biomass,par.aqua))
+  c = 0.1+0.005*(nstart.p.vol["L"]-38) # make juvenile prawns cost a function of their size with reference at $0.1/juvenile
 
 #post-process to estimate additional parameters
 # 0) prawn density rather than raw prawn numbers
@@ -12,12 +16,14 @@ op.vol = as.data.frame(ode(nstart.p.vol,t.p,prawn_biomass,par.aqua))
   op.vol$B = ((par.aqua['a.p']*(op.vol$L/10)^par.aqua['b.p'])/10)
 # 2) total prawn biomass (mean biomass * number of prawns)  
   op.vol$Bt = op.vol$B*op.vol$P / 1000
+# 2.5) marketable prawns at harvest
+  eta.vol = predict(eta.lm, newdata = data.frame(dens = nstart.p.vol["P"]/area)) # Fraction of harvest that's marketable as function of stocking density
 # 3) profit (in terms of revenue (discounted by time since stocking) minus stocking costs )  
-  op.vol$profit = p*(op.vol$Bt/1000)*exp(-delta*(op.vol$t)) - c*(nstart.p["P"]/1000)
+  op.vol$profit = eta.vol*p*(op.vol$Bt/1000)*exp(-delta*(op.vol$t)) - c*(nstart.p["P"])
 # 4) starting total biomass
   start.mass.kg.vol = op.vol$Bt[op.vol$time==0]/1000
 # 5) harvest mass in kg (harvest assumed to occur when biomass is maximized)   
-  harvest.mass.kg.vol = max(op.vol$Bt)/1000
+  harvest.mass.kg.vol = eta.vol*max(op.vol$Bt)/1000
 # 6) average mass of prawns at harvest  
   harvest.size.vol = op.vol$B[op.vol$Bt==max(op.vol$Bt)]
 # 7) time of harvest (when biomass is maximized)
@@ -29,9 +35,9 @@ op.vol = as.data.frame(ode(nstart.p.vol,t.p,prawn_biomass,par.aqua))
 
 #run model through 2 years for M. rosenbergii ######
 par.aqua['k'] = 0.0104333333  # alternate value for M. rosenbergii, from Sampaio & Valenti 1996
-nstart.p.ros = c(P = 1000, L = 25)   #optimal starting conditions for M. rosenbergii as estimated in prawn_aquaculture_opt.R script
-  
-  op.ros = as.data.frame(ode(nstart.p.ros,t.p,prawn_biomass,par.aqua))
+nstart.p.ros = c(P = 10000, L = 30)   #optimal starting conditions for M. rosenbergii as estimated in prawn_aquaculture_opt.R script
+op.ros = as.data.frame(ode(nstart.p.ros,t.p,prawn_biomass,par.aqua))
+  c = 0.1+0.005*(nstart.p.ros["L"]-38) # make juvenile prawns cost a function of their size with reference at $0.1/juvenile
 
 #post-process to estimate additional parameters
 # 0) prawn density rather than raw prawn numbers
@@ -40,12 +46,14 @@ nstart.p.ros = c(P = 1000, L = 25)   #optimal starting conditions for M. rosenbe
   op.ros$B = ((par.aqua['a.p']*(op.ros$L/10)^par.aqua['b.p'])/10)
 # 2) total prawn biomass (mean biomass * number of prawns)  
   op.ros$Bt = op.ros$B*op.ros$P /1000 
+# 2.5) marketable prawns at harvest
+  eta.ros = predict(eta.lm, newdata = data.frame(dens = nstart.p.ros['P']/area)) # Fraction of harvest that's marketable as function of stocking density
 # 3) profit (in terms of revenue (discounted by time since stocking) minus stocking costs )  
-  op.ros$profit = p*(op.ros$Bt/1000)*exp(-delta*(op.ros$t)) - c*(nstart.p["P"]/1000)
+  op.ros$profit = eta.ros*p*(op.ros$Bt/1000)*exp(-delta*(op.ros$t)) - c*(nstart.p["P"]/1000)
 # 4) starting total biomass
   start.mass.kg.ros = op.ros$Bt[op.ros$time==0]/1000
 # 5) harvest mass in kg (harvest assumed to occur when biomass is maximized)   
-  harvest.mass.kg.ros = max(op.ros$Bt)/1000
+  harvest.mass.kg.ros = eta.ros*max(op.ros$Bt)/1000
 # 6) average mass of prawns at harvest  
   harvest.size.ros = op.ros$B[op.ros$Bt==max(op.ros$Bt)]
 # 7) time of harvest (when biomass is maximized)
@@ -62,7 +70,7 @@ require(ggplot2)
   
     pr.l = ggplot(op.spe, aes(x = time)) +
             theme_bw() +
-            theme(legend.position = c(0.35, 0.1),        #place legend inside plot
+            theme(legend.position = c(0.4, 0.15),        #place legend inside plot
                   axis.text = element_text(size = 15),  #increase axis label size
                   axis.title = element_text(size = 18), #increase axis title size
                   axis.title.x=element_blank(),         #Suppress x axis
@@ -77,7 +85,7 @@ require(ggplot2)
                                labels = c(seq(0,300,60), 365),
                                limits = c(0, 375)) +
             scale_y_continuous(breaks = c(0, 25, 100, 150,200),
-                               labels = c('0', '25', '100', '150', '  200'),
+                               labels = c('0', '25', '100', '150', '200'),
                                limits = c(0, 205))  
     pr.l
 
@@ -97,28 +105,31 @@ require(ggplot2)
       scale_x_continuous(breaks = c(seq(0,300,60), 365),
                          labels = c(seq(0,300,60), 365),
                          limits = c(0, 375)) +
-      scale_y_continuous(breaks = seq(0,0.5000, 0.1000),
-                         labels = seq(0,0.5000, 0.1000),
-                         limits = c(0, 0.5000))
+      scale_y_continuous(breaks = seq(0,5, 1),
+                         labels = c('0', '1', '2', '3', '4', '  5'),
+                         limits = c(0, 5.1))
     
     pr.P
     
 
 #plot showing mean weight of each prawn over time ###########
   pr.B = ggplot(op.spe, aes(x = time)) +
-    theme_bw() +
-    theme(axis.text = element_text(size = 15),  #increase axis label size
-          axis.title = element_text(size = 18), #increase axis title size
-          axis.title.x=element_blank(),         #Suppress x axis
-          axis.text.x=element_blank(),          #Suppress x axis
-          legend.position = 'none')  +    #suppress legend title
-    geom_line(aes(y = B, col = Species), size = 1.25) +
-    geom_vline(xintercept = harvest.time.ros, lty = 2, size = 1.25) +
-    geom_vline(xintercept = harvest.time.vol, lty = 3, size = 1.25) +
-    labs(x = 'time (days)', y = 'Weight (g)', col = 'Species') +
-    scale_x_continuous(breaks = c(seq(0,300,60), 365),
-                       labels = c(seq(0,300,60), 365),
-                       limits = c(0, 375))
+      theme_bw() +
+      theme(axis.text = element_text(size = 15),  #increase axis label size
+            axis.title = element_text(size = 18), #increase axis title size
+            axis.title.x=element_blank(),         #Suppress x axis
+            axis.text.x=element_blank(),          #Suppress x axis
+            legend.position = 'none')  +    #suppress legend title
+      geom_line(aes(y = B, col = Species), size = 1.25) +
+      geom_vline(xintercept = harvest.time.ros, lty = 2, size = 1.25) +
+      geom_vline(xintercept = harvest.time.vol, lty = 3, size = 1.25) +
+      labs(x = 'time (days)', y = 'Weight (g)', col = 'Species') +
+      scale_x_continuous(breaks = c(seq(0,300,60), 365),
+                         labels = c(seq(0,300,60), 365),
+                         limits = c(0, 375)) +
+      scale_y_continuous(breaks = seq(0,100, 25),
+                         labels = c('0', '25', '50', '75', ' 100'),
+                         limits = c(0, 100))
   pr.B
   
 
@@ -135,9 +146,9 @@ require(ggplot2)
     scale_x_continuous(breaks = c(seq(0,300,60), 365),
                        labels = c(seq(0,300,60), 365),
                        limits = c(0, 375)) +
-    scale_y_continuous(breaks = seq(0,50,10),
-                       labels = c('0','10','20','30','40','  50'),
-                       limits = c(0, 55))
+    scale_y_continuous(breaks = seq(0,500,100),
+                       labels = c('0','100','200','300','400','500'),
+                       limits = c(0, 550))
     
     
   pr.Bt
