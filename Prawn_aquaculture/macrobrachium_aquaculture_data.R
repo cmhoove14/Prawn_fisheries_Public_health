@@ -50,3 +50,16 @@ gam.gg = ggplot(rk06, aes(x = dens, y = surv)) +
 gam.gg  
 
   gam.lm = lm(mean_B_perday ~ dens, data = rk06)
+
+p.gg = ggplot(rk06, aes(x = dens, y = profit)) + 
+            theme_bw() +
+            labs(x = 'stocking density (P/m^2)', y = 'Profit (USD)',
+                 title = 'Profit from harvest as function of stocking density \n Ranjeet & Kurup 2006 data') +
+            xlim(0,7.5) +
+            #ylim(0,1) +
+            geom_point() +
+            stat_smooth(method = "lm", col = "green")
+  p.gg  
+  
+  gam.lm = lm(mean_B_perday ~ dens, data = rk06)
+  
