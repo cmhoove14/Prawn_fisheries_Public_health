@@ -10,7 +10,154 @@
 require(plotly)
 
 source('Prawn_aquaculture/prawn_aquaculture_mod.R')
+source('Prawn_aquaculture/macrobrachium_aquaculture_data.R')
+
 area = 10000 #Working with 1 hectare site
+# Simulate across stocking densities to estimate optimal P_nought for M. volenhovenii ############
+opt.df = expand.grid(L_nought = c(30:60), P_nought = seq(10000, 75000, 500)) 
+  opt.df$h.t = 0
+  opt.df$h.bm = 0
+  opt.df$h.frac = 0
+  opt.df$m.bm = 0
+  opt.df$p.bm = 0
+  opt.df$p.surv = 0
+  opt.df$Revenue = 0
+  opt.df$Profit = 0
+  opt.df$ROI = 0
+
+par.aqua['k'] = 0.00339726       # Growth rate (mm/day), from Nwosu & Wolfi 2006 (M. vollenhovenii)
+
+  for(k in 1:nrow(opt.df)){
+    start = c(P = opt.df[k,2], L = opt.df[k,1])
+    c = 0.1+0.005*(start["L"]-38) # make juvenile prawns cost a function of their size with reference at $0.1/juvenile
+    
+    op = as.data.frame(ode(start,t.p,prawn_biomass,par.aqua))
+    op$B = ((par.aqua['a.p']*(op$L/10)^par.aqua['b.p'])/10)     # Mean prawn biomass, transformed from length
+    
+    opt.df[k,3] = op$time[op$B*op$P==max(op$B*op$P)]  # harvest time
+    opt.df[k,4] = max(op$B*op$P)                      # Total prawn biomass
+    opt.df[k,5] = predict(eta.lm, newdata = data.frame(dens = opt.df[k,2]/area)) # Fraction of harvest that's marketable as function of stocking density
+    opt.df[k,6] = opt.df[k,4] * opt.df[k,5]           # Marketable harvest (total biomass times fraction marketable size)
+    opt.df[k,7] = op$B[op$B*op$P==max(op$B*op$P)]     # Prawn size at harvest
+    opt.df[k,8] = op$P[op$B*op$P==max(op$B*op$P)] / opt.df[k,2]   # Prawn % survival at harvest
+    opt.df[k,9] = p*(max(op$B*op$P)/1000)    # Raw Profit
+    opt.df[k,10] = p*(max(op$B*op$P)/1000)*exp(-delta*(op$time[op$B*op$P==max(op$B*op$P)])) - c*(start["P"])  #Net profit
+    opt.df[k,11] = (p*(max(op$B*op$P)/1000)*exp(-delta*(op$time[op$B*op$P==max(op$B*op$P)])) - c*(start["P"])) / (c*(start["P"])) # ROI  
+    
+    if(k %% 1000==0) print(k)
+  }
+
+#contour plots with no restrictions on harvest time, harvest size, or profit #########
+  plot_ly(opt.df, x = ~L_nought, y = ~P_nought, z = ~m.bm, type = 'contour')
+  plot_ly(opt.df, x = ~L_nought, y = ~P_nought, z = ~ROI, type = 'contour')
+  plot_ly(opt.df, x = ~L_nought, y = ~P_nought, z = ~Revenue, type = 'contour')
+  plot_ly(opt.df, x = ~L_nought, y = ~P_nought, z = ~Profit, type = 'contour')
+  
+#restrict to runs in which harvest time was <1 year ##########
+opt.df.pos = opt.df[which(opt.df$h.t <= 365),]
+
+  plot_ly(opt.df.pos, x = ~L_nought, y = ~P_nought, z = ~m.bm, type = 'contour')
+  plot_ly(opt.df.pos, x = ~L_nought, y = ~P_nought, z = ~Revenue, type = 'contour')
+  plot_ly(opt.df.pos, x = ~L_nought, y = ~P_nought, z = ~ROI, type = 'contour')
+
+#Restrict to runs in which sufficient marketable size is achieved ##############
+#Also want to make sure that prawns are actually big enough to be marketable when harvested
+#Restrict mean prawn biomass to be >= 30g when harvested
+opt.df.pos.30g = opt.df.pos[which(opt.df.pos$p.bm >= 30),]
+
+  plot_ly(opt.df.pos.30g, x = ~L_nought, y = ~P_nought, z = ~m.bm, type = 'contour')
+  plot_ly(opt.df.pos.30g, x = ~L_nought, y = ~P_nought, z = ~Revenue, type = 'contour')
+  plot_ly(opt.df.pos.30g, x = ~L_nought, y = ~P_nought, z = ~Profit, type = 'contour')
+  plot_ly(opt.df.pos.30g, x = ~L_nought, y = ~P_nought, z = ~ROI, type = 'contour')
+
+vol.opt = max(opt.df.pos.30g$ROI)
+
+  vol.l0 = opt.df.pos.30g$L_nought[opt.df.pos.30g$ROI == vol.opt]  # volenhovenii optimal starting length
+  vol.p0 = opt.df.pos.30g$P_nought[opt.df.pos.30g$ROI == vol.opt]  # volenhovenii optimal starging density
+  vol.ht = opt.df.pos.30g$h.t[opt.df.pos.30g$ROI == vol.opt]       # volenhovenii optimal harvest time
+  vol.mbm = opt.df.pos.30g$m.bm[opt.df.pos.30g$ROI == vol.opt]/1000# volenhovenii marketable biomass at optimal harvest
+  vol.pbm = opt.df.pos.30g$p.bm[opt.df.pos.30g$ROI == vol.opt]     # volenhovenii prawn mass at optimal harvest
+
+#Restrict to simulations in which L_0 = 38 mm, reference size for juveniles #########
+opt.df.juv = subset(opt.df, L_nought == 38)
+  
+  plot(opt.df.juv$P_nought, opt.df.juv$h.t, type = 'l', lwd = 2)
+    abline(h = 365, lty = 2)
+###########  
+###########  
+# Simulate across stocking densities to estimate optimal P_nought for M. rosenbergii ############
+opt.df.ros = expand.grid(L_nought = c(30:60), P_nought = seq(10000, 75000, 500)) 
+  opt.df.ros$h.t = 0
+  opt.df.ros$h.bm = 0
+  opt.df.ros$h.frac = 0
+  opt.df.ros$m.bm = 0
+  opt.df.ros$p.bm = 0
+  opt.df.ros$p.surv = 0
+  opt.df.ros$Revenue = 0
+  opt.df.ros$Profit = 0
+  opt.df.ros$ROI = 0
+  
+  par.aqua['k'] = 0.0104333333    # alternate value for M. rosenbergii, from Sampaio & Valenti 1996: 0.0104333333
+  
+  for(k in 1:nrow(opt.df.ros)){
+    start = c(P = opt.df.ros[k,2], L = opt.df.ros[k,1])
+    c = 0.1+0.005*(start["L"]-38) # make juvenile prawns cost a function of their size with reference at $0.1/juvenile
+    
+    op = as.data.frame(ode(start,t.p,prawn_biomass,par.aqua))
+    op$B = ((par.aqua['a.p']*(op$L/10)^par.aqua['b.p'])/10)     # Mean prawn biomass, transformed from length
+    
+    opt.df.ros[k,3] = op$time[op$B*op$P==max(op$B*op$P)]  # harvest time
+    opt.df.ros[k,4] = max(op$B*op$P)                      # Total prawn biomass
+    opt.df.ros[k,5] = predict(eta.lm, newdata = data.frame(dens = opt.df.ros[k,2]/area)) # Fraction of harvest that's marketable as function of stocking density
+    opt.df.ros[k,6] = opt.df.ros[k,4] * opt.df.ros[k,5]           # Marketable harvest (total biomass times fraction marketable size)
+    opt.df.ros[k,7] = op$B[op$B*op$P==max(op$B*op$P)]     # Prawn size at harvest
+    opt.df.ros[k,8] = op$P[op$B*op$P==max(op$B*op$P)] / opt.df.ros[k,2]   # Prawn % survival at harvest
+    opt.df.ros[k,9] = p*(max(op$B*op$P)/1000)    # Raw Profit
+    opt.df.ros[k,10] = p*(max(op$B*op$P)/1000)*exp(-delta*(op$time[op$B*op$P==max(op$B*op$P)])) - c*(start["P"])  #Net profit
+    opt.df.ros[k,11] = (p*(max(op$B*op$P)/1000)*exp(-delta*(op$time[op$B*op$P==max(op$B*op$P)])) - c*(start["P"])) / (c*(start["P"])) # ROI  
+    
+    if(k %% 1000==0) print(k)
+  }
+  
+#contour plots with no restrictions on harvest time, harvest size, or profit #########
+  plot_ly(opt.df.ros, x = ~L_nought, y = ~P_nought, z = ~m.bm, type = 'contour')
+  plot_ly(opt.df.ros, x = ~L_nought, y = ~P_nought, z = ~ROI, type = 'contour')
+  plot_ly(opt.df.ros, x = ~L_nought, y = ~P_nought, z = ~Revenue, type = 'contour')
+  
+#restrict to runs in which harvest time was <1 year and net profit was positive ##########
+opt.df.ros.pos = opt.df.ros[which(opt.df.ros$h.t <= 365),]
+  
+  plot_ly(opt.df.ros.pos, x = ~L_nought, y = ~P_nought, z = ~m.bm, type = 'contour')
+  plot_ly(opt.df.ros.pos, x = ~L_nought, y = ~P_nought, z = ~Revenue, type = 'contour')
+  plot_ly(opt.df.ros.pos, x = ~L_nought, y = ~P_nought, z = ~ROI, type = 'contour')
+  
+#Restrict to runs in which sufficient marketable size is achieved ##############
+#Also want to make sure that prawns are actually big enough to be marketable when harvested
+#Restrict mean prawn biomass to be >= 30g when harvested
+opt.df.ros.pos.30g = opt.df.ros.pos[which(opt.df.ros.pos$p.bm >= 30),]
+  
+  plot_ly(opt.df.ros.pos.30g, x = ~L_nought, y = ~P_nought, z = ~m.bm, type = 'contour')
+  plot_ly(opt.df.ros.pos.30g, x = ~L_nought, y = ~P_nought, z = ~Revenue, type = 'contour')
+  plot_ly(opt.df.ros.pos.30g, x = ~L_nought, y = ~P_nought, z = ~Profit, type = 'contour')
+  plot_ly(opt.df.ros.pos.30g, x = ~L_nought, y = ~P_nought, z = ~ROI, type = 'contour')
+  
+ros.opt = max(opt.df.ros.pos.30g$ROI)
+  
+  ros.l0 = opt.df.ros.pos.30g$L_nought[opt.df.ros.pos.30g$ROI == ros.opt]  # volenhovenii optimal starting length
+  ros.p0 = opt.df.ros.pos.30g$P_nought[opt.df.ros.pos.30g$ROI == ros.opt]  # volenhovenii optimal starging density
+  ros.ht = opt.df.ros.pos.30g$h.t[opt.df.ros.pos.30g$ROI == ros.opt]       # volenhovenii optimal harvest time
+  ros.mbm = opt.df.ros.pos.30g$m.bm[opt.df.ros.pos.30g$ROI == ros.opt]/1000# volenhovenii marketable biomass at optimal harvest
+  ros.pbm = opt.df.ros.pos.30g$p.bm[opt.df.ros.pos.30g$ROI == ros.opt]     # volenhovenii prawn mass at optimal harvest
+
+#Restrict to simulations in which L_0 = 38 mm, reference size for juveniles #########
+  opt.df.ros.juv = subset(opt.df.ros, L_nought == 38)
+  
+  plot(opt.df.juv$P_nought, opt.df.juv$h.t, type = 'l', lwd = 2)
+  abline(h = 365, lty = 2)
+  
+##########  
+##########  
+##########
 # Run & plot typical volenhovenii cycle from TAMU volenhovenii document ######
   P0.tamu = 2.5*8000      #8000 juveniles stocked per acre, ~2.5 acres per hectare
   L0.tamu = 38            #38mm = ~.78 grams
@@ -288,145 +435,179 @@ plot(x = op.wb4$time, y = op.wb4$P/100, col = 'red', xlab = 'Time (days)', ylab 
        xlab = 'time', ylab = 'profit')  
   plot(op.wb4$time, op.wb4$roi, type = 'l', col = 'blue', lwd = 2,
        xlab = 'time', ylab = 'ROI')
+
+# Run & plot cycles from Ranjeet and Kurup paper, experiment 1 check model fit to their exeperimental outcomes #######  
+source('Prawn_aquaculture/macrobrachium_aquaculture_data.R')
+  P0.rk1 = rk06$dens_ha[1]      #5 post larvae per square meter
+  L0.rk1 = 38          #17mm = ~.056 grams
+  c.rk1 = 0.1       #0.7 cents / postlarvae; assume that actual postlarvae are the only cost; assume post-larvae are 10% cost of juveniles
+  p.rk1= rk06$p_kg[1]        #price per kg of adult prawns (TAMU reports $4-$7 per lb)
   
+  nstart.rk1 = c(P = P0.rk1, L = L0.rk1)
   
-# Optimize by length and stocking density for M. volenhovenii simultaneously ######
-  opt.df = expand.grid(L_nought = c(25:50), P_nought = seq(500, 50000, 5000)) 
-    opt.df$h.t = 0
-    opt.df$h.bm = 0
-    opt.df$p.bm = 0
-    opt.df$p.surv = 0
-    opt.df$profit = 0
-    opt.df$ROI = 0
+  op.rk1 = as.data.frame(ode(nstart.rk1,t.p,prawn_biomass,par.aqua))
+  op.rk1$B = ((par.aqua['a.p']*(op.rk1$L/10)^par.aqua['b.p'])/10)         # Mean prawn biomass, transformed from length
+  op.rk1$Bt = op.rk1$B*op.rk1$P                                           # Total prawn biomass
+  # Profit function, in terms of revenue (discounted by time since stocking) minus stocking costs 
+  op.rk1$Revenue = p.rk1*(op.rk1$Bt/1000)  
+  op.rk1$profit = p.rk1*(op.rk1$Bt/1000)*exp(-delta*(op.rk1$t)) - (c.rk1*nstart.p["P"])   
+  # ROI as net profit over cost
+  op.rk1$roi = ((p.rk1*(op.rk1$Bt/1000)*exp(-delta*(op.rk1$t))) - 
+                  (c.rk1*nstart.p["P"])) /
+    (c.rk1*nstart.p["P"])
   
-      par.aqua['k'] = 0.00339726       # Growth rate (mm/day), from Nwosu & Wolfi 2006 (M. vollenhovenii)
+  bt0.rk1 = op.rk1$Bt[op.rk1$time==0]/1000
+  T.rk1 = 8*30
+  btT.rk1 = op.rk1$Bt[op.rk1$time == T.rk1]/1000
+  BT.rk1 = op.rk1$B[op.rk1$time == T.rk1]  
+  PT.rk1 = op.rk1$P[op.rk1$time == T.rk1]  
+  prof.rk1 = op.rk1$profit[op.rk1$time == T.rk1]
+  roi.rk1 = op.rk1$roi[op.rk1$time == T.rk1]
   
-  for(k in 1:nrow(opt.df)){
-    start = c(P = opt.df[k,2], L = opt.df[k,1])
-    op = as.data.frame(ode(start,t.p,prawn_biomass,par.aqua))
-    op$B = ((par.aqua['a.p']*(op$L/10)^par.aqua['b.p'])/10)                    # Mean prawn biomass, transformed from length
-    
-    opt.df[k,3] = op$time[op$B*op$P==max(op$B*op$P)]  # harvest time
-    opt.df[k,4] = max(op$B*op$P)                      # Total prawn biomass
-    opt.df[k,5] = op$B[op$B*op$P==max(op$B*op$P)]     # Prawn size at harvest
-    opt.df[k,6] = op$P[op$B*op$P==max(op$B*op$P)] / opt.df[k,2]   # Prawn % survival at harvest
-    opt.df[k,7] = p*(max(op$B*op$P)/1000)*exp(-delta*(op$time[op$B*op$P==max(op$B*op$P)])) - c*(start["P"]/1000)     #Profit
-    opt.df[k,8] = (p*(max(op$B*op$P)/1000)*exp(-delta*(op$time[op$B*op$P==max(op$B*op$P)])) - c*(start["P"]/1000)) / (c*(start["P"]/1000))#ROI  
-    
-    if(k %% 1000==0) print(k)
-  }
+  T.optrk1 = op.rk1$time[op.rk1$Bt == max(op.rk1$Bt)]
+  btT.optrk1 = op.rk1$Bt[op.rk1$time == T.optrk1]/1000
+  BT.optrk1 = op.rk1$B[op.rk1$time == T.optrk1]  
+  PT.optrk1 = op.rk1$P[op.rk1$time == T.optrk1]  
+  prof.optrk1 = op.rk1$profit[op.rk1$time == T.optrk1]
+  roi.optrk1 = op.rk1$roi[op.rk1$time == T.optrk1]
+  surv.optrk1 = PT.optrk1/P0.rk1
   
+  plot(x = op.rk1$time, y = op.rk1$P/100, col = 'red', xlab = 'Time (days)', ylab = 'State variables', 
+       type = 'l', lwd=2, xlim = c(0, max(op.rk1$time)), ylim = c(0, max(op.rk1$Bt/1000)+50),
+       main = paste('Prawn fishery dynamics\n', '(mean start size = ', as.numeric(nstart.rk1[2]), ' mm)', sep = ''))
+    lines(x = op.rk1$time, y = op.rk1$Bt/1000, col = 'blue', lwd=2)
+    lines(x = op.rk1$time, y = op.rk1$B, col = 'purple', lwd=2, lty=2)
+    lines(x = op.rk1$time, y = op.rk1$L, col = 'green', lwd=2)
+    abline(v = T.rk1, lty = 2, lwd = 2)
+    legend('topright', legend = c('Prawns (100s)', 'Total biomass (kg)', 'Mean size (g)', 'Mean length (mm)'), 
+           lty = 1, col = c('red', 'blue', 'purple', 'green'), cex = 0.5, bty = 'n')
+    legend('bottomright', legend = c(paste('Starting mass =', round(bt0.rk1), 'kg', sep = ' '),
+                                     paste('Total harvest mass =', round(btT.rk1), 'kg', sep = ' '), 
+                                     paste('Mean harvest mass =', round(BT.rk1), 'g', sep = ' '), 
+                                     paste('Time of harvest =', round(T.rk1), 'days', sep = ' ')), cex=0.5, bty = 'n')
   
-  #contour plots with no restrictions on harvest time, harvest size, or profit #########
-  plot_ly(opt.df, x = ~L_nought, y = ~P_nought, z = ~h.bm, type = 'contour')
-  plot_ly(opt.df, x = ~L_nought, y = ~P_nought, z = ~ROI, type = 'contour')
-  plot_ly(opt.df, x = ~L_nought, y = ~P_nought, z = ~profit, type = 'contour')
+  plot(op.rk1$time, op.rk1$profit, type = 'l', col = 'darkgreen', lwd = 2,
+       xlab = 'time', ylab = 'profit')  
+  plot(op.rk1$time, op.rk1$Revenue, type = 'l', col = 'darkgreen', lwd = 2,
+       xlab = 'time', ylab = 'profit') 
+    abline(v = T.rk1, lty = 2, lwd = 2)
+    abline(h = rk06$profit[1], lty = 3, lwd = 2)
+  plot(op.rk1$time, op.rk1$roi, type = 'l', col = 'blue', lwd = 2,
+       xlab = 'time', ylab = 'ROI')
   
-  #restrict to runs in which harvest time was <1 yearand profit was positive ##########
-  opt.df.pos = opt.df[which(opt.df$profit > 0 & opt.df$h.t <= 365),]
+# Run & plot cycles from Ranjeet and Kurup paper, experiment 2 check model fit to their exeperimental outcomes #######  
+  P0.rk2 = rk06$dens_ha[2]      #5 post larvae per square meter
+  L0.rk2 = 38          #17mm = ~.056 grams
+  c.rk2 = 0.1       #0.7 cents / postlarvae; assume that actual postlarvae are the only cost; assume post-larvae are 10% cost of juveniles
+  p.rk2= rk06$p_kg[2]        #price per kg of adult prawns (TAMU reports $4-$7 per lb)
   
-  plot_ly(opt.df.pos, x = ~L_nought, y = ~P_nought, z = ~h.bm, type = 'contour')
+  nstart.rk2 = c(P = P0.rk2, L = L0.rk2)
   
-  plot_ly(opt.df.pos, x = ~L_nought, y = ~P_nought, z = ~profit, type = 'contour')
-  plot_ly(opt.df.pos, x = ~L_nought, y = ~P_nought, z = ~ROI, type = 'contour')
+  op.rk2 = as.data.frame(ode(nstart.rk2,t.p,prawn_biomass,par.aqua))
+  op.rk2$B = ((par.aqua['a.p']*(op.rk2$L/10)^par.aqua['b.p'])/10)         # Mean prawn biomass, transformed from length
+  op.rk2$Bt = op.rk2$B*op.rk2$P                                           # Total prawn biomass
+  # Profit function, in terms of revenue (discounted by time since stocking) minus stocking costs 
+  op.rk2$Revenue = p.rk2*(op.rk2$Bt/1000)  
+  op.rk2$profit = p.rk2*(op.rk2$Bt/1000)*exp(-delta*(op.rk2$t)) - (c.rk2*nstart.p["P"])   
+  # ROI as net profit over cost
+  op.rk2$roi = ((p.rk2*(op.rk2$Bt/1000)*exp(-delta*(op.rk2$t))) - 
+                  (c.rk2*nstart.p["P"])) /
+    (c.rk2*nstart.p["P"])
   
-  #Restrict to runs in which initial stocking size is restricted ####################
-  #Bigger prawns at stocking inevitable leads to higher profits. 
-  #What's the max initial size feasible for stocking?
-  #say it's 25mm
-  opt.df.pos.25 = opt.df.pos[which(opt.df.pos$L_nought <= 25),]
-  plot_ly(opt.df.pos.25, x = ~L_nought, y = ~P_nought, z = ~h.bm, type = 'contour')
+  bt0.rk2 = op.rk2$Bt[op.rk2$time==0]/1000
+  T.rk2 = 8*30
+  btT.rk2 = op.rk2$Bt[op.rk2$time == T.rk2]/1000
+  BT.rk2 = op.rk2$B[op.rk2$time == T.rk2]  
+  PT.rk2 = op.rk2$P[op.rk2$time == T.rk2]  
+  prof.rk2 = op.rk2$profit[op.rk2$time == T.rk2]
+  roi.rk2 = op.rk2$roi[op.rk2$time == T.rk2]
   
-  plot_ly(opt.df.pos.25, x = ~L_nought, y = ~P_nought, z = ~profit, type = 'contour')
-  plot_ly(opt.df.pos.25, x = ~L_nought, y = ~P_nought, z = ~ROI, type = 'contour')
+  T.optrk2 = op.rk2$time[op.rk2$Bt == max(op.rk2$Bt)]
+  btT.optrk2 = op.rk2$Bt[op.rk2$time == T.optrk2]/1000
+  BT.optrk2 = op.rk2$B[op.rk2$time == T.optrk2]  
+  PT.optrk2 = op.rk2$P[op.rk2$time == T.optrk2]  
+  prof.optrk2 = op.rk2$profit[op.rk2$time == T.optrk2]
+  roi.optrk2 = op.rk2$roi[op.rk2$time == T.optrk2]
+  surv.optrk2 = PT.optrk2/P0.rk2
   
-  opt.df.pos.25$P_nought[opt.df.pos.25$profit == max(opt.df.pos.25$profit)]
+  plot(x = op.rk2$time, y = op.rk2$P/100, col = 'red', xlab = 'Time (days)', ylab = 'State variables', 
+       type = 'l', lwd=2, xlim = c(0, max(op.rk2$time)), ylim = c(0, max(op.rk2$Bt/1000)+50),
+       main = paste('Prawn fishery dynamics\n', '(mean start size = ', as.numeric(nstart.rk2[2]), ' mm)', sep = ''))
+    lines(x = op.rk2$time, y = op.rk2$Bt/1000, col = 'blue', lwd=2)
+    lines(x = op.rk2$time, y = op.rk2$B, col = 'purple', lwd=2, lty=2)
+    lines(x = op.rk2$time, y = op.rk2$L, col = 'green', lwd=2)
+    abline(v = T.rk2, lty = 2, lwd = 2)
+    legend('topright', legend = c('Prawns (100s)', 'Total biomass (kg)', 'Mean size (g)', 'Mean length (mm)'), 
+           lty = 1, col = c('red', 'blue', 'purple', 'green'), cex = 0.5, bty = 'n')
+    legend('bottomright', legend = c(paste('Starting mass =', round(bt0.rk2), 'kg', sep = ' '),
+                                     paste('Total harvest mass =', round(btT.rk2), 'kg', sep = ' '), 
+                                     paste('Mean harvest mass =', round(BT.rk2), 'g', sep = ' '), 
+                                     paste('Time of harvest =', round(T.rk2), 'days', sep = ' ')), cex=0.5, bty = 'n')
   
-  #Restrict to runs in which sufficient marketable size is achieved ##############
-  #Also want to make sure that prawns are actually big enough to be marketable when harvested
-  #Restrict mean prawn biomass to be >= 40g when harvested
-  opt.df.pos.25.40g = opt.df.pos.25[which(opt.df.pos.25$p.bm >= 40),]
+  plot(op.rk2$time, op.rk2$profit, type = 'l', col = 'darkgreen', lwd = 2,
+       xlab = 'time', ylab = 'profit')  
+  plot(op.rk2$time, op.rk2$Revenue, type = 'l', col = 'darkgreen', lwd = 2,
+       xlab = 'time', ylab = 'profit') 
+    abline(v = T.rk2, lty = 2, lwd = 2)
+    abline(h = rk06$profit[2], lty = 3, lwd = 2)
+  plot(op.rk2$time, op.rk2$roi, type = 'l', col = 'blue', lwd = 2,
+       xlab = 'time', ylab = 'ROI')  
   
-  plot_ly(opt.df.pos.25.40g, x = ~L_nought, y = ~P_nought, z = ~h.bm, type = 'contour')
+# Run & plot cycles from Ranjeet and Kurup paper, experiment 3 check model fit to their exeperimental outcomes #######  
+  P0.rk3= rk06$dens_ha[3]      #5 post larvae per square meter
+  L0.rk3= 38          #17mm = ~.056 grams
+  c.rk3= 0.1       #0.7 cents / postlarvae; assume that actual postlarvae are the only cost; assume post-larvae are 10% cost of juveniles
+  p.rk3= rk06$p_kg[3]        #price per kg of adult prawns (TAMU reports $4-$7 per lb)
   
-  plot_ly(opt.df.pos.25.40g, x = ~L_nought, y = ~P_nought, z = ~profit, type = 'contour')
-  plot_ly(opt.df.pos.25.40g, x = ~L_nought, y = ~P_nought, z = ~ROI, type = 'contour')
+  nstart.rk3= c(P = P0.rk3, L = L0.rk3)
   
-  vol.opt = max(opt.df.pos.25.40g$ROI)
+  op.rk3= as.data.frame(ode(nstart.rk3,t.p,prawn_biomass,par.aqua))
+  op.rk3$B = ((par.aqua['a.p']*(op.rk3$L/10)^par.aqua['b.p'])/10)         # Mean prawn biomass, transformed from length
+  op.rk3$Bt = op.rk3$B*op.rk3$P                                           # Total prawn biomass
+  # Profit function, in terms of revenue (discounted by time since stocking) minus stocking costs 
+  op.rk3$Revenue = p.rk3*(op.rk3$Bt/1000)  
+  op.rk3$profit = p.rk3*(op.rk3$Bt/1000)*exp(-delta*(op.rk3$t)) - (c.rk3*nstart.p["P"])   
+  # ROI as net profit over cost
+  op.rk3$roi = ((p.rk3*(op.rk3$Bt/1000)*exp(-delta*(op.rk3$t))) - 
+                  (c.rk3*nstart.p["P"])) /
+    (c.rk3*nstart.p["P"])
   
-  vol.l0 = opt.df.pos.25.40g$L_nought[opt.df.pos.25.40g$ROI == vol.opt]  # volenhovenii optimal starting length
-  vol.p0 = opt.df.pos.25.40g$P_nought[opt.df.pos.25.40g$ROI == vol.opt]  # volenhovenii optimal starging density
-  vol.ht = opt.df.pos.25.40g$h.t[opt.df.pos.25.40g$ROI == vol.opt]       # volenhovenii optimal harvest time
-  vol.hbm = opt.df.pos.25.40g$h.bm[opt.df.pos.25.40g$ROI == vol.opt]     # volenhovenii harvest biomass at optimal harvest
-  vol.pbm = opt.df.pos.25.40g$p.bm[opt.df.pos.25.40g$ROI == vol.opt]     # volenhovenii prawn mass at optimal harvest
+  bt0.rk3= op.rk3$Bt[op.rk3$time==0]/1000
+  T.rk3= 8*30
+  btT.rk3= op.rk3$Bt[op.rk3$time == T.rk3]/1000
+  BT.rk3= op.rk3$B[op.rk3$time == T.rk3]  
+  PT.rk3= op.rk3$P[op.rk3$time == T.rk3]  
+  prof.rk3= op.rk3$profit[op.rk3$time == T.rk3]
+  roi.rk3= op.rk3$roi[op.rk3$time == T.rk3]
   
+  T.optrk3 = op.rk3$time[op.rk3$Bt == max(op.rk3$Bt)]
+  btT.optrk3 = op.rk3$Bt[op.rk3$time == T.optrk3]/1000
+  BT.optrk3 = op.rk3$B[op.rk3$time == T.optrk3]  
+  PT.optrk3 = op.rk3$P[op.rk3$time == T.optrk3]  
+  prof.optrk3 = op.rk3$profit[op.rk3$time == T.optrk3]
+  roi.optrk3 = op.rk3$roi[op.rk3$time == T.optrk3]
+  surv.optrk3 = PT.optrk3/P0.rk3
   
-  #Optimize by length and stocking density for M. rosenbergii simultaneously ######
-  opt.dfr = expand.grid(L_nought = c(1:50), P_nought = seq(500, 50000, 500)) 
-  opt.dfr$h.t = 0
-  opt.dfr$h.bm = 0
-  opt.dfr$p.bm = 0
-  opt.dfr$p.surv = 0
-  opt.dfr$profit = 0
-  opt.dfr$ROI = 0
+  plot(x = op.rk3$time, y = op.rk3$P/100, col = 'red', xlab = 'Time (days)', ylab = 'State variables', 
+       type = 'l', lwd=2, xlim = c(0, max(op.rk3$time)), ylim = c(0, max(op.rk3$Bt/1000)+50),
+       main = paste('Prawn fishery dynamics\n', '(mean start size = ', as.numeric(nstart.rk3[2]), ' mm)', sep = ''))
+    lines(x = op.rk3$time, y = op.rk3$Bt/1000, col = 'blue', lwd=2)
+    lines(x = op.rk3$time, y = op.rk3$B, col = 'purple', lwd=2, lty=2)
+    lines(x = op.rk3$time, y = op.rk3$L, col = 'green', lwd=2)
+    abline(v = T.rk3, lty = 2, lwd = 2)
+    legend('topright', legend = c('Prawns (100s)', 'Total biomass (kg)', 'Mean size (g)', 'Mean length (mm)'), 
+           lty = 1, col = c('red', 'blue', 'purple', 'green'), cex = 0.5, bty = 'n')
+    legend('bottomright', legend = c(paste('Starting mass =', round(bt0.rk3), 'kg', sep = ' '),
+                                     paste('Total harvest mass =', round(btT.rk3), 'kg', sep = ' '), 
+                                     paste('Mean harvest mass =', round(BT.rk3), 'g', sep = ' '), 
+                                     paste('Time of harvest =', round(T.rk3), 'days', sep = ' ')), cex=0.5, bty = 'n')
   
-  par.aqua['k'] = 0.0104333333  # alternate value for M. rosenbergii, from Sampaio & Valenti 1996: 0.0104333333
-  
-  for(k in 1:nrow(opt.dfr)){
-    start = c(P = opt.dfr[k,2], L = opt.dfr[k,1])
-    op = as.data.frame(ode(start,t.p,prawn_biomass,par.aqua))
-    op$B = ((par.aqua['a.p']*(op$L/10)^par.aqua['b.p'])/10)                    # Mean prawn biomass, transformed from length
-    
-    opt.dfr[k,3] = op$time[op$B*op$P==max(op$B*op$P)]  # harvest time
-    opt.dfr[k,4] = max(op$B*op$P)                      # Total prawn biomass
-    opt.dfr[k,5] = op$B[op$B*op$P==max(op$B*op$P)]     # Prawn size at harvest
-    opt.dfr[k,6] = op$P[op$B*op$P==max(op$B*op$P)] / opt.dfr[k,2]   # Prawn % survival at harvest
-    opt.dfr[k,7] = p*(max(op$B*op$P)/1000)*exp(-delta*(op$time[op$B*op$P==max(op$B*op$P)])) - c*(start["P"]/1000)     #Profit
-    opt.dfr[k,8] = (p*(max(op$B*op$P)/1000)*exp(-delta*(op$time[op$B*op$P==max(op$B*op$P)])) - c*(start["P"]/1000)) / (c*(start["P"]/1000))#ROI  
-    
-    if(k %% 100==0) print(k)
-  }
-  
-  #contour plots with no restrictions on harvest time, harvest size, or profit ############
-  plot_ly(opt.dfr, x = ~L_nought, y = ~P_nought, z = ~h.bm, type = 'contour')
-  plot_ly(opt.dfr, x = ~L_nought, y = ~P_nought, z = ~ROI, type = 'contour')
-  plot_ly(opt.dfr, x = ~L_nought, y = ~P_nought, z = ~profit, type = 'contour')
-  
-  #restrict to runs in which harvest time was <1 year and profit was positive##########
-  opt.dfr.pos = opt.dfr[which(opt.dfr$profit > 0 & opt.dfr$h.t <= 365),]
-  
-  plot_ly(opt.dfr.pos, x = ~L_nought, y = ~P_nought, z = ~h.bm, type = 'contour')
-  
-  plot_ly(opt.dfr.pos, x = ~L_nought, y = ~P_nought, z = ~profit, type = 'contour')
-  plot_ly(opt.dfr.pos, x = ~L_nought, y = ~P_nought, z = ~ROI, type = 'contour')
-  
-  #Restrict to runs in which initial stocking size is restricted ####################
-  #Bigger prawns at stocking inevitable leads to higher profits. 
-  #What's the max initial size feasible for stocking?
-  #say it's 25mm
-  opt.dfr.pos.25 = opt.dfr.pos[which(opt.dfr.pos$L_nought <= 25),]
-  
-  plot_ly(opt.dfr.pos.25, x = ~L_nought, y = ~P_nought, z = ~h.bm, type = 'contour')
-  
-  plot_ly(opt.dfr.pos.25, x = ~L_nought, y = ~P_nought, z = ~profit, type = 'contour')
-  plot_ly(opt.dfr.pos.25, x = ~L_nought, y = ~P_nought, z = ~ROI, type = 'contour')
-  
-  #Restrict to runs in which sufficient marketable size is achieved ##############
-  #Also want to make sure that prawns are actually big enough to be marketable when harvested
-  #Restrict mean prawn biomass to be >= 40g when harvested
-  opt.dfr.pos.25.40g = opt.dfr.pos.25[which(opt.dfr.pos.25$p.bm >= 40),]
-  
-  plot_ly(opt.dfr.pos.25.40g, x = ~L_nought, y = ~P_nought, z = ~h.bm, type = 'contour')
-  
-  plot_ly(opt.dfr.pos.25.40g, x = ~L_nought, y = ~P_nought, z = ~profit, type = 'contour')
-  plot_ly(opt.dfr.pos.25.40g, x = ~L_nought, y = ~P_nought, z = ~ROI, type = 'contour')
-  
-  ros.opt = max(opt.dfr.pos.25.40g$ROI)
-  
-  ros.l0 = opt.dfr.pos.25.40g$L_nought[opt.dfr.pos.25.40g$ROI == ros.opt]  # rosenbergii optimal starting length
-  ros.p0 = opt.dfr.pos.25.40g$P_nought[opt.dfr.pos.25.40g$ROI == ros.opt]  # rosenbergii optimal starging density
-  ros.ht = opt.dfr.pos.25.40g$h.t[opt.dfr.pos.25.40g$ROI == ros.opt]       # rosenbergii optimal harvest time
-  ros.hbm = opt.dfr.pos.25.40g$h.bm[opt.dfr.pos.25.40g$ROI == ros.opt]     # rosenbergii harvest biomass at optimal harvest
-  ros.pbm = opt.dfr.pos.25.40g$p.bm[opt.dfr.pos.25.40g$ROI == ros.opt]     # rosenbergii prawn mass at optimal harvest
-  
+  plot(op.rk3$time, op.rk3$profit, type = 'l', col = 'darkgreen', lwd = 2,
+       xlab = 'time', ylab = 'profit')  
+  plot(op.rk3$time, op.rk3$Revenue, type = 'l', col = 'darkgreen', lwd = 2,
+       xlab = 'time', ylab = 'profit') 
+  abline(v = T.rk3, lty = 2, lwd = 2)
+  abline(h = rk06$profit[3], lty = 3, lwd = 2)
+  plot(op.rk3$time, op.rk3$roi, type = 'l', col = 'blue', lwd = 2,
+       xlab = 'time', ylab = 'ROI')  
   
