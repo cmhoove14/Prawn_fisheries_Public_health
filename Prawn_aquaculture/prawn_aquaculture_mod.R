@@ -38,8 +38,8 @@ par.aqua=c(
 )
 
 # Economic parameters (price estimates from Tamil Nadu Agricultural University, http://agritech.tnau.ac.in/fishery/fish_freshwaterprawn.html)
-p = 140                                           # Weighted average market price of prawns, in rupees/kg 
-c = 600                                           # Cost of post-larvae, in rupees/1000 PL
+p = 12                                           # Weighted average market price of prawns, in rupees/kg 
+c = 0.1                                           # Cost of post-larvae, in rupees/1000 PL
 delta = -log(1-0.1)/365                           # Discount rate, equivalent to 10%/year
 
 
