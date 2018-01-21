@@ -29,10 +29,10 @@ t.p = seq(0, 365*2, 1)
 par.aqua=c(
   a.p = 0.096868,        # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
   b.p = 3.2944,          # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
-  gam = 1e-5,           # Density-dependent growth parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
-  muP = 0.00610958904,  # Prawn mortality at unit weight, from Lorenzen 1996 (pond aquaculture)
+  gam = 6e-6,           # Density-dependent growth parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
+  muP = 0.00610958904,  # Prawn mortality at unit weight, from Lorenzen 1996 (pond aquaculture); informally adjusted based on Ranjeet & Kurup 2010 in fit_dens_dep_params.R
   d = -0.382,           # Exponential relationship of weight with mortality, from Lorenzen 1996 (pond aquaculture)
-  om = 5e-8,           # Density-dependent mortality parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
+  om = 5e-9,            # Density-dependent mortality parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010 in fit_dens_dep_params.R
   k = 0.00339726,       # Growth rate (mm/day), from Nwosu & Wolfi 2006 (M. vollenhovenii); alternate value for M. rosenbergii, from Sampaio & Valenti 1996: 0.0104333333
   linf = 206            # Max length (mm), from Nwosu & Wolfi 2006 (M. vollenhovenii)
 )
