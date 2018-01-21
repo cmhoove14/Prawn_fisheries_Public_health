@@ -166,7 +166,7 @@ snail_prawn_model = function(t, n, parameters) {
     dWdt = lambda*I2/A + theta*lambda*I3/A - (muW + muH)*W
     
     # Prawn abundance
-    dPdt = -P*(muP*Bm.p^d + phi*Bm.t)
+    dPdt = -P*(muP*Bm.p^d + om*Bm.t)
     
     # Mean prawn length (mm)
     dLdt = k/(1+gam*Bm.t)*(linf - L)
