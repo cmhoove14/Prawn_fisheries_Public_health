@@ -12,6 +12,7 @@
 
 source('Combined_Model/epi_prawn_mod.R')
 require(ggplot2)
+require(reshape2)
 
 ## Set initial values and parameters ###########
 years = 10
@@ -21,8 +22,8 @@ t.all = c(0:(years*365)+366)
 nstart.vol = c(S1 = sn.eqbm$S1, S2 = sn.eqbm$S2, S3 = sn.eqbm$S3, 
               E1 = sn.eqbm$E1, E2 = sn.eqbm$E2, E3 = sn.eqbm$E3, 
               I2 = sn.eqbm$I2, I3 = sn.eqbm$I3, W = sn.eqbm$W, 
-              P = 4500, L = 25) #Optimal stocking parameters from volenhovenii ROI optimization
-  harvest.t.vol = 361           #Optimal harvest time from volenhovenii optimization
+              P = 8000, L = 38) #Optimal stocking parameters from volenhovenii ROI optimization
+  harvest.t.vol = 364           #Optimal harvest time from volenhovenii optimization
   n.harvest.vol = floor(max(t.all)/harvest.t.vol)
   stocks.vol = data.frame(var = rep(c('P', 'L'), n.harvest.vol),
                           time = rep(366 + harvest.t.vol*c(0:(n.harvest.vol-1)), each = 2),
@@ -41,9 +42,9 @@ nstart.vol = c(S1 = sn.eqbm$S1, S2 = sn.eqbm$S2, S3 = sn.eqbm$S3,
 nstart.ros = c(S1 = sn.eqbm$S1, S2 = sn.eqbm$S2, S3 = sn.eqbm$S3, 
                E1 = sn.eqbm$E1, E2 = sn.eqbm$E2, E3 = sn.eqbm$E3, 
                I2 = sn.eqbm$I2, I3 = sn.eqbm$I3, W = sn.eqbm$W, 
-               P = 1000, L = 25) #Optimal stocking parameters from rosenbergii ROI optimization
+               P = 19000, L = 38) #Optimal stocking parameters from rosenbergii ROI optimization
 
-  harvest.t.ros = 228
+  harvest.t.ros = 298
   n.harvest.ros = floor(max(t.all)/harvest.t.ros)
   stocks.ros = data.frame(var = rep(c('P', 'L'), n.harvest.ros),
                           time = rep(366 + harvest.t.ros*c(0:(n.harvest.ros-1)), each = 2),
@@ -105,8 +106,21 @@ yr1 = as.data.frame(ode(nstart.yr1,t.yr1,snail_epi,par.snails))
 #plot worm burden over time with MDA events  
   w.mda = ggplot(data = sim.mda, aes(x = time)) +
             theme_bw() +
-            geom_line(aes(y = W), size = 1.25, col = 'purple') 
-  
+            theme(axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 15), #increase axis title size
+                  axis.title.x=element_blank(),         #Suppress x axis
+                  axis.text.x=element_blank(),          #Suppress x axis
+                  title = element_text(size = 15)) +    #increase title size
+            geom_line(aes(y = W), size = 1.25, col = 'purple') +
+            labs(x = 'time (years)', y = expression(italic('W'))) +
+            annotate('text', x = 0.05, y = 50, label = 'A)', size = 8) +
+            scale_y_continuous(breaks = seq(0,50,10),
+                               labels = c('0', '10', '20', '30', '40', '   50'),
+                               limits = c(0, 51)) +
+            scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+                               labels = c(-1:years),
+                               limits = c(0, (365*(years+1)+10)))
+    
   w.mda
   
 #plot snail infection dynamics over time with MDA events  
@@ -151,8 +165,21 @@ sim.vol = as.data.frame(ode(nstart.vol,t.all,snail_prawn_model,par.all.vol,
   
 #plot worm burden over time with volenhovenii stocking events  
   w.vol = ggplot(data = sim.vol, aes(x = time)) +
-    theme_bw() +
-    geom_line(aes(y = W), size = 1.25, col = 'purple') 
+              theme_bw() +
+              theme(axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    axis.title.x=element_blank(),         #Suppress x axis
+                    axis.text.x=element_blank(),          #Suppress x axis
+                    title = element_text(size = 15)) +    #increase title size
+              geom_line(aes(y = W), size = 1.25, col = 'purple') +
+              annotate('text', x = 0.05, y = 50, label = 'C)', size = 8) +
+              labs(x = 'time (years)', y = expression(italic('W'))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = c('0', '10', '20', '30', '40', '   50'),
+                                 limits = c(0, 51)) +
+              scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+                                 labels = c(-1:years),
+                                 limits = c(0, (365*(years+1)+10)))
   
   w.vol
   
@@ -179,12 +206,36 @@ sim.vol = as.data.frame(ode(nstart.vol,t.all,snail_prawn_model,par.all.vol,
   
   size.vol
 #plot snail infection dynamics over time with volenhovenii stocking events  
-  snail.vol = ggplot(data = sim.vol, aes(x = time)) +
-    theme_bw() +
-    geom_line(aes(y = N.t), size = 1.25, col = 'black') +
-    geom_line(aes(y = S.t), size = 1.25, col = 'green') +
-    geom_line(aes(y = E.t), size = 1.25, col = 'orange') +
-    geom_line(aes(y = I.t), size = 1.25, col = 'red') 
+  snail.vol.long = reshape(sim.vol, varying = c('S.t', 'E.t', 'I.t', 'N.t'), v.names = 'infection',
+                           times = c('S', 'E', 'I', 'N'), direction = 'long', drop = c('S1', 'S2', 'S3',
+                                                                          'E1', 'E2', 'E3',
+                                                                          'I2', 'I3', 'W',
+                                                                          'P', 'L', 'prev',
+                                                                          't.1', 't.2', 't.3',
+                                                                          'Species'))
+  colnames(snail.vol.long) = c('Infection', 'dens', 'time')
+  snail.vol.long$Infection = factor(snail.vol.long$Infection, levels = c('N', 'S', 'E', 'I'))
+  
+snail.vol = ggplot(data = snail.vol.long, aes(x = time)) +
+              theme_bw() +
+              theme(legend.position = c(0.25, 0.75),      #place legend inside plot
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    axis.title.x=element_blank(),         #Suppress x axis
+                    axis.text.x=element_blank(),          #Suppress x axis
+                    title = element_text(size = 15),      #increase title size
+                    legend.text = element_text(size = 11),#increase legend text size
+                    legend.title = element_blank())  +    #suppress legend title
+              geom_line(aes(y = dens, col = Infection), size = 1.25) +
+              scale_color_manual(values = c('black', 'green', 'orange', 'red')) +
+              annotate('text', x = 0.05, y = 20, label = 'E)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste('N'[i], 'm'^'-2'))) +
+              scale_y_continuous(breaks = seq(0,20,5),
+                                 labels = seq(0,20,5),
+                                 limits = c(0, 21)) +
+              scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+                                 labels = c(-1:years),
+                                 limits = c(0, (365*(years+1)+10)))
   
   snail.vol
   
@@ -205,8 +256,21 @@ sim.vol = as.data.frame(ode(nstart.vol,t.all,snail_prawn_model,par.all.vol,
   
 #plot worm burden over time with rosenbergii stocking events  
   w.ros = ggplot(data = sim.ros, aes(x = time)) +
-    theme_bw() +
-    geom_line(aes(y = W), size = 1.25, col = 'purple') 
+            theme_bw() +
+            theme(axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 15), #increase axis title size
+                  axis.title.x=element_blank(),         #Suppress x axis
+                  axis.text.x=element_blank(),          #Suppress x axis
+                  title = element_text(size = 15)) +    #increase title size
+            geom_line(aes(y = W), size = 1.25, col = 'purple') +
+            annotate('text', x = 0.05, y = 50, label = 'D)', size = 8) +
+            labs(x = 'time (years)', y = expression(italic('W'))) +
+            scale_y_continuous(breaks = seq(0,50,10),
+                               labels = c('0', '10', '20', '30', '40', '   50'),
+                               limits = c(0, 51)) +
+            scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+                               labels = c(-1:years),
+                               limits = c(0, (365*(years+1)+10)))
   
   w.ros
   
@@ -235,17 +299,225 @@ sim.vol = as.data.frame(ode(nstart.vol,t.all,snail_prawn_model,par.all.vol,
   snail.ros
   
 #plot snail size dynamics over time with rosenbergii stocking events  
-  size.ros = ggplot(data = sim.ros, aes(x = time)) +
-    theme_bw() +
-    geom_line(aes(y = t.1), size = 1.25, col = 'blue') +
-    geom_line(aes(y = t.2), size = 1.25, col = 'green') +
-    geom_line(aes(y = t.3), size = 1.25, col = 'red') 
+  snail.ros.long = reshape(sim.ros, varying = c('S.t', 'E.t', 'I.t', 'N.t'), v.names = 'infection',
+                           times = c('S', 'E', 'I', 'N'), direction = 'long', drop = c('S1', 'S2', 'S3',
+                                                                                       'E1', 'E2', 'E3',
+                                                                                       'I2', 'I3', 'W',
+                                                                                       'P', 'L', 'prev',
+                                                                                       't.1', 't.2', 't.3',
+                                                                                       'Species'))
+  colnames(snail.ros.long) = c('Infection', 'dens', 'time')
+  snail.ros.long$Infection = factor(snail.ros.long$Infection, levels = c('N', 'S', 'E', 'I'))
   
-  size.ros
+snail.ros = ggplot(data = snail.ros.long, aes(x = time)) +
+                    theme_bw() +
+                    theme(legend.position = c(0.25, 0.75),      #place legend inside plot
+                          axis.text = element_text(size = 12),  #increase axis label size
+                          axis.title = element_text(size = 15), #increase axis title size
+                          axis.title.x=element_blank(),         #Suppress x axis
+                          axis.text.x=element_blank(),          #Suppress x axis
+                          title = element_text(size = 15),      #increase title size
+                          legend.text = element_text(size = 11),#increase legend text size
+                          legend.title = element_blank())  +    #suppress legend title
+                    geom_line(aes(y = dens, col = Infection), size = 1.25) +
+                    annotate('text', x = 0.05, y = 20, label = 'F)', size = 8) +
+                    scale_color_manual(values = c('black', 'green', 'orange', 'red')) +
+                    labs(x = 'time (years)', y = expression(paste('N'[i], 'm'^'-2'))) +
+                    scale_y_continuous(breaks = seq(0,20,5),
+                                       labels = seq(0,20,5),
+                                       limits = c(0, 21)) +
+                    scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+                                       labels = c(-1:years),
+                                       limits = c(0, (365*(years+1)+10)))
   
+  snail.ros
+  
+#Merge rosenbergii and volenhovenii stocking sims for plot of prawn pops over time ###############
+  sim.ros$Species = 'M. rosenbergii'
+  sim.vol$Species = 'M. volenhovenii'
+  sim.rosvol = rbind(sim.vol, sim.ros)
+  
+p.rosvol = ggplot(sim.rosvol, aes(x = time)) +
+            theme_bw() +
+            theme(legend.position = c(0.8, 0.088),      #place legend inside plot
+                  axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 15), #increase axis title size
+                  axis.title.x=element_blank(),         #Suppress x axis
+                  axis.text.x=element_blank(),          #Suppress x axis
+                  title = element_text(size = 15),      #increase title size
+                  legend.text = element_text(size = 8), #increase legend text size
+                  legend.background = element_blank(),
+                  legend.title = element_blank())  +    #suppress legend title
+            geom_line(aes(y = P/10000, col = Species), size = 1.25) +
+            annotate('text', x = 0.05, y = 2, label = 'B)', size = 8) +
+            labs(x = 'time (years)', y = expression(italic('Pm'^'-2'))) +
+            scale_y_continuous(breaks = seq(0,2,0.5),
+                               labels = seq(0,2,0.5),
+                               limits = c(0, 2.1)) +
+            scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+                               labels = c(-1:years),
+                               limits = c(-0.2, (365*(years+1)+10)))
+  p.rosvol
+
+#Simulate annual mda along with volenhovenii stocking #############
+mda.vol = rbind(mdas, stocks.vol)
+  mda.vol = mda.vol[order(mda.vol$time),]
+  
+  sim.mda.vol = as.data.frame(ode(nstart.vol,t.all,snail_prawn_model,par.all.vol,
+                              events = list(data = mda.vol)))
+  
+  sim.mda.vol$prev = pnbinom(2, size = 0.2, mu = sim.mda.vol$W, lower.tail = FALSE)   
+  sim.mda.vol$S.t = (sim.mda.vol$S1 + sim.mda.vol$S2 + sim.mda.vol$S3) / area        # density susceptible snails
+  sim.mda.vol$E.t = (sim.mda.vol$E1 + sim.mda.vol$E2 + sim.mda.vol$E3) / area        # density exposed snails 
+  sim.mda.vol$I.t = (sim.mda.vol$I2 + sim.mda.vol$I3 ) / area                    # density infected snails
+  sim.mda.vol$N.t = (sim.mda.vol$S.t + sim.mda.vol$E.t + sim.mda.vol$I.t)            # density snails
+  sim.mda.vol$t.1 = (sim.mda.vol$S1 + sim.mda.vol$E1) / area                          # density snails of size class 1
+  sim.mda.vol$t.2 = (sim.mda.vol$S2 + sim.mda.vol$E2 + sim.mda.vol$I2) / area      # density snails of size class 2
+  sim.mda.vol$t.3 = (sim.mda.vol$S3 + sim.mda.vol$E3 + sim.mda.vol$I3) / area      # density snails of size class 3
+  
+  sim.mda.vol = rbind(yr1, sim.mda.vol)
+  
+#plot worm burden over time with volenhovenii stocking events and mda events
+w.mda.vol = ggplot(data = sim.mda.vol, aes(x = time)) +
+                    theme_bw() +
+                    theme(axis.text = element_text(size = 12),  #increase axis label size
+                          axis.title = element_text(size = 15), #increase axis title size
+                          title = element_text(size = 15)) +    #increase title size
+                    geom_line(aes(y = W), size = 1.25, col = 'purple') +
+                    annotate('text', x = 0.05, y = 50, label = 'G)', size = 8) +
+                    labs(x = 'time (years)', y = expression(italic('W'))) +
+                    scale_y_continuous(breaks = seq(0,50,10),
+                                       labels = c('0', '10', '20', '30', '40', '   50'),
+                                       limits = c(0, 51)) +
+                    scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+                                       labels = c(-1:years),
+                                       limits = c(0, (365*(years+1)+10)))
+  
+  w.mda.vol
+
+#Plot snail infection dynamics under repeated MDA and volenhovenii stocking
+  snail.mda.vol.long = reshape(sim.mda.vol, varying = c('S.t', 'E.t', 'I.t', 'N.t'), v.names = 'infection',
+                           times = c('S', 'E', 'I', 'N'), direction = 'long', drop = c('S1', 'S2', 'S3',
+                                                                                       'E1', 'E2', 'E3',
+                                                                                       'I2', 'I3', 'W',
+                                                                                       'P', 'L', 'prev',
+                                                                                       't.1', 't.2', 't.3',
+                                                                                       'Species'))
+  colnames(snail.mda.vol.long) = c('Infection', 'dens', 'time')
+  snail.mda.vol.long$Infection = factor(snail.mda.vol.long$Infection, levels = c('N', 'S', 'E', 'I'))
+  
+snail.mda.vol = ggplot(data = snail.mda.vol.long, aes(x = time)) +
+                  theme_bw() +
+                  theme(legend.position = c(0.25, 0.75),      #place legend inside plot
+                        axis.text = element_text(size = 12),  #increase axis label size
+                        axis.title = element_text(size = 15), #increase axis title size
+                        axis.title.x=element_blank(),         #Suppress x axis
+                        axis.text.x=element_blank(),          #Suppress x axis
+                        title = element_text(size = 15),      #increase title size
+                        legend.text = element_text(size = 11),#increase legend text size
+                        legend.title = element_blank())  +    #suppress legend title
+                  geom_line(aes(y = dens, col = Infection), size = 1.25) +
+                  annotate('text', x = 0.05, y = 50, label = 'F)', size = 8) +
+                  scale_color_manual(values = c('black', 'green', 'orange', 'red')) +
+                  labs(x = 'time (years)', y = expression(paste('N'[i], 'm'^'-2'))) +
+                  scale_y_continuous(breaks = seq(0,50,5),
+                                     labels = seq(0,50,5),
+                                     limits = c(0, 51)) +
+                  scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+                                     labels = c(-1:years),
+                                     limits = c(0, (365*(years+1)+10)))
+  
+  snail.mda.vol
+  
+#Simulate annual mda along with rosenbergii stocking #############
+mda.ros = rbind(mdas, stocks.ros)
+  mda.ros = mda.ros[order(mda.ros$time),]
+  
+  sim.mda.ros = as.data.frame(ode(nstart.ros,t.all,snail_prawn_model,par.all.ros,
+                                  events = list(data = mda.ros)))
+  
+  sim.mda.ros$prev = pnbinom(2, size = 0.2, mu = sim.mda.ros$W, lower.tail = FALSE)   
+  sim.mda.ros$S.t = (sim.mda.ros$S1 + sim.mda.ros$S2 + sim.mda.ros$S3) / area        # density susceptible snails
+  sim.mda.ros$E.t = (sim.mda.ros$E1 + sim.mda.ros$E2 + sim.mda.ros$E3) / area        # density exposed snails 
+  sim.mda.ros$I.t = (sim.mda.ros$I2 + sim.mda.ros$I3 ) / area                    # density infected snails
+  sim.mda.ros$N.t = (sim.mda.ros$S.t + sim.mda.ros$E.t + sim.mda.ros$I.t)            # density snails
+  sim.mda.ros$t.1 = (sim.mda.ros$S1 + sim.mda.ros$E1) / area                          # density snails of size class 1
+  sim.mda.ros$t.2 = (sim.mda.ros$S2 + sim.mda.ros$E2 + sim.mda.ros$I2) / area      # density snails of size class 2
+  sim.mda.ros$t.3 = (sim.mda.ros$S3 + sim.mda.ros$E3 + sim.mda.ros$I3) / area      # density snails of size class 3
+  
+  sim.mda.ros = rbind(yr1, sim.mda.ros)
+  
+#plot worm burden over time with volenhovenii stocking events and mda events
+w.mda.ros = ggplot(data = sim.mda.ros, aes(x = time)) +
+                    theme_bw() +
+                    theme(axis.text = element_text(size = 12),  #increase axis label size
+                          axis.title = element_text(size = 15), #increase axis title size
+                          title = element_text(size = 15)) +    #increase title size
+                    geom_line(aes(y = W), size = 1.25, col = 'purple') +
+                    annotate('text', x = 0.05, y = 50, label = 'H)', size = 8) +
+                    labs(x = 'time (years)', y = expression(italic('W'))) +
+                    scale_y_continuous(breaks = seq(0,50,10),
+                                       labels = c('0', '10', '20', '30', '40', '   50'),
+                                       limits = c(0, 51)) +
+                    scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+                                       labels = c(-1:years),
+                                       limits = c(0, (365*(years+1)+10)))
+  
+  w.mda.ros
   
 ##################
+##################
+#plot combined figure with multiplot ###############   
+  multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+    library(grid)
+    
+    # Make a list from the ... arguments and plotlist
+    plots <- c(list(...), plotlist)
+    
+    numPlots = length(plots)
+    
+    # If layout is NULL, then use 'cols' to determine layout
+    if (is.null(layout)) {
+      # Make the panel
+      # ncol: Number of columns of plots
+      # nrow: Number of rows needed, calculated from # of cols
+      layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                       ncol = cols, nrow = ceiling(numPlots/cols))
+    }
+    
+    if (numPlots==1) {
+      print(plots[[1]])
+      
+    } else {
+      # Set up the page
+      grid.newpage()
+      pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+      
+      # Make each plot, in the correct location
+      for (i in 1:numPlots) {
+        # Get the i,j matrix positions of the regions that contain this subplot
+        matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+        
+        print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                        layout.pos.col = matchidx$col))
+      }
+    }
+  }
   
+  fig1.layout = matrix(c(1,2,
+                         3,4,
+                         5,6,
+                         7,8), ncol = 2, byrow = T)
+
+  windows(width = 300, height = 700)
+  multiplot(w.mda, p.rosvol, 
+            w.vol, w.ros, 
+            snail.vol, snail.ros, 
+            w.mda.vol, w.mda.ros, 
+            layout = fig1.layout)
+  
+##################
+##################
 theme(legend.position = c(0.9, 0.5),        
                   axis.text.y = element_text(size = 12),  
                   axis.title.y = element_text(size = 15), 
