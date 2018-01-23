@@ -16,9 +16,9 @@ fx<-function(x, mean.worm, clump){
   alpha<-(mean.worm)/(clump+mean.worm)
   (1-cos(x)) / ( (1+(alpha*cos(x)))^(1+clump) )
 }
-phi_Wk<-function(W, k){
-  alpha<-W/(W+k)
-  1-( (1-alpha)^(k+1) * (integrate(fx, 0, 2*pi, W, k, stop.on.error = F)$value) /(2*pi)  )
+phi_Wk<-function(W, phi){
+  alpha<-W/(W+phi)
+  1-( (1-alpha)^(phi+1) * (integrate(fx, 0, 2*pi, W, phi, stop.on.error = F)$value) /(2*pi)  )
 }
 
 snail_epi = function(t, n, parameters) { 
@@ -34,7 +34,7 @@ snail_epi = function(t, n, parameters) {
     I3=n[8]
     W =n[9]
     
-    mate = phi_Wk(W = W, k = k)  #Mating probability
+    mate = phi_Wk(W = W, phi = phi)  #Mating probability
     S = S1+S2+S3    # Total susceptible snails
     E = E1+E2+E3    # Total exposed snails
     I = I2+I3       # Total infected snails
@@ -101,7 +101,7 @@ par.snails=c(
   sigma = 1/30,      # Latent period for exposed snails (infectious snails/exposed snail/day); adjusted from Sokolow et al. 2015 (original value: 1/50)
   lambda = 0.00787,  # Snail-to-human infection probability scaled to 1 m^2 (composite including cercarial shedding, mortality, infection, survival to patency) from Sokolow et al. 2015; =1 infection per 127 contacts
   theta = 2,         # Scale factor describing increase in cercarial shedding rate in larger snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
-  k = 0.2,           # clumping parameter of the negative binomial distribution used in the mating probability function
+  phi = 0.2,           # clumping parameter of the negative binomial distribution used in the mating probability function
   
   ## Schisto mortality parameters
   muW = 1/(3.3*365), # Natural mortality rate of adult worms in humans, assuming average lifespan of 3.3 years, from Sokolow et al. 2015

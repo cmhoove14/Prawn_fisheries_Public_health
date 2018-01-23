@@ -22,7 +22,7 @@ snail_prawn_model = function(t, n, parameters) {
     N = N1+N2+N3   # Total number of snails
     
     # Miracidial density per person as a function of mean worm burden (W) and miracidial shedding rate (m)
-    mate = phi_Wk(W = W, k = k)  #Mating probability
+    mate = phi_Wk(W = W, phi = phi)  #Mating probability
     M = m*0.5*W*mate
     
     # Mean and total prawn biomass, converting from length (mm) to weight (g)
