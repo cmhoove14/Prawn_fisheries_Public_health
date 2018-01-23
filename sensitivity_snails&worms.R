@@ -1,5 +1,150 @@
-#Assess sensitivity of infection outcomes, holding prawn dynamics constant to start ############
-  source('snail_prawn_full.R') #Reset
+#Assess sensitivity of each outcome ############
+source('Combined_Model/epi_prawn_mod.R')
+source('Prawn_aquaculture/prawn_aquaculture_mod.R')
+source('Prawn_aquaculture/macrobrachium_aquaculture_data.R')
+source('Epi_Model/snail_epi_mod.R')
+
+nsims = 1000
+years = 10
+t.all = c(0:(years*365))
+nstart.r = c(P = 19000, L = 38) 
+eta = predict(eta.lm, newdata = data.frame(dens = nstart.r['P']/area))
+#get all parameters in the same vector ###########
+par.all = c(par.aqua, par.snails,
+            a.s = 0.187178454,  # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
+            b.s = 2.536764792,  # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
+            ar.slp = 0.9050,    # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014
+            #ar.int = 0.804928, # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014
+            th = 0.38561)       # Coefficient for relationship between biomass ratio and handling time, fitted to data from Sokolow et al. 2014
+
+  par.all['c'] = 0.1
+  par.all['p'] = 12
+  par.all['eta'] = eta
+ 
+#generate parameter ranges to sample over ################# 
+  paranges = matrix(ncol = length(par.all), nrow = nsims)
+  paranges = as.data.frame(paranges)
+  colnames(paranges) = names(par.all)
+  
+  for(i in 1: length(par.all)){
+    paranges[,i] = seq(par.all[i]*0.75, par.all[i]*1.25, length.out = nsims)
+  }
+  
+  #don't vary these. They're only included as parameters for modeling convenience, but we know what they are
+  paranges$H = rep(1000, nsims)
+  paranges$A = rep(10000, nsims)
+  
+#Augment latin hypercube to sample from ###########
+  #create a matrix of indices for the LHC where nrow=number of sims and ncol=number of variables
+  LHC_indices<-matrix(0, nrow=nsims, ncol=length(par.all))  
+  #Add structure of latin hypercube
+  set.seed(43018)
+  for(j in 1:dim(LHC_indices)[2]){
+    LHC_indices[,j]<-sample(1:nsims, size=nsims, replace=FALSE)
+  }  
+  
+  lhcpars = paranges
+  
+#reorder parameters in order of LHC indices  
+  for(k in 1:length(par.all)){
+    lhcpars[,k] = paranges[,k][LHC_indices[,k]]
+  }
+  
+#first get outcomes from prawn aquaculture model ###########
+  lhcpars.aqua = lhcpars[,which(colnames(lhcpars) %in% c(names(par.aqua), 'c', 'p', 'eta'))]
+  
+  lhcpars.aqua.fill = data.frame(h.t = 0,
+                                 h.bm = 0,
+                                 h.mbm = 0,
+                                 revenue = 0,
+                                 profit = 0,
+                                 roi = 0)
+  
+#Run model through with parameter sets from latin hypercube
+  for(i in 1:nsims){
+    parun<-lhcpars.aqua[i,1:8]
+    c = lhcpars.aqua[i,9]
+    p = lhcpars.aqua[i,10]
+    eta = lhcpars.aqua[i,11]
+      
+    output = as.data.frame(ode(nstart.r, t.p, prawn_biomass, parun))
+    output$B = ((par.aqua['a.p']*(output$L/10)^par.aqua['b.p'])/10)       
+    output$Bt = output$B*output$P      
+    
+    lhcpars.aqua.fill[i,1] = output$time[output$B*output$P==max(output$B*output$P)]   #harvest time
+    lhcpars.aqua.fill[i,2] = max(output$B*output$P)                       #harvest total biomass
+    lhcpars.aqua.fill[i,3] = max(output$B*output$P) * eta                 #harvest marketable biomass
+    lhcpars.aqua.fill[i,4] = p*(max(output$B*output$P)/1000)               # Raw Profit (revenue)
+    lhcpars.aqua.fill[i,5] = p*(max(output$B*output$P)/1000)*
+                                exp(-delta*(output$time[output$B*output$P==max(output$B*output$P)])) - 
+                                c*(nstart.r["P"])  #Net profit
+    lhcpars.aqua.fill[i,6] = (p*(max(output$B*output$P)/1000)*
+                                 exp(-delta*(output$time[output$B*output$P==max(output$B*output$P)])) - 
+                                 c*(nstart.r["P"])) / (c*(nstart.r["P"])) # ROI 
+    if(i %% 100==0) print(i)
+  }
+  
+#Next run epi mod to equilibrium, get stocking events based on aquaculture mod run above, then run intervention over 10 yrs ##########  
+  lhcpars.epi = lhcpars[,which(colnames(lhcpars) %in% names(par.snails))]
+  lhcpars.epi.fill = data.frame(W = 0,
+                                I.t = 0,
+                                N.t = 0)
+  
+  lhcpars.all.fill = data.frame(W = 0,
+                                I.t = 0,
+                                N.t = 0)
+  
+  for(i in 1:nsims){
+    #Run epi mod to eqbm by itself, store key outcomes
+    sn.run = as.data.frame(ode(nstart.sn,t.sn,snail_epi,par.snails))
+    sn.eqbm = sn.run[dim(sn.run)[1],]
+    
+    lhcpars.epi.fill[i,1] = sn.eqbm$W
+    lhcpars.epi.fill[i,2] = sn.eqbm$I2 + sn.eqbm$I3
+    lhcpars.epi.fill[i,3] = sum(sn.eqbm[,2:9])
+    
+    #create new starting conditions based on the parameter set 
+    nstart.lhc = c(S1 = sn.eqbm$S1, S2 = sn.eqbm$S2, S3 = sn.eqbm$S3, 
+                   E1 = sn.eqbm$E1, E2 = sn.eqbm$E2, E3 = sn.eqbm$E3, 
+                   I2 = sn.eqbm$I2, I3 = sn.eqbm$I3, W = sn.eqbm$W, 
+                   P = 19000, L = 38) #Optimal stocking parameters from rosenbergii ROI optimization
+    
+    #draw stocking parameters from prior aquaculture runs
+    harvest.t.lhc = lhcpars.aqua.fill[i,1]
+    n.harvest.lhc = floor(max(t.all)/harvest.t.lhc)
+    stocks.lhc = data.frame(var = rep(c('P', 'L'), n.harvest.lhc),
+                            time = rep(harvest.t.lhc*c(1:(n.harvest.lhc)), each = 2),
+                            value = rep(c(nstart.lhc['P'], nstart.lhc['L']), n.harvest.lhc),
+                            method = rep('rep', n.harvest.lhc*2))
+    
+    #get full parameter set from latin hypercube
+    par.all.lhc = lhcpars[i,-which(colnames(lhcpars) %in% c('c', 'p', 'eta'))]
+    
+    #simulate
+    sim.lhc = as.data.frame(ode(nstart.lhc,t.all,snail_prawn_model,par.all.lhc,
+                                events = list(data = stocks.lhc)))
+    
+    lhcpars.all.fill[i,1] = median(sim.lhc$W[c(((years-1)*365):(years*365))+1])
+    
+    lhcpars.all.fill[i,2] = median(sim.lhc$I2[c(((years-1)*365):(years*365))+1] + 
+                                     sim.lhc$I3[c(((years-1)*365):(years*365))+1])
+    
+    lhcpars.all.fill[i,3] = median(sim.lhc$I2[c(((years-1)*365):(years*365))+1] + 
+                                     sim.lhc$I3[c(((years-1)*365):(years*365))+1] +
+                                     sim.lhc$E3[c(((years-1)*365):(years*365))+1] +
+                                     sim.lhc$E2[c(((years-1)*365):(years*365))+1] +
+                                     sim.lhc$E1[c(((years-1)*365):(years*365))+1] +
+                                     sim.lhc$S3[c(((years-1)*365):(years*365))+1] +
+                                     sim.lhc$S2[c(((years-1)*365):(years*365))+1] +
+                                     sim.lhc$S1[c(((years-1)*365):(years*365))+1])
+    print(i)
+    # if(i %% 100==0) print(i)
+    
+  }
+  
+lhcfin = cbind(lhcpars, lhcpars.aqua.fill,lhcpars.epi.fill, lhcpars.all.fill)
+  colnames(lhcfin)[47:49] = c('W.all', 'I.t.all', 'N.t.all')
+  save(lhcfin, file='Sensitivity_Analysis/lhc_prcc_df.Rdata')
 #check model behavior ###############
   harvest.time = harvest.time
   ncycles = 10
