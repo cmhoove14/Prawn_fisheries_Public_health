@@ -4,6 +4,9 @@ source('Prawn_aquaculture/prawn_aquaculture_mod.R')
 source('Prawn_aquaculture/macrobrachium_aquaculture_data.R')
 source('Epi_Model/snail_epi_mod.R')
 
+library(sensitivity)
+library(parallel)
+
 nsims = 1000
 years = 10
 t.all = c(0:(years*365))
@@ -96,21 +99,28 @@ par.all = c(par.aqua, par.snails,
                                 I.t.all = 0,
                                 N.t.all = 0)
   
+  lhcpars.all.sims = array(data = NA, dim = c(3651, 12, nsims))
+  
+clus1 = makeCluster(detectCores()-1)
+  clusterExport(clus1, c('lhcpars.all.fill', 'lhcpars.all.sims', 'lhcpars.aqua', 'lhcpars.epi', 'lhcpars.epi.fill', 'lhcpars',
+                         'snail_epi', 'prawn_biomass'))
+  
+  
   for(i in 1:nsims){
     parsim = lhcpars.epi[i,]
     
     #Run epi mod to eqbm by itself, store key outcomes
-    sn.run = as.data.frame(ode(nstart.sn,t.sn,snail_epi,parsim))
+    sn.run = ode(nstart.sn,t.sn,snail_epi,parsim)
     sn.eqbm = sn.run[dim(sn.run)[1],]
     
-    lhcpars.epi.fill[i,1] = sn.eqbm$W
-    lhcpars.epi.fill[i,2] = sn.eqbm$I2 + sn.eqbm$I3
-    lhcpars.epi.fill[i,3] = sum(sn.eqbm[,2:9])
+    lhcpars.epi.fill[i,1] = sn.eqbm['W']
+    lhcpars.epi.fill[i,2] = sn.eqbm['I2'] + sn.eqbm['I3']
+    lhcpars.epi.fill[i,3] = sum(sn.eqbm[2:9])
     
     #create new starting conditions based on the parameter set 
-    nstart.lhc = c(S1 = sn.eqbm$S1, S2 = sn.eqbm$S2, S3 = sn.eqbm$S3, 
-                   E1 = sn.eqbm$E1, E2 = sn.eqbm$E2, E3 = sn.eqbm$E3, 
-                   I2 = sn.eqbm$I2, I3 = sn.eqbm$I3, W = sn.eqbm$W, 
+    nstart.lhc = c(sn.eqbm['S1'], sn.eqbm['S2'], sn.eqbm['S3'], 
+                   sn.eqbm['E1'], sn.eqbm['E2'], sn.eqbm['E3'], 
+                   sn.eqbm['I2'], sn.eqbm['I3'], sn.eqbm['W'], 
                    P = 19000, L = 38) #Optimal stocking parameters from rosenbergii ROI optimization
     
     #draw stocking parameters from prior aquaculture runs
@@ -131,23 +141,29 @@ par.all = c(par.aqua, par.snails,
     lhcpars.all.fill[i,1] = median(sim.lhc$W[c(((years-1)*365):(years*365))+1])
     
     lhcpars.all.fill[i,2] = median(sim.lhc$I2[c(((years-1)*365):(years*365))+1] + 
-                                     sim.lhc$I3[c(((years-1)*365):(years*365))+1])
+                                   sim.lhc$I3[c(((years-1)*365):(years*365))+1])
     
     lhcpars.all.fill[i,3] = median(sim.lhc$I2[c(((years-1)*365):(years*365))+1] + 
-                                     sim.lhc$I3[c(((years-1)*365):(years*365))+1] +
-                                     sim.lhc$E3[c(((years-1)*365):(years*365))+1] +
-                                     sim.lhc$E2[c(((years-1)*365):(years*365))+1] +
-                                     sim.lhc$E1[c(((years-1)*365):(years*365))+1] +
-                                     sim.lhc$S3[c(((years-1)*365):(years*365))+1] +
-                                     sim.lhc$S2[c(((years-1)*365):(years*365))+1] +
-                                     sim.lhc$S1[c(((years-1)*365):(years*365))+1])
+                                   sim.lhc$I3[c(((years-1)*365):(years*365))+1] +
+                                   sim.lhc$E3[c(((years-1)*365):(years*365))+1] +
+                                   sim.lhc$E2[c(((years-1)*365):(years*365))+1] +
+                                   sim.lhc$E1[c(((years-1)*365):(years*365))+1] +
+                                   sim.lhc$S3[c(((years-1)*365):(years*365))+1] +
+                                   sim.lhc$S2[c(((years-1)*365):(years*365))+1] +
+                                   sim.lhc$S1[c(((years-1)*365):(years*365))+1])
+    
+    lhcpars.all.sims[ , , i] = round(as.matrix(sim.lhc), digits = 2)
     
      if(i %% 50==0) print(c(i, lhcpars.all.fill[i,]))
     
   }
   
+stopCluster(clus1)
+
 lhcfin = cbind(lhcpars, lhcpars.aqua.fill,lhcpars.epi.fill, lhcpars.all.fill)
-  #save(lhcfin, file='Sensitivity_Analysis/lhc_prcc_df_plusminus50%_inputs.Rdata')
+ #lhcfin$N.t.all.10yr = lhcpars.all.sims[3651, 10, ]
+ #lhcfin$W.all.10yr = lhcpars.all.sims[3651, 10, ]
+  #save(lhcfin, file='Sensitivity_Analysis/lhc_prcc_df_plusminus30%_inputs.Rdata')
   
 # Assess PRCC of prawn model outputs ###############
 # profit sensitivity  
@@ -292,7 +308,7 @@ lhcfin = cbind(lhcpars, lhcpars.aqua.fill,lhcpars.epi.fill, lhcpars.all.fill)
   N_tall.pcc = pcc(X = as.data.frame(lhcfin[,which(colnames(lhcfin) %in% 
                                                      names(par.all)[-which(names(par.all) %in% 
                                                                              c('A', 'H', 'psi1', 'psi2', 'psi3'))])]),
-                   y = as.data.frame(lhcfin$N.t.all),
+                   y = as.data.frame(colSums(lhcpars.all.sims[3651, 2:9, ])),
                    rank = TRUE)
   
   N_tall.pcc.df = N_tall.pcc$PRCC
@@ -309,6 +325,18 @@ lhcfin = cbind(lhcpars, lhcpars.aqua.fill,lhcpars.epi.fill, lhcpars.all.fill)
   
   N_tall.lhsprcc
   
+#Something weird going on here, PRCC is near 0 for all variables
+  plot(lhcfin$N.t, lhcfin$N.t.all, pch = 16, cex = 0.7)
+  plot(lhcfin$N.t.all, colSums(lhcpars.all.sims[3651, 2:9, ]), pch = 16, cex = 0.7,
+       xlab = 'fin snail pop', ylab = 'median last year snail pop')
+  
+  lhcfin$N.t.all.10yr = colSums(lhcpars.all.sims[3651, 2:9, ])
+    pairs(lhcfin[,c(1:8, 49)], pch = 18, cex = 0.7)
+    pairs(lhcfin[,c(1:8, 50)], pch = 18, cex = 0.7)
+    
+    pairs(lhcfin[,c(11:17, 50)], pch = 18, cex = 0.7)
+    pairs(lhcfin[,c(21:34, 50)], pch = 18, cex = 0.7)
+    
 # Combine plots of key model outcomes ##################
   multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
     library(grid)
