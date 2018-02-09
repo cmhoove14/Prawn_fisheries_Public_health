@@ -89,22 +89,13 @@ par.all = c(par.aqua, par.snails,
   
   hist(lhcpars.aqua.fill$h.t, breaks = 30)
   
-#Next run epi mod to equilibrium, get stocking events based on aquaculture mod run above, then run intervention over 10 yrs ##########  
+#Next run epi mod to equilibrium over all parameter sets ##########  
   lhcpars.epi = lhcpars[,which(colnames(lhcpars) %in% names(par.snails))]
   lhcpars.epi.fill = data.frame(W = 0,
-                                I.t = 0,
-                                N.t = 0)
-  
-  lhcpars.all.fill = data.frame(W.all = 0,
-                                I.t.all = 0,
-                                N.t.all = 0)
-  
-  lhcpars.all.sims = array(data = NA, dim = c(3651, 12, nsims))
-  
-clus1 = makeCluster(detectCores()-1)
-  clusterExport(clus1, c('lhcpars.all.fill', 'lhcpars.all.sims', 'lhcpars.aqua', 'lhcpars.epi', 'lhcpars.epi.fill', 'lhcpars',
-                         'snail_epi', 'prawn_biomass'))
-  
+                                S1 = 0, S2 = 0, S3 = 0,
+                                E1 = 0, E2 = 0, E3 = 0,
+                                I2 = 0, I3 = 0,
+                                I.t = 0, N.t = 0)
   
   for(i in 1:nsims){
     parsim = lhcpars.epi[i,]
@@ -114,9 +105,30 @@ clus1 = makeCluster(detectCores()-1)
     sn.eqbm = sn.run[dim(sn.run)[1],]
     
     lhcpars.epi.fill[i,1] = sn.eqbm['W']
-    lhcpars.epi.fill[i,2] = sn.eqbm['I2'] + sn.eqbm['I3']
-    lhcpars.epi.fill[i,3] = sum(sn.eqbm[2:9])
+    lhcpars.epi.fill[i,2:9] = sn.eqbm[2:9]
     
+    if(i %% 100==0) print(i)
+    
+  }
+  
+  lhcpars.epi.fill$I.t = rowSums(lhcpars.epi.fill[,8:9])
+  lhcpars.epi.fill$N.t = rowSums(lhcpars.epi.fill[,2:9])
+  
+  
+#Next use epi mod equilibrium values, get stocking events based on aquaculture mod run above, then run intervention over 10 yrs ##########  
+  lhcpars.all.fill = data.frame(W.all = rep(0,1000),
+                                I.t.all = rep(0,1000),
+                                N.t.all = rep(0,1000))
+  
+  lhcpars.all.sims = array(data = NA, dim = c(3651, 12, nsims))
+  
+clus1 = makeCluster(detectCores()-1)
+  clusterExport(clus1, c('lhcpars.all.fill', 'lhcpars.all.sims', 'lhcpars.aqua', 'lhcpars.epi', 'lhcpars.epi.fill', 'lhcpars',
+                         'snail_epi', 'prawn_biomass'))
+  
+  
+  for(i in 1:nsims){
+    sn.eqbm = lhcpars.epi.fill[i,]
     #create new starting conditions based on the parameter set 
     nstart.lhc = c(sn.eqbm['S1'], sn.eqbm['S2'], sn.eqbm['S3'], 
                    sn.eqbm['E1'], sn.eqbm['E2'], sn.eqbm['E3'], 
@@ -164,7 +176,10 @@ lhcfin = cbind(lhcpars, lhcpars.aqua.fill,lhcpars.epi.fill, lhcpars.all.fill)
  #lhcfin$N.t.all.10yr = lhcpars.all.sims[3651, 10, ]
  #lhcfin$W.all.10yr = lhcpars.all.sims[3651, 10, ]
   #save(lhcfin, file='Sensitivity_Analysis/lhc_prcc_df_plusminus30%_inputs.Rdata')
-  
+  #load("~/RemaisWork/Schisto/Stanford/Prawn_fisheries_Public_health/Sensitivity_Analysis/lhc_sims_n1000_seed043093_30per_par_var.Rdata")
+  #lhcpars.all.fill[,1] = lhcpars.all.sims[3651, 10, ]
+  #lhcpars.all.fill[,2] = rowSums(lhcpars.all.sims[3651, 8:9, ])
+  #lhcpars.all.fill[,3] = rowSums(lhcpars.all.sims[3651, 2:9, ])
 # Assess PRCC of prawn model outputs ###############
 # profit sensitivity  
   profit.pcc = pcc(X = as.data.frame(lhcpars[,which(colnames(lhcpars) %in% c(names(par.aqua), 'c', 'p', 'eta'))]),
@@ -260,6 +275,30 @@ lhcfin = cbind(lhcpars, lhcpars.aqua.fill,lhcpars.epi.fill, lhcpars.all.fill)
     labs(title = 'Nt sensitivity', x = 'Parameter', y = 'PRCC')
   
   Nt.lhsprcc
+  
+  pairs(cbind(lhcpars.epi.fill$N.t, lhcpars.epi[,3:8]))
+  pairs(cbind(lhcpars.epi.fill$N.t, lhcpars.epi[,13:22]))
+  
+#Equilibrium infected snail population 
+  It.pcc = pcc(X = as.data.frame(lhcpars[,which(colnames(lhcpars) %in% 
+                                                  names(par.snails)[-which(names(par.snails) %in% 
+                                                                             c('A', 'H', 'psi1', 'psi2', 'psi3'))])]),
+               y = as.data.frame(lhcpars.epi.fill$I.t),
+               rank = TRUE)
+  
+  It.pcc.df = It.pcc$PRCC
+  It.pcc.df$var = names(par.snails)[-which(names(par.snails) %in% 
+                                             c('A', 'H', 'psi1', 'psi2', 'psi3'))]
+  
+  It.lhsprcc = ggplot(It.pcc.df, aes(x = var, y = original)) +
+    theme_bw()+
+    scale_y_continuous(limits = c(-0.5,0.5), breaks = c(-0.5,0,0.5))+
+    geom_bar(fill = 'black', stat = 'identity', width = 0.25)+
+    #geom_errorbar(x = var, )
+    geom_hline(yintercept = 0, lty = 2)+
+    labs(x = 'Parameter', y = 'Infected snail density PRCC')
+  
+  It.lhsprcc
   
 # Assess PRCC of combined model (with intervention regime) outputs ###########
 # Ending mean worm burden  
@@ -375,12 +414,10 @@ lhcfin = cbind(lhcpars, lhcpars.aqua.fill,lhcpars.epi.fill, lhcpars.all.fill)
   }
   
   fig1.layout = matrix(c(1,2,
-                         3,3,
-                         4,4), ncol = 2, byrow = T)
+                         3,3), ncol = 2, byrow = T)
   
   windows(width = 300, height = 200)
-  multiplot(profit.lhsprcc, W.lhsprcc, 
-            N_tall.lhsprcc,
+  multiplot(profit.lhsprcc, It.lhsprcc, 
             Wall.lhsprcc, 
             layout = fig1.layout)
   
