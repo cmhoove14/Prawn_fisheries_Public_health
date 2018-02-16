@@ -12,6 +12,7 @@ years = 10
 t.all = c(0:(years*365))
 nstart.r = c(P = 19000, L = 38) 
 eta = predict(eta.lm, newdata = data.frame(dens = nstart.r['P']/area))
+
 #get all parameters in the same vector ###########
 par.all = c(par.aqua, par.snails,
             a.s = 0.187178454,  # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
@@ -36,6 +37,49 @@ par.all = c(par.aqua, par.snails,
   #don't vary these. They're only included as parameters for modeling convenience, but we know what they are
   paranges$H = rep(1000, nsims)
   paranges$A = rep(10000, nsims)
+  
+#Check monotinicity of outcomes wrt to parameter ranges ################
+  #only interested in Epi parameters, reduce dimensionality to check smaller range as we're more interested in trends
+  mono_pars_epi <- paranges[round(seq(1,1000, length.out = 21)), which(colnames(paranges) %in% names(par.snails))]
+  
+  mono_fill_epi <- array(data = NA, dim = c(nrow(mono_pars_epi), 11, ncol(mono_pars_epi)-2))
+  
+  #get_eqbm <- function(par){
+  for(j in 3:ncol(mono_pars_epi)){ #skip Area and human density, start at column 3 rather than column 2
+      for(i in 1:nrow(mono_pars_epi)){
+        test_par = colnames(mono_pars_epi)[j]
+        pars_use = c(mono_pars_epi[i , which(colnames(mono_pars_epi) == test_par)], par.snails[which(names(par.snails) != test_par)])
+        names(pars_use)[1] <- test_par
+        sn.run = ode(nstart.sn, t.sn, snail_epi, pars_use)
+        mono_fill_epi[i, 1:9,j-2] = sn.run[dim(sn.run)[1],2:10]
+      } 
+    
+    print(j)
+    
+  }  
+  
+  mono_fill_epi_copy<-mono_fill_epi
+  
+  for(i in 1:ncol(mono_pars_epi)-2){
+    mono_fill_epi[ , 10 ,i] <- rowSums(mono_fill_epi[ , 1:8 ,i])
+    mono_fill_epi[ , 11 ,i] <- rowSums(mono_fill_epi[ , 7:8 ,i])
+  }
+  
+  par(mfrow = c(3,1))
+  
+  for(i in 1:(ncol(mono_pars_epi)-2)){
+    plot(mono_pars_epi[, (i+2)], mono_fill_epi[ , 9, i], xlab = colnames(mono_pars_epi[(i+2)]), ylab = "W",
+         type = "l", col = "purple", lwd = 2)
+    plot(mono_pars_epi[, (i+2)], mono_fill_epi[ , 10, i], xlab = colnames(mono_pars_epi[(i+2)]), ylab = "N",
+         type = "l", col = "Black", lwd = 2)
+    plot(mono_pars_epi[, (i+2)], mono_fill_epi[ , 9, i], xlab = colnames(mono_pars_epi[(i+2)]), ylab = "I",
+         type = "l", col = "Red", lwd = 2)
+    print(i)
+  }
+  
+  par(mfrow = c(1,1))
+  
+#  Relationship between muN2 and total snail density is a bit concave, but otherwise everything checks out as monotonic
   
 #Augment latin hypercube to sample from ###########
   #create a matrix of indices for the LHC where nrow=number of sims and ncol=number of variables
@@ -130,10 +174,10 @@ clus1 = makeCluster(detectCores()-1)
   for(i in 1:nsims){
     sn.eqbm = lhcpars.epi.fill[i,]
     #create new starting conditions based on the parameter set 
-    nstart.lhc = c(sn.eqbm['S1'], sn.eqbm['S2'], sn.eqbm['S3'], 
+    nstart.lhc = unlist(c(sn.eqbm['S1'], sn.eqbm['S2'], sn.eqbm['S3'], 
                    sn.eqbm['E1'], sn.eqbm['E2'], sn.eqbm['E3'], 
                    sn.eqbm['I2'], sn.eqbm['I3'], sn.eqbm['W'], 
-                   P = 19000, L = 38) #Optimal stocking parameters from rosenbergii ROI optimization
+                   P = 19000, L = 38)) #Optimal stocking parameters from rosenbergii ROI optimization
     
     #draw stocking parameters from prior aquaculture runs
     harvest.t.lhc = lhcpars.aqua.fill[i,1]
@@ -173,253 +217,17 @@ clus1 = makeCluster(detectCores()-1)
 stopCluster(clus1)
 
 lhcfin = cbind(lhcpars, lhcpars.aqua.fill,lhcpars.epi.fill, lhcpars.all.fill)
+
+save.image("~/RemaisWork/Schisto/Stanford/Prawn_fisheries_Public_health/Sensitivity_Analysis/sens_sims.RData")
+
+
+
+
  #lhcfin$N.t.all.10yr = lhcpars.all.sims[3651, 10, ]
  #lhcfin$W.all.10yr = lhcpars.all.sims[3651, 10, ]
   #save(lhcfin, file='Sensitivity_Analysis/lhc_prcc_df_plusminus30%_inputs.Rdata')
+  #load('Sensitivity_Analysis/lhc_prcc_df_plusminus30%_inputs.Rdata')
   #load("~/RemaisWork/Schisto/Stanford/Prawn_fisheries_Public_health/Sensitivity_Analysis/lhc_sims_n1000_seed043093_30per_par_var.Rdata")
   #lhcpars.all.fill[,1] = lhcpars.all.sims[3651, 10, ]
   #lhcpars.all.fill[,2] = rowSums(lhcpars.all.sims[3651, 8:9, ])
   #lhcpars.all.fill[,3] = rowSums(lhcpars.all.sims[3651, 2:9, ])
-# Assess PRCC of prawn model outputs ###############
-# profit sensitivity  
-  profit.pcc = pcc(X = as.data.frame(lhcpars[,which(colnames(lhcpars) %in% c(names(par.aqua), 'c', 'p', 'eta'))]),
-                   y = as.data.frame(lhcpars.aqua.fill$profit),
-                   rank = TRUE)
-  
-  profit.pcc.df = profit.pcc$PRCC
-  profit.pcc.df$var = c(names(par.aqua), 'c', 'p', 'eta')
-  
-  profit.lhsprcc = ggplot(profit.pcc.df, aes(x = var, y = original)) +
-    theme_bw()+
-    scale_y_continuous(limits = c(-0.5,0.5), breaks = c(-0.5,0,0.5))+
-    geom_bar(fill = 'darkgreen', stat = 'identity', width = 0.25)+
-    geom_hline(yintercept = 0, lty = 2)+
-    labs(x = 'Parameter', y = 'Profit PRCC')
-  
-  profit.lhsprcc
-  
-# roi sensitivity  
-  roi.pcc = pcc(X = as.data.frame(lhcpars[,which(colnames(lhcpars) %in% c(names(par.aqua), 'c', 'p', 'eta'))]),
-                y = as.data.frame(lhcpars.aqua.fill$roi),
-                rank = TRUE)
-  
-  roi.pcc.df = roi.pcc$PRCC
-  roi.pcc.df$var = c(names(par.aqua), 'c', 'p', 'eta')
-  
-  roi.lhsprcc = ggplot(roi.pcc.df, aes(x = var, y = original)) +
-    theme_bw()+
-    scale_y_continuous(limits = c(-1,1), breaks = c(-1,-0.5,0,0.5,1))+
-    geom_bar(fill = 'darkgreen', stat = 'identity', width = 0.25)+
-    geom_hline(yintercept = 0, lty = 2)+
-    labs(title = 'roi sensitivity', x = 'Parameter', y = 'PRCC')
-  
-  roi.lhsprcc
-  
-# harvest time sensitivity  
-  ht.pcc = pcc(X = as.data.frame(lhcpars[,which(colnames(lhcpars) %in% c(names(par.aqua), 'c', 'p', 'eta'))]),
-               y = as.data.frame(lhcpars.aqua.fill$h.t),
-               rank = TRUE)
-  
-  ht.pcc.df = ht.pcc$PRCC
-  ht.pcc.df$var = c(names(par.aqua), 'c', 'p', 'eta')
-  
-  ht.lhsprcc = ggplot(ht.pcc.df, aes(x = var, y = original)) +
-    theme_bw()+
-    scale_y_continuous(limits = c(-1,1), breaks = c(-1,-0.5,0,0.5,1))+
-    geom_bar(fill = 'darkgreen', stat = 'identity', width = 0.25)+
-    #geom_errorbar(x = var, )
-    geom_hline(yintercept = 0, lty = 2)+
-    labs(title = 'ht sensitivity', x = 'Parameter', y = 'PRCC')
-  
-  ht.lhsprcc
-  
-# Assess PRCC of epi model outputs ###########
-#Equilibrium mean worm burden  
-  W.pcc = pcc(X = as.data.frame(lhcpars[,which(colnames(lhcpars) %in% 
-                                                 names(par.snails)[-which(names(par.snails) %in% 
-                                                                            c('A', 'H', 'psi1', 'psi2', 'psi3'))])]),
-              y = as.data.frame(lhcpars.epi.fill$W),
-              rank = TRUE)
-  
-  W.pcc.df = W.pcc$PRCC
-  W.pcc.df$var = names(par.snails)[-which(names(par.snails) %in% 
-                                            c('A', 'H', 'psi1', 'psi2', 'psi3'))]
-  
-  W.lhsprcc = ggplot(W.pcc.df, aes(x = var, y = original)) +
-    theme_bw()+
-    scale_y_continuous(limits = c(-0.5,0.5), breaks = c(-0.5,0,0.5))+
-    geom_bar(fill = 'purple', stat = 'identity', width = 0.25)+
-    #geom_errorbar(x = var, )
-    geom_hline(yintercept = 0, lty = 2)+
-    labs(x = 'Parameter', y = 'Equlibrium W PRCC')
-  
-  W.lhsprcc
-  
-#Equilibrium total snail population 
-  Nt.pcc = pcc(X = as.data.frame(lhcpars[,which(colnames(lhcpars) %in% 
-                                                 names(par.snails)[-which(names(par.snails) %in% 
-                                                                            c('A', 'H', 'psi1', 'psi2', 'psi3'))])]),
-              y = as.data.frame(lhcpars.epi.fill$N.t),
-              rank = TRUE)
-  
-  Nt.pcc.df = Nt.pcc$PRCC
-  Nt.pcc.df$var = names(par.snails)[-which(names(par.snails) %in% 
-                                            c('A', 'H', 'psi1', 'psi2', 'psi3'))]
-  
-  Nt.lhsprcc = ggplot(Nt.pcc.df, aes(x = var, y = original)) +
-    theme_bw()+
-    scale_y_continuous(limits = c(-0.5,0.5), breaks = c(-0.5,0,0.5))+
-    geom_bar(fill = 'black', stat = 'identity', width = 0.25)+
-    #geom_errorbar(x = var, )
-    geom_hline(yintercept = 0, lty = 2)+
-    labs(title = 'Nt sensitivity', x = 'Parameter', y = 'PRCC')
-  
-  Nt.lhsprcc
-  
-  pairs(cbind(lhcpars.epi.fill$N.t, lhcpars.epi[,3:8]))
-  pairs(cbind(lhcpars.epi.fill$N.t, lhcpars.epi[,13:22]))
-  
-#Equilibrium infected snail population 
-  It.pcc = pcc(X = as.data.frame(lhcpars[,which(colnames(lhcpars) %in% 
-                                                  names(par.snails)[-which(names(par.snails) %in% 
-                                                                             c('A', 'H', 'psi1', 'psi2', 'psi3'))])]),
-               y = as.data.frame(lhcpars.epi.fill$I.t),
-               rank = TRUE)
-  
-  It.pcc.df = It.pcc$PRCC
-  It.pcc.df$var = names(par.snails)[-which(names(par.snails) %in% 
-                                             c('A', 'H', 'psi1', 'psi2', 'psi3'))]
-  
-  It.lhsprcc = ggplot(It.pcc.df, aes(x = var, y = original)) +
-    theme_bw()+
-    scale_y_continuous(limits = c(-0.5,0.5), breaks = c(-0.5,0,0.5))+
-    geom_bar(fill = 'black', stat = 'identity', width = 0.25)+
-    #geom_errorbar(x = var, )
-    geom_hline(yintercept = 0, lty = 2)+
-    labs(x = 'Parameter', y = 'Infected snail density PRCC')
-  
-  It.lhsprcc
-  
-# Assess PRCC of combined model (with intervention regime) outputs ###########
-# Ending mean worm burden  
-  Wall.pcc = pcc(X = as.data.frame(lhcfin[,which(colnames(lhcfin) %in% 
-                                                 names(par.all)[-which(names(par.all) %in% 
-                                                                            c('A', 'H', 'psi1', 'psi2', 'psi3'))])]),
-              y = as.data.frame(lhcfin$W.all),
-              rank = TRUE)
-  
-  Wall.pcc.df = Wall.pcc$PRCC
-  Wall.pcc.df$var = names(par.all)[-which(names(par.all) %in% 
-                                            c('A', 'H', 'psi1', 'psi2', 'psi3'))]
-  
-  Wall.lhsprcc = ggplot(Wall.pcc.df, aes(x = var, y = original)) +
-    theme_bw()+
-    scale_y_continuous(limits = c(-0.75,0.75), breaks = c(-0.75,-0.25,-0.5,0,0.25,0.5,0.75))+
-    geom_bar(fill = 'purple', stat = 'identity', width = 0.25)+
-    #geom_errorbar(x = var, )
-    geom_hline(yintercept = 0, lty = 2)+
-    labs(x = 'Parameter', y = 'Final W PRCC')
-  
-  Wall.lhsprcc
-  
-#Ending infected snail density  
-  I_tall.pcc = pcc(X = as.data.frame(lhcfin[,which(colnames(lhcfin) %in% 
-                                                   names(par.all)[-which(names(par.all) %in% 
-                                                                           c('A', 'H', 'psi1', 'psi2', 'psi3'))])]),
-                 y = as.data.frame(lhcfin$I.t.all),
-                 rank = TRUE)
-  
-  I_tall.pcc.df = I_tall.pcc$PRCC
-  I_tall.pcc.df$var = names(par.all)[-which(names(par.all) %in% 
-                                            c('A', 'H', 'psi1', 'psi2', 'psi3'))]
-  
-  I_tall.lhsprcc = ggplot(I_tall.pcc.df, aes(x = var, y = original)) +
-    theme_bw()+
-    scale_y_continuous(limits = c(-1,1), breaks = c(-1,-0.5,0,0.5,1))+
-    geom_bar(fill = 'black', stat = 'identity', width = 0.25)+
-    #geom_errorbar(x = var, )
-    geom_hline(yintercept = 0, lty = 2)+
-    labs(title = 'Infected snail density sensitivity', x = 'Parameter', y = 'PRCC')
-  
-  I_tall.lhsprcc
-  
-#Ending total snail density  
-  N_tall.pcc = pcc(X = as.data.frame(lhcfin[,which(colnames(lhcfin) %in% 
-                                                     names(par.all)[-which(names(par.all) %in% 
-                                                                             c('A', 'H', 'psi1', 'psi2', 'psi3'))])]),
-                   y = as.data.frame(colSums(lhcpars.all.sims[3651, 2:9, ])),
-                   rank = TRUE)
-  
-  N_tall.pcc.df = N_tall.pcc$PRCC
-  N_tall.pcc.df$var = names(par.all)[-which(names(par.all) %in% 
-                                              c('A', 'H', 'psi1', 'psi2', 'psi3'))]
-  
-  N_tall.lhsprcc = ggplot(N_tall.pcc.df, aes(x = var, y = original)) +
-    theme_bw()+
-    scale_y_continuous(limits = c(-0.75,0.75), breaks = c(-0.75,-0.25,-0.5,0,0.25,0.5,0.75))+
-    geom_bar(fill = 'black', stat = 'identity', width = 0.25)+
-    #geom_errorbar(x = var, )
-    geom_hline(yintercept = 0, lty = 2)+
-    labs(x = 'Parameter', y = 'Final snail density PRCC')
-  
-  N_tall.lhsprcc
-  
-#Something weird going on here, PRCC is near 0 for all variables
-  plot(lhcfin$N.t, lhcfin$N.t.all, pch = 16, cex = 0.7)
-  plot(lhcfin$N.t.all, colSums(lhcpars.all.sims[3651, 2:9, ]), pch = 16, cex = 0.7,
-       xlab = 'fin snail pop', ylab = 'median last year snail pop')
-  
-  lhcfin$N.t.all.10yr = colSums(lhcpars.all.sims[3651, 2:9, ])
-    pairs(lhcfin[,c(1:8, 49)], pch = 18, cex = 0.7)
-    pairs(lhcfin[,c(1:8, 50)], pch = 18, cex = 0.7)
-    
-    pairs(lhcfin[,c(11:17, 50)], pch = 18, cex = 0.7)
-    pairs(lhcfin[,c(21:34, 50)], pch = 18, cex = 0.7)
-    
-# Combine plots of key model outcomes ##################
-  multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-    library(grid)
-    
-    # Make a list from the ... arguments and plotlist
-    plots <- c(list(...), plotlist)
-    
-    numPlots = length(plots)
-    
-    # If layout is NULL, then use 'cols' to determine layout
-    if (is.null(layout)) {
-      # Make the panel
-      # ncol: Number of columns of plots
-      # nrow: Number of rows needed, calculated from # of cols
-      layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                       ncol = cols, nrow = ceiling(numPlots/cols))
-    }
-    
-    if (numPlots==1) {
-      print(plots[[1]])
-      
-    } else {
-      # Set up the page
-      grid.newpage()
-      pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-      
-      # Make each plot, in the correct location
-      for (i in 1:numPlots) {
-        # Get the i,j matrix positions of the regions that contain this subplot
-        matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-        
-        print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                        layout.pos.col = matchidx$col))
-      }
-    }
-  }
-  
-  fig1.layout = matrix(c(1,2,
-                         3,3), ncol = 2, byrow = T)
-  
-  windows(width = 300, height = 200)
-  multiplot(profit.lhsprcc, It.lhsprcc, 
-            Wall.lhsprcc, 
-            layout = fig1.layout)
-  
-##################
-##################
