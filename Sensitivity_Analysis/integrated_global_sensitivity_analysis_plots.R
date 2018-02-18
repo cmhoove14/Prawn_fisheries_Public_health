@@ -1,4 +1,6 @@
 load("~/RemaisWork/Schisto/Stanford/Prawn_fisheries_Public_health/Sensitivity_Analysis/sens_sims.RData")
+library(sensitivity)
+library(ggplot2)
 
 # Assess PRCC of prawn model outputs ###############
 # profit sensitivity  
