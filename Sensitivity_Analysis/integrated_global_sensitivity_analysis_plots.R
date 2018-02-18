@@ -215,6 +215,17 @@ ggplot(It.pcc.df, aes(x = cor, y = original, label = var)) +
   geom_point(pch = 16) +
   geom_text(aes(label = var), hjust = -0.5, vjust = -0.5)
 
+ggplot(cbind(lhcpars.epi.fill, lhcpars.epi), aes(x = muW, y = I.t/area)) + 
+  theme_bw() +
+  geom_point(pch = 16, col = "red")+
+  stat_smooth(method = "lm")
+
+ggplot(cbind(lhcpars.epi.fill, lhcpars.epi), aes(x = muW, y = N.t/area)) + 
+  theme_bw() +
+  geom_point(pch = 16)+
+  stat_smooth(method = "lm")
+
+
 It.lhsprcc = ggplot(It.pcc.df, aes(x = var, y = original)) +
   theme_bw()+
   theme(axis.text = element_text(size = 12),  #increase axis label size

@@ -72,7 +72,7 @@ par.all = c(par.aqua, par.snails,
          type = "l", col = "purple", lwd = 2)
     plot(mono_pars_epi[, (i+2)], mono_fill_epi[ , 10, i], xlab = colnames(mono_pars_epi[(i+2)]), ylab = "N",
          type = "l", col = "Black", lwd = 2)
-    plot(mono_pars_epi[, (i+2)], mono_fill_epi[ , 9, i], xlab = colnames(mono_pars_epi[(i+2)]), ylab = "I",
+    plot(mono_pars_epi[, (i+2)], mono_fill_epi[ , 11, i], xlab = colnames(mono_pars_epi[(i+2)]), ylab = "I",
          type = "l", col = "Red", lwd = 2)
     print(i)
   }
