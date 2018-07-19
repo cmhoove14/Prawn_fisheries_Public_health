@@ -34,9 +34,9 @@ time = seq(0, 365*2, 1)
 parameters = c(
     f = 0.26,    # Birth rate of adult snails (snails/reproductive snail/day, including survival to detection; more like a recruitment rate)
     Kn = 50,     # Carrying capacity of snails (snails/m^2), from Sokolow et al. 2015
-    muN1 = 1/40, # Natural mortality rate of small snails (deaths/snail/day; assume mean lifespan = 50 days)
-    muN2 = 1/50, # Natural mortality rate of medium snails (deaths/snail/day; assume mean lifespan = 50 days)
-    muN3 = 1/60, # Natural mortality rate of large snails (deaths/snail/day; assume mean lifespan = 50 days)
+    muN1 = 1/50, # Natural mortality rate of small snails (deaths/snail/day; assume mean lifespan = 50 days)
+    muN2 = 1/75, # Natural mortality rate of medium snails (deaths/snail/day; assume mean lifespan = 50 days)
+    muN3 = 1/100, # Natural mortality rate of large snails (deaths/snail/day; assume mean lifespan = 50 days)
     g1 = 1/37,   # Growth rate of small snails (size class transition rate, in terms of days to grow 4mm; adapted from McCreesh et al. 2014, assuming water temp. of 25 C) 
     g2 = 1/62,   # Growth rate of medium snails (size class transition rate, in terms of days to grow 4mm; adapted from McCreesh et al. 2014, assuming water temp. of 25 C) 
     psi1 = 0,    # TBD: predation rate of prawn cohort on smallest snails
