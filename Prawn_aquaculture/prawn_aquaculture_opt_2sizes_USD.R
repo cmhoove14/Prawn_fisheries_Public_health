@@ -12,9 +12,9 @@ require(plotly)
 source('Prawn_aquaculture/prawn_aquaculture_mod.R')
 source('Prawn_aquaculture/macrobrachium_aquaculture_data.R')
 
-area = 10000 #Working with 1 hectare site
+area = 1000 #Working with 1 sq km site
 # Simulate across stocking densities to estimate optimal P_nought for M. volenhovenii ############
-opt.df = expand.grid(L_nought = c(38, 67), P_nought = seq(1000, 75000, 500)) 
+opt.df = expand.grid(L_nought = c(33, 67), P_nought = seq(1000, 75000, 500)) 
   opt.df$h.t = 0
   opt.df$h.bm = 0
   opt.df$h.frac = 0
@@ -103,7 +103,7 @@ ggplot(opt.df, aes(x = P_nought)) +
 ###########  
 ###########  
 # Simulate across stocking densities to estimate optimal P_nought for M. rosenbergii ############
-opt.df.ros = expand.grid(L_nought = c(38, 67), P_nought = seq(1000, 75000, 500)) 
+opt.df.ros = expand.grid(L_nought = c(33, 67), P_nought = seq(1000, 75000, 500)) 
   opt.df.ros$h.t = 0
   opt.df.ros$h.bm = 0
   opt.df.ros$h.frac = 0
