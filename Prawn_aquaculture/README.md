@@ -7,4 +7,10 @@ Contains the base model with state variables number of prawns, P, and average pr
 ## `macrobrachium_aquaculture_data.R`  
 Data from Ranjeet and Kurup 2006 on M. rosenbergii stocking trials at different densities used to derive density dependence and marketable biomass from the harvest for the prawn aquaculture model  
 
+## `fit_dens_dep_.R`  
+Qualitative fitting of density dependent parameters to data from Ranjeet and Kurup 2006 on M. rosenbergii stocking trials  
+
+## `prawn_aquaculture_opt_2sizes_USD.R`  
+Simulations with two different starting sizes (juvenile prawns and young adults) to explore range of profit, harvest time, harvest biomass, etc. given different stocking densities and stocking sizes  
+
 ## ``
