@@ -39,12 +39,12 @@ om.gg
 
   om.lm = lm(surv ~ dens, data = rk06)
   
-gam.gg = ggplot(rk06, aes(x = dens, y = surv)) + 
+gam.gg = ggplot(rk06, aes(x = dens, y = mean_B)) + 
                   theme_bw() +
                   labs(x = 'stocking density (P/m^2)', y = 'Mean size (g)',
                        title = 'Mean prawn weight at harvest as function of stocking density \n Ranjeet & Kurup 2006 data') +
                   xlim(0,7.5) +
-                  ylim(0,1) +
+                  #ylim(0,1) +
                   geom_point() +
                   stat_smooth(method = "lm", col = "blue")
 gam.gg  
@@ -57,9 +57,6 @@ p.gg = ggplot(rk06, aes(x = dens, y = profit)) +
                  title = 'Profit from harvest as function of stocking density \n Ranjeet & Kurup 2006 data') +
             xlim(0,7.5) +
             #ylim(0,1) +
-            geom_point() +
-            stat_smooth(method = "lm", col = "green")
+            geom_point()
   p.gg  
-  
-  gam.lm = lm(mean_B_perday ~ dens, data = rk06)
   
