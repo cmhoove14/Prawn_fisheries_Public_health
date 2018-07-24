@@ -22,8 +22,8 @@ prawn_biomass = function(t, n, parameters) {
 } 
 
 # Set initial values and parameters #######
-# Stocking conditions: L = 25mm ~ W = 0.2g
-nstart.p = c(P = 5000, L = 25)
+# Stocking conditions: L = 33mm ~ W = 0.5g
+nstart.p = c(P = 5000, L = 33)
 t.p = seq(0, 365*2, 1)
 
 par.aqua=c(
@@ -37,10 +37,10 @@ par.aqua=c(
   linf = 206            # Max length (mm), from Nwosu & Wolfi 2006 (M. vollenhovenii)
 )
 
-# Economic parameters (price estimates from Tamil Nadu Agricultural University, http://agritech.tnau.ac.in/fishery/fish_freshwaterprawn.html)
-p = 12                                           # Weighted average market price of prawns, in rupees/kg 
-c = 0.1                                           # Cost of post-larvae, in rupees/1000 PL
-delta = -log(1-0.1)/365                           # Discount rate, equivalent to 10%/year
+# Economic parameters (price estimates from Dasgupta and Tidwell)
+p = 12                                           # Weighted average market price of prawns, in dollars/kg 
+c = 0.1                                          # Cost of post-larvae, in dollars per
+delta = -log(1-0.1)/365                          # Discount rate, equivalent to 10%/year
 
 
 #run to get optimization parameters
