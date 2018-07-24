@@ -18,7 +18,7 @@ output_s.epi = as.data.frame(ode(nstart.sn,t.sn,snail_epi,par.snails))
 
   output_s.epi$S.t = (output_s.epi$S1 + output_s.epi$S2 + output_s.epi$S3) / area        # density susceptible snails
   output_s.epi$E.t = (output_s.epi$E1 + output_s.epi$E2 + output_s.epi$E3) / area        # density exposed snails 
-  output_s.epi$I.t = (output_s.epi$I2 + output_s.epi$I3 ) / area                         # density infected snails
+  output_s.epi$I.t = (output_s.epi$I1 + output_s.epi$I2 + output_s.epi$I3 ) / area                         # density infected snails
   output_s.epi$N.t = (output_s.epi$S.t + output_s.epi$E.t + output_s.epi$I.t)            # density snails
   output_s.epi$t.1 = (output_s.epi$S1 + output_s.epi$E1) / area                          # density snails of size class 1
   output_s.epi$t.2 = (output_s.epi$S2 + output_s.epi$E2 + output_s.epi$I2) / area      # density snails of size class 2
@@ -65,6 +65,7 @@ plot(x = output_s.epi$time, y = output_s.epi$S1/area, type = 'l', col = 'green',
      ylim = c(0,max(output_s.epi$S1/area)),
      main = 'Snail Infection Classes, size class 1')
   lines(output_s.epi$time, output_s.epi$E1/area, col = 'orange', lwd = 2)
+  lines(output_s.epi$time, output_s.epi$I1/area, col = 'red', lwd = 2)
   legend('topright', legend = c('S', 'E', 'I'), lwd = 2, col = c('green', 'orange', 'red'), cex = 0.7)
   
 plot(x = output_s.epi$time, y = output_s.epi$S2/area, type = 'l', col = 'green', lwd=2,
@@ -82,3 +83,4 @@ plot(x = output_s.epi$time, y = output_s.epi$S3/area, type = 'l', col = 'green',
   lines(output_s.epi$time, output_s.epi$I3/area, col = 'red', lwd = 2)
 
   par(opar) #Return to default plot settings
+  
