@@ -29,8 +29,8 @@ par.aqua['k'] = 0.00339726       # Growth rate (mm/day), from Nwosu & Wolfi 2006
     opt.df[k,7] = op$B[op$B*op$P==max(op$B*op$P)]     # Prawn size at harvest
     opt.df[k,8] = op$P[op$B*op$P==max(op$B*op$P)] / opt.df[k,2]   # Prawn % survival at harvest
     opt.df[k,9] = p*(opt.df[k,4]/1000)*opt.df[k,5]    # Raw Profit
-    opt.df[k,10] = p*(opt.df[k,4]/1000)*opt.df[k,5]*exp(-delta*(op$time[op$B*op$P==opt.df[k,4]])) - c*(start["P"])  #Net profit
-    opt.df[k,11] = (p*(opt.df[k,4]/1000)*opt.df[k,5]*exp(-delta*(op$time[op$B*op$P==opt.df[k,4]])) - c*(start["P"])) / (c*(start["P"])) # ROI  
+    opt.df[k,10] = p*(opt.df[k,4]/1000)*opt.df[k,5]*exp(-delta*opt.df[k,3]) - c*(start["P"])  #Net profit
+    opt.df[k,11] = (p*(opt.df[k,4]/1000)*opt.df[k,5]*exp(-delta*opt.df[k,3]) - c*(start["P"])) / (c*(start["P"])) # ROI  
     
   }
 
@@ -67,8 +67,8 @@ opt.df.ros = expand.grid(L_nought = 33, P_nought = seq(100, 10000, 100))
     opt.df.ros[k,7] = op$B[op$B*op$P==max(op$B*op$P)]     # Prawn size at harvest
     opt.df.ros[k,8] = op$P[op$B*op$P==max(op$B*op$P)] / opt.df.ros[k,2]   # Prawn % survival at harvest
     opt.df.ros[k,9] = p*(opt.df.ros[k,4]/1000)*opt.df.ros[k,5]    # Raw Profit
-    opt.df.ros[k,10] = p*(opt.df.ros[k,4]/1000)*opt.df.ros[k,5]*exp(-delta*(op$time[op$B*op$P==opt.df.ros[k,4]])) - c*(start["P"])  #Net profit
-    opt.df.ros[k,11] = (p*(opt.df.ros[k,4]/1000)*opt.df.ros[k,5]*exp(-delta*(op$time[op$B*op$P==opt.df.ros[k,4]])) - c*(start["P"])) / (c*(start["P"])) # ROI  
+    opt.df.ros[k,10] = p*(opt.df.ros[k,4]/1000)*opt.df.ros[k,5]*exp(-delta*opt.df.ros[k,3]) - c*(start["P"])  #Net profit
+    opt.df.ros[k,11] = (p*(opt.df.ros[k,4]/1000)*opt.df.ros[k,5]*exp(-delta*opt.df.ros[k,3]) - c*(start["P"])) / (c*(start["P"])) # ROI  
     
   }
  
