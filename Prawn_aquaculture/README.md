@@ -10,7 +10,11 @@ Data from Ranjeet and Kurup 2006 on M. rosenbergii stocking trials at different 
 ## `fit_dens_dep_.R`  
 Qualitative fitting of density dependent parameters to data from Ranjeet and Kurup 2006 on M. rosenbergii stocking trials  
 
-## `prawn_aquaculture_opt_2sizes_USD.R`  
-Simulations with two different starting sizes (juvenile prawns and young adults) to explore range of profit, harvest time, harvest biomass, etc. given different stocking densities and stocking sizes  
+## `prawn_aquaculture_sims.R`  
+Script to run simulations used to derive eumetric curve (identifies profit-optimal initial stocking density for each species) and then simulate a two year aquaculture run for each species given the profit-optimal conditions identified  
 
-## ``
+## `prawn_aquaculture_plot.R`  
+Takes simulations data and produces manuscript figures 2 and 3 showing the eumetric curve and parameters of the prawn model over an aquqculture cycle
+
+## Other scripts  
+Deprecated; mostly old scripts investigating optimization  
