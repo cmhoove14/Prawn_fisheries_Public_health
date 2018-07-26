@@ -24,9 +24,10 @@ phi_Wk<-function(W, phi){
 
 # Set initial values and parameters #######
 area = 1000 #1 square kiolmeter = 1000m^2
-nstart.sn = c(S1 = 5*area, S2 = 0, S3 = 0, 
-              E1 = 0, E2 = 0, E3 = 0, 
-              I1 = 0, I2 = 0, I3 = 0, Wt = 10, Wu = 10)
+nstart.sn = c(S1 = 5*area, S2 = 5*area, S3 = 5*area, 
+              E1 = 5*area, E2 = 5*area, E3 = 5*area, 
+              I1 = 5*area, I2 = 5*area, I3 = 5*area, 
+              Wt = 50, Wu = 50)
 t.sn = seq(0,365*300,10)
 cov = 0.8  #MDA coverage
 eff = 0.93 #MDA efficacy
@@ -57,9 +58,9 @@ par.snails=c(
   g2 = 1/62,         # Growth rate of medium snails (size class transition rate, in terms of days to grow 4mm; adapted from McCreesh et al. 2014, assuming water temp. of 25 C)
   
   ## Infection parameters
-  beta = 4e-6,       # Human-to-snail infection probability in reference area (infected snails/miracidia/snail/day); from Sokolow et al. 2015 
+  beta = 4e-7,       # Human-to-snail infection probability in reference area (infected snails/miracidia/snail/day); from Sokolow et al. 2015 
   m = 0.8,           # Miracidial shedding rate per adult female worm divided by miracidial mortality; from Sokolow et al. 2015
-  sigma = 1/50,      # Latent period for exposed snails (infectious snails/exposed snail/day); from Sokolow et al. 2015 
+  sigma = 1/30,      # Latent period for exposed snails (infectious snails/exposed snail/day); from Sokolow et al. 2015 
   lambda = 0.005,  # Snail-to-human infection probability scaled to 1 m^2 (composite including cercarial shedding, mortality, infection, survival to patency) from Sokolow et al. 2015
   theta1 = 167.8/127.8,         # Scale factor describing increase in cercarial shedding rate in larger (size class 2) snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
   theta2 = 1006.8/127.8,         # Scale factor describing increase in cercarial shedding rate in larger (size class 2) snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
