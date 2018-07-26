@@ -4,7 +4,7 @@ load("Prawn_aquaculture/aquaculture_sims.RData")
 require(ggplot2)
 
 
-#Plot eumetric curve ######
+#Plot eumetric curve for unrestricted harvest time ######
 eum_dat <- rbind(opt.df, opt.df.ros)  
   
   eum_crv = ggplot(eum_dat, aes(x = P_nought/1000)) +
@@ -22,6 +22,24 @@ eum_dat <- rbind(opt.df, opt.df.ros)
                                breaks = c(-1000, -500, 0, 500, 1000))
     eum_crv
 
+#Plot eumetric curve for harvest time fixed at 8 months######
+eum_dat8mos <- rbind(opt.df8mos, opt.df.ros8mos)  
+  
+  eum_crv8mos = ggplot(eum_dat8mos, aes(x = P_nought/1000)) +
+            theme_bw() +
+            theme(legend.position = c(0.2, 0.1),        #place legend inside plot
+                  axis.text = element_text(size = 15),  #increase axis label size
+                  axis.title = element_text(size = 18), #increase axis title size
+                  legend.text = element_text(size = 12),#increase legend text size
+                  legend.title = element_blank())  +    #suppress legend title
+            geom_line(aes(y = Profit, col = Species), size = 1.25) +
+            #geom_vline(xintercept = harvest.time.ros, lty = 2, size = 1.25) +
+            #geom_vline(xintercept = harvest.time.vol, lty = 3, size = 1.25) +
+            labs(x = expression(paste('Stocking density (P', m^-2,')', sep = "")), y = 'Profit (USD)')  +
+            scale_y_continuous(limits = c(-1000, 1000),
+                               breaks = c(-1000, -500, 0, 500, 1000))
+    eum_crv8mos
+    
 #plot showing length trajectory in each species ###########
   op.spe = rbind(op.ros, op.vol)
   

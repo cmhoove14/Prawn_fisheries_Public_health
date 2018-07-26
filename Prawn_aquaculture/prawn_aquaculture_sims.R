@@ -79,7 +79,7 @@ opt.df.ros$Species = "M. rosenbergii"
   opt.ros = opt.df.ros[which(opt.df.ros$Profit == max(opt.df.ros$Profit)),]
 
     
-#Simulate an aquaculture cycle based on profit-optimized stocking density for M. volenhovenii above ###########
+#Simulate an aquaculture cycle based on profit-optimized stocking density for ach species above ###########
 t.p = c(0:(365*2))
     
 #run model through 2 years for M. volenhovenii ######
@@ -142,4 +142,78 @@ op.ros = as.data.frame(ode(nstart.p.ros,t.p,prawn_biomass,par.aqua))
 # 9) species
   op.ros$Species = 'M. rosenbergii'
   
+#Simulations with volenhovenii when restricting harvesting to 8 months ########## 
+opt.df8mos = expand.grid(L_nought = 45, P_nought = seq(100, 10000, 100)) 
+  opt.df8mos$h.t = 8*30
+  opt.df8mos$h.bm = 0
+  opt.df8mos$h.frac = 0
+  opt.df8mos$m.bm = 0
+  opt.df8mos$p.bm = 0
+  opt.df8mos$p.surv = 0
+  opt.df8mos$Revenue = 0
+  opt.df8mos$Profit = 0
+  opt.df8mos$ROI = 0
+
+par.aqua['k'] = 0.00339726       # Growth rate (mm/day), from Nwosu & Wolfi 2006 (M. vollenhovenii)
+
+  for(k in 1:nrow(opt.df8mos)){
+    start = c(P = opt.df8mos[k,2], L = opt.df8mos[k,1])
+
+    op = as.data.frame(ode(start,c(0:365),prawn_biomass,par.aqua))
+    op$B = (par.aqua['a.p']/10)*(op$L/10)^par.aqua['b.p']     # Mean prawn biomass, transformed from length in mm
+    
+    opt.df8mos[k,3] = 240  # harvest time fixed at 8 months
+    opt.df8mos[k,4] = op$B[op$time == 240]*op$P[op$time == 240]                      # Total prawn biomass
+    opt.df8mos[k,5] = predict(eta.lm, newdata = data.frame(dens = opt.df8mos[k,2]/area)) # Fraction of harvest that's marketable as function of stocking density
+    opt.df8mos[k,6] = opt.df8mos[k,4] * opt.df8mos[k,5]           # Marketable harvest (total biomass times fraction marketable size)
+    opt.df8mos[k,7] = op$B[op$time == 240]     # Prawn size at harvest
+    opt.df8mos[k,8] = op$P[op$time == 240] / opt.df8mos[k,2]   # Prawn % survival at harvest
+    opt.df8mos[k,9] = p*(opt.df8mos[k,4]/1000)*opt.df8mos[k,5]    # Raw Profit
+    opt.df8mos[k,10] = p*(opt.df8mos[k,4]/1000)*opt.df8mos[k,5]*exp(-delta*opt.df8mos[k,3]) - cost*(start["P"])  #Net profit
+    opt.df8mos[k,11] = (p*(opt.df8mos[k,4]/1000)*opt.df8mos[k,5]*exp(-delta*opt.df8mos[k,3]) - cost*(start["P"])) / (cost*(start["P"])) # ROI  
+    
+  }
+
+opt.df8mos$p.t = opt.df8mos$P_nought * opt.df8mos$p.surv     #number of prawns alive at harvest
+opt.df8mos$Species = "M. volenhovenii"
+  opt.vol8mos = opt.df8mos[which(opt.df8mos$Profit == max(opt.df8mos$Profit)),]
+
+  
+#Simulations with rosenbergii when restricting harvesting to 8 months ########## 
+opt.df.ros8mos = expand.grid(L_nought = 45, P_nought = seq(100, 10000, 100)) 
+  opt.df.ros8mos$h.t = 8*30
+  opt.df.ros8mos$h.bm = 0
+  opt.df.ros8mos$h.frac = 0
+  opt.df.ros8mos$m.bm = 0
+  opt.df.ros8mos$p.bm = 0
+  opt.df.ros8mos$p.surv = 0
+  opt.df.ros8mos$Revenue = 0
+  opt.df.ros8mos$Profit = 0
+  opt.df.ros8mos$ROI = 0
+
+  par.aqua['k'] = 0.0104333333    # alternate value for M. rosenbergii, from Sampaio & Valenti 1996: 0.0104333333
+
+  for(k in 1:nrow(opt.df.ros8mos)){
+    start = c(P = opt.df.ros8mos[k,2], L = opt.df.ros8mos[k,1])
+
+    op = as.data.frame(ode(start,c(0:365),prawn_biomass,par.aqua))
+    op$B = (par.aqua['a.p']/10)*(op$L/10)^par.aqua['b.p']     # Mean prawn biomass, transformed from length in mm
+    
+    opt.df.ros8mos[k,3] = 240  # harvest time fixed at 8 months
+    opt.df.ros8mos[k,4] = op$B[op$time == 240]*op$P[op$time == 240]                      # Total prawn biomass
+    opt.df.ros8mos[k,5] = predict(eta.lm, newdata = data.frame(dens = opt.df.ros8mos[k,2]/area)) # Fraction of harvest that's marketable as function of stocking density
+    opt.df.ros8mos[k,6] = opt.df.ros8mos[k,4] * opt.df.ros8mos[k,5]           # Marketable harvest (total biomass times fraction marketable size)
+    opt.df.ros8mos[k,7] = op$B[op$time == 240]     # Prawn size at harvest
+    opt.df.ros8mos[k,8] = op$P[op$time == 240] / opt.df.ros8mos[k,2]   # Prawn % survival at harvest
+    opt.df.ros8mos[k,9] = p*(opt.df.ros8mos[k,4]/1000)*opt.df.ros8mos[k,5]    # Raw Profit
+    opt.df.ros8mos[k,10] = p*(opt.df.ros8mos[k,4]/1000)*opt.df.ros8mos[k,5]*exp(-delta*opt.df.ros8mos[k,3]) - cost*(start["P"])  #Net profit
+    opt.df.ros8mos[k,11] = (p*(opt.df.ros8mos[k,4]/1000)*opt.df.ros8mos[k,5]*exp(-delta*opt.df.ros8mos[k,3]) - cost*(start["P"])) / (cost*(start["P"])) # ROI  
+    
+  }
+
+opt.df.ros8mos$p.t = opt.df.ros8mos$P_nought * opt.df.ros8mos$p.surv     #number of prawns alive at harvest
+opt.df.ros8mos$Species = "M. rosenbergii"
+  opt.ros8mos = opt.df.ros8mos[which(opt.df.ros8mos$Profit == max(opt.df.ros8mos$Profit)),]
+  
 save.image(file = "Prawn_aquaculture/aquaculture_sims.RData")  
+  
