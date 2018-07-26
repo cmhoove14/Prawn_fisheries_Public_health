@@ -20,6 +20,7 @@ source('Epi_Model/snail_epi_mod_no_diag.R')
   allvh.eqbm.run$t.2 = (allvh.eqbm.run$S2 + allvh.eqbm.run$E2 + allvh.eqbm.run$I2) / area      # density snails of size class 2
   allvh.eqbm.run$t.3 = (allvh.eqbm.run$S3 + allvh.eqbm.run$E3 + allvh.eqbm.run$I3) / area      # density snails of size class 3
   # Estimated prevalence, using a negative binomial dist. with k = 0.2(fitted from EPLS data in nb_fit.R)
+  allvh.eqbm.run$W = cov*allvh.eqbm.run$Wt + (1-cov)*allvh.eqbm.run$Wu
   allvh.eqbm.run$prev = pnbinom(2, size = 0.2, mu = allvh.eqbm.run$W, lower.tail = FALSE)   
 
 #plot infection classes over time  

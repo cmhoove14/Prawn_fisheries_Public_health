@@ -26,8 +26,9 @@ phi_Wk<-function(W, phi){
 area = 1000 #1 square kiolmeter = 1000m^2
 nstart.sn = c(S1 = 5*area, S2 = 0, S3 = 0, 
               E1 = 0, E2 = 0, E3 = 0, 
-              I1 = 0, I2 = 0, I3 = 0, W = 10)
+              I1 = 0, I2 = 0, I3 = 0, Wt = 10, Wu = 10)
 t.sn = seq(0,365*300,10)
+cov = 0.8
 
 par.snails=c(
   ## Location parameters
@@ -85,7 +86,10 @@ snail_epi_allvh = function(t, n, parameters) {
     I1=n[7]
     I2=n[8]
     I3=n[9]
-    W =n[10]
+    Wt=n[10]
+    Wu=n[11]
+    
+    W = cov*Wt + (1-cov)*Wu
     
     mate = phi_Wk(W = W, phi = phi)  #Mating probability
     S = S1+S2+S3    # Total susceptible snails
@@ -113,10 +117,11 @@ snail_epi_allvh = function(t, n, parameters) {
     
     dI3dt = sigma*E3 + g2*I2 - (muN3+muI)*I3 - psi3*I3
     
-    dWdt = lambda*I1/A + theta1*lambda*I2/A + theta2*lambda*I3/A - (muW + muH)*W
+    dWtdt = lambda*I1/A + theta1*lambda*I2/A + theta2*lambda*I3/A - (muW + muH)*Wt
     
+    dWudt = lambda*I1/A + theta1*lambda*I2/A + theta2*lambda*I3/A - (muW + muH)*Wu
     
-    return(list(c(dS1dt, dS2dt, dS3dt, dE1dt, dE2dt, dE3dt, dI1dt, dI2dt, dI3dt, dWdt)))
+    return(list(c(dS1dt, dS2dt, dS3dt, dE1dt, dE2dt, dE3dt, dI1dt, dI2dt, dI3dt, dWtdt, dWudt)))
   }) 
 } 
 
