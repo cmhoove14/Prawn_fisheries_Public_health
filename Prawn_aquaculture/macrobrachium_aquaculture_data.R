@@ -60,3 +60,41 @@ p.gg = ggplot(rk06, aes(x = dens, y = profit)) +
             geom_point()
   p.gg  
   
+
+  
+# Lalringsanga 2012 and Kuris 1987 L-W relationship #####
+f1 <- function(l, a, b){
+  a/10*(l/10)^b  #convert from mm to cm by dividing by 10
+}  
+  
+l_vec <- c(1:300)   
+
+plot(l_vec, sapply(l_vec, f1, a = 0.127836, b = 2.9506), type = 'l', lwd = 2,  #Relationship for juveniles
+     xlab = "length(mm)", ylab = "weight (g)", ylim = c(0, 300), xlim = c(0,300))
+  lines(l_vec, sapply(l_vec, f1, a = 0.096868, b = 3.2944), lwd = 2, col = 2)  # growout phase
+  lines(l_vec, sapply(l_vec, f1, a = 0.101723, b = 3.2667), lwd = 2, col = 3)  # broodstock phase
+  lines(l_vec, sapply(l_vec, f1, a = exp(-2.6132), b = 3.5502), lwd = 2, col = 4)  # all males
+  lines(l_vec, sapply(l_vec, f1, a = exp(-2.4339), b = 3.3893), lwd = 2, col = 5)  # all pooled
+
+#Also look at data from Kuris et al 1987
+  
+f2 <- function(l, a, b){
+  exp((log(l/a)/b))
+}  
+
+lines(l_vec, sapply(l_vec, f2, a = 37, b = 0.298), lwd = 2, col = 6)  # kuris data
+
+# This produces a much shallower (and more reasonable) curve. 
+# To get the length-weight rather than weight-length relationship, we'll refit the parameters
+
+plot(log(l_vec), log(sapply(l_vec, f2, a = 37, b = 0.298)),
+     xlab = 'log(length)', ylab = 'log(weight)')
+
+kuris_lm <- lm(log(sapply(l_vec, f2, a = 37, b = 0.298)) ~ log(l_vec))
+  abline(coef(kuris_lm), lty = 2, col = 2)
+
+kuris_a <- as.numeric(exp(coef(kuris_lm)[1]))
+kuris_b <- as.numeric(coef(kuris_lm)[2])
+
+plot(l_vec, sapply(l_vec*10, f1, a = kuris_a*10, b = kuris_b), type = 'l', lwd = 2,  
+     xlab = "length(mm)", ylab = "weight (g)", ylim = c(0, 300), xlim = c(0,300))

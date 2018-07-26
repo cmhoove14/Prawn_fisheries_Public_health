@@ -1,6 +1,7 @@
 ## Modeling prawn growth and mortality in aquaculture
 
 require(deSolve)
+source("Prawn_aquaculture/macrobrachium_aquaculture_data.R")
 
 # Model ###########
 prawn_biomass = function(t, n, parameters) { 
@@ -28,8 +29,8 @@ t.p = seq(0, 365*2, 1)
 area = 1000
 
 par.aqua=c(
-  a.p = 0.096868,        # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
-  b.p = 3.2944,          # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, growout phase)
+  a.p = 0.096868,     # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, all pooled)
+  b.p = 3.2944,         # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, all pooled)
   gam = 7e-6,           # Density-dependent growth parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
   muP = 0.00610958904,  # Prawn mortality at unit weight, from Lorenzen 1996 (pond aquaculture); informally adjusted based on Ranjeet & Kurup 2010 in fit_dens_dep_params.R
   d = -0.382,           # Exponential relationship of weight with mortality, from Lorenzen 1996 (pond aquaculture)
@@ -40,14 +41,14 @@ par.aqua=c(
 
 # Economic parameters (price estimates from Dasgupta and Tidwell)
 p = 12                                           # Weighted average market price of prawns, in dollars/kg 
-c = 0.1                                          # Cost of post-larvae, in dollars per
+cost = 0.05                                          # Cost of juveniles, in dollars per
 delta = -log(1-0.1)/365                          # Discount rate, equivalent to 10%/year
 
 
 #run to get optimization parameters
 p.run = as.data.frame(ode(nstart.p,t.p,prawn_biomass,par.aqua))
-  p.run$B = ((par.aqua['a.p']*(p.run$L/10)^par.aqua['b.p'])/10)                # Mean prawn biomass, transformed from length
-  p.run$Bt = p.run$B*p.run$P                                                   # Total prawn biomass
+  p.run$B = (par.aqua['a.p']/10)*(p.run$L/10)^par.aqua['b.p']                # Mean prawn biomass, transformed from length in mm
+  p.run$Bt = p.run$B*p.run$P                                                 # Total prawn biomass
 
   start.mass.kg = p.run$Bt[p.run$time==0]/1000
   harvest.mass.kg = max(p.run$Bt)/1000
@@ -59,6 +60,6 @@ p.run = as.data.frame(ode(nstart.p,t.p,prawn_biomass,par.aqua))
 #run to get reference for length to weight relationship 
 nstart.ref = c(P = 10000, L = 1)
 p.reference = as.data.frame(ode(nstart.ref,t.p,prawn_biomass,par.aqua))
-  p.reference$B = ((par.aqua['a.p']*(p.reference$L/10)^par.aqua['b.p'])/10)                # Mean prawn biomass, transformed from length
+  p.reference$B = ((par.aqua['a.p']/10*(p.reference$L/10)^par.aqua['b.p']))                # Mean prawn biomass, transformed from length
   p.reference$Bt = p.reference$B*p.reference$P                                                   # Total prawn biomass
  
