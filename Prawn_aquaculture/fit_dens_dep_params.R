@@ -19,7 +19,7 @@ for(k in 1:nrow(surv.df)){
   par.aqua['om'] = surv.df[k,1]        # set omega parameter
   
   op = as.data.frame(ode(start,t.rk06,prawn_biomass,par.aqua))   # run simulation
-  op$B = ((par.aqua['a.p']*(op$L/10)^par.aqua['b.p'])/10)        # Mean prawn biomass, transformed from length
+  op$B = (par.aqua['a.p']/10) *(op$L/10)^par.aqua['b.p']       # Mean prawn biomass, transformed from length
   
   surv.df[k,4] = op$P[op$time == max(op$time)]/surv.df[k,3]      # store survival rate in simulation
   surv.df[k,5] = op$B[op$time == max(op$time)]/max(op$time)      # store mean daily growth rate in simulation  
@@ -29,7 +29,7 @@ for(k in 1:nrow(surv.df)){
 
 for(o in 1:nsim){
   plot(surv.df$P0[surv.df$om == unique(surv.df$om)[o]]/10000, surv.df$surv[surv.df$om == unique(surv.df$om)[o]],
-       pch = 16, ylim = c(0,1), xlab = 'Stocking density (P/m^2', ylab = '%survival',
+       pch = 16, ylim = c(0,1), xlab = 'Stocking density (P/m^2)', ylab = '%survival',
        main = paste0('omega = ', unique(surv.df$om)[o]))
     points(rk06$dens, rk06$surv, pch = 17, col = 2, cex = 1.25)
     abline(om.lm, lty = 2, col = 2)
@@ -39,7 +39,7 @@ for(o in 1:nsim){
 
 for(g in 1:nsim){
   plot(surv.df$P0[surv.df$gam == unique(surv.df$gam)[g]]/10000, surv.df$mean_B_perday[surv.df$gam == unique(surv.df$gam)[g]],
-       pch = 16, ylim = c(0,1), xlab = 'Stocking density (P/m^2', ylab = 'Mean size',
+       pch = 16, ylim = c(0,1), xlab = 'Stocking density (P/m^2)', ylab = 'Mean size',
        main = paste0('gamma = ', unique(surv.df$gam)[g]))
     points(rk06$dens, rk06$mean_B_perday, pch = 17, col = 2, cex = 1.25)
     abline(gam.lm, lty = 2, col = 2)
