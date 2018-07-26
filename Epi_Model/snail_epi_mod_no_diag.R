@@ -28,7 +28,8 @@ nstart.sn = c(S1 = 5*area, S2 = 0, S3 = 0,
               E1 = 0, E2 = 0, E3 = 0, 
               I1 = 0, I2 = 0, I3 = 0, Wt = 10, Wu = 10)
 t.sn = seq(0,365*300,10)
-cov = 0.8
+cov = 0.8  #MDA coverage
+eff = 0.93 #MDA efficacy
 
 par.snails=c(
   ## Location parameters
