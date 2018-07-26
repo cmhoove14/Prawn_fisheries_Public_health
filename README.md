@@ -1,7 +1,17 @@
 # Prawn_fisheries_Public_health
 Code repository for project connecting prawn fisheries model to schisto epidemiological model
 
+## Prawn_aquaculture  
+Contains scripts for the prawn aquaculture model, simulations, and plots  
 
-This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License http://creativecommons.org/licenses/by-nc/4.0/. This work was supported in part by the National Institutes of Health/National Science Foundation Ecology of Infectious Disease program funded by the Fogarty International Center (grant R01TW010286), the National Institute of Allergy and Infectious Diseases (grant K01AI091864), and the National Science Foundation Water Sustainability and Climate Program (grant 1360330).
+## Epi_model  
+Contains scripts for the schisto epidemiological model, simulations, and plots  
 
-Per the terms of this license, if you are making derivative use of this work, you must identify that your work is a derivative work, give credit to the original work, provide a link to the license, and indicate changes that were made.
+## neg_binom_fit  
+Contains data and a small script to estimate parameters of the negative binomial distribution from egg burden data from Senegal  
+
+## functional_response_fit
+Script and data used to fit parameters of Hollings disk equation which models predation of snails by prawns and links the prawn aquaculture model to the schisto epi model
+
+## Combined model  
+Contains scripts for the combined model which links the aquaculture model to the schisto epi model via the predation function  
