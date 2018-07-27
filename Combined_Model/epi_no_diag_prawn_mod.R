@@ -50,9 +50,9 @@ snail_prawn_model = function(t, n, parameters) {
     #alpha1 = ifelse(-log(3) + ar*log(Bm.r1) < 0, -log(3) + ar*log(Bm.r1), 0)
     
     # Adjusted attack rates, accounting for area of interest and limiting factors in the wild
-    alpha_star1 = alpha1/A
-    alpha_star2 = alpha2/A
-    alpha_star3 = alpha3/A
+    alpha_star1 = alpha1/sqrt(A)
+    alpha_star2 = alpha2/sqrt(A)
+    alpha_star3 = alpha3/sqrt(A)
     
     # Handling times for each size class as a function of biomass ratio
     handle1 = 1/(th*Bm.r1)
