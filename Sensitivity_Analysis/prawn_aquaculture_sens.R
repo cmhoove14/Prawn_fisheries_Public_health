@@ -7,7 +7,7 @@ require(Rmisc)
 
 #Start with parameters that affect prawn aquaculture dynamics ##################
 #  Vary each parameter +/- 25% of it's original value
-  sims=250
+  sims=1000
   nstart.v = c(P = opt.vol$P_nought, L = 38)
   eta = predict(eta.lm, newdata = data.frame(dens = nstart.v['P']/area))
   
@@ -20,7 +20,7 @@ require(Rmisc)
   d.range<-seq(par.aqua['d']*0.75, par.aqua['d']*1.25, length.out = sims)
   om.range<-seq(par.aqua['om']*0.75, par.aqua['om']*1.25, length.out = sims)
   gam.range<-seq(par.aqua['gam']*0.75, par.aqua['gam']*1.25, length.out = sims)
-  c.range<-seq(0.05, 0.15, length.out = sims)
+  c.range<-seq(0.015, 0.15, length.out = sims)
   p.range<-seq(5, 20, length.out = sims)
   
   paranges<-cbind(a.p=a.p.range, 
@@ -129,6 +129,10 @@ require(Rmisc)
          xlab = vars[i], ylab = 'Harvest size')
   }
   
+  for(i in 1:length(vars)){
+    plot(x = params.harvest[,i], y = params.harvest[,dim(params.harvest)[2]-4], pch = 16, col = 'darkgreen', cex = 0.7,
+         xlab = vars[i], ylab = 'Net profit')
+  }
   #restore original plot settings
     par(opar)
     
@@ -142,7 +146,7 @@ require(Rmisc)
     
 profit.lhsprcc = ggplot(profit.pcc.df, aes(x = var, y = original)) +
                   theme_bw()+
-                  scale_y_continuous(limits = c(-0.1,0.1), breaks = c(-0.1,0,0.1))+
+                  scale_y_continuous(limits = c(-0.5,0.5), breaks = c(-0.5, -0.25,0,0.25,0.5))+
                   geom_bar(fill = 'darkgreen', stat = 'identity', width = 0.25)+
                   geom_hline(yintercept = 0, lty = 2)+
                   labs(title = 'Profit sensitivity', x = 'Parameter', y = 'PRCC')
