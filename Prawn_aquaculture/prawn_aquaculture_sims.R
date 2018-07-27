@@ -3,8 +3,8 @@ source('Prawn_aquaculture/prawn_aquaculture_mod.R')
 source('Prawn_aquaculture/macrobrachium_aquaculture_data.R')
 
 #Simulation for eumetric curve for M. volenhovenii #####
-#Starting length of 45 mm corresponds to juveniles of ~0.36 grams
-opt.df = expand.grid(L_nought = 45, P_nought = seq(100, 10000, 100)) 
+#Starting length of 45 mm corresponds to juveniles of ~0.45 grams
+opt.df = expand.grid(L_nought = 32, P_nought = seq(100, 10000, 100)) 
   opt.df$h.t = 0
   opt.df$h.bm = 0
   opt.df$h.frac = 0
@@ -22,16 +22,18 @@ par.aqua['k'] = 0.00339726       # Growth rate (mm/day), from Nwosu & Wolfi 2006
 
     op = as.data.frame(ode(start,t.p,prawn_biomass,par.aqua))
     op$B = (par.aqua['a.p']/10)*(op$L/10)^par.aqua['b.p']     # Mean prawn biomass, transformed from length in mm
+    op$Bt = op$P*op$B
+    max_bt = max(op$Bt)
     
-    opt.df[k,3] = op$time[op$B*op$P==max(op$B*op$P)]  # harvest time
-    opt.df[k,4] = max(op$B*op$P)                      # Total prawn biomass
+    opt.df[k,3] = op$time[op$Bt==max_bt]  # harvest time
+    opt.df[k,4] = max_bt                      # Total prawn biomass
     opt.df[k,5] = predict(eta.lm, newdata = data.frame(dens = opt.df[k,2]/area)) # Fraction of harvest that's marketable as function of stocking density
     opt.df[k,6] = opt.df[k,4] * opt.df[k,5]           # Marketable harvest (total biomass times fraction marketable size)
-    opt.df[k,7] = op$B[op$B*op$P==max(op$B*op$P)]     # Prawn size at harvest
-    opt.df[k,8] = op$P[op$B*op$P==max(op$B*op$P)] / opt.df[k,2]   # Prawn % survival at harvest
-    opt.df[k,9] = p*(opt.df[k,4]/1000)*opt.df[k,5]    # Raw Profit
-    opt.df[k,10] = p*(opt.df[k,4]/1000)*opt.df[k,5]*exp(-delta*opt.df[k,3]) - cost*(start["P"])  #Net profit
-    opt.df[k,11] = (p*(opt.df[k,4]/1000)*opt.df[k,5]*exp(-delta*opt.df[k,3]) - cost*(start["P"])) / (cost*(start["P"])) # ROI  
+    opt.df[k,7] = op$B[op$Bt==max_bt]     # Prawn size at harvest
+    opt.df[k,8] = op$P[op$Bt==max_bt] / opt.df[k,2]   # Prawn % survival at harvest
+    opt.df[k,9] = p*(opt.df[k,6]/1000)    # Raw Profit
+    opt.df[k,10] = p*(opt.df[k,6]/1000)*exp(-delta*opt.df[k,3]) - cost*(start["P"])  #Net profit
+    opt.df[k,11] = (p*(opt.df[k,6]/1000)*exp(-delta*opt.df[k,3]) - cost*(start["P"])) / (cost*(start["P"])) # ROI  
     
   }
 
@@ -41,7 +43,7 @@ opt.df$Species = "M. volenhovenii"
   opt.vol = opt.df[which(opt.df$Profit == max(opt.df$Profit)),]
 
 #Simulation for eumetric curve for M. rosenbergii #####
-opt.df.ros = expand.grid(L_nought = 45, P_nought = seq(100, 10000, 100)) 
+opt.df.ros = opt.df
   opt.df.ros$h.t = 0
   opt.df.ros$h.bm = 0
   opt.df.ros$h.frac = 0
@@ -60,16 +62,18 @@ opt.df.ros = expand.grid(L_nought = 45, P_nought = seq(100, 10000, 100))
     
     op = as.data.frame(ode(start,t.p,prawn_biomass,par.aqua))
     op$B = (par.aqua['a.p']/10)*(op$L/10)^par.aqua['b.p']     # Mean prawn biomass, transformed from length
+    op$Bt = op$P*op$B
+    max_bt = max(op$Bt)
     
-    opt.df.ros[k,3] = op$time[op$B*op$P==max(op$B*op$P)]  # harvest time
-    opt.df.ros[k,4] = max(op$B*op$P)                      # Total prawn biomass
+    opt.df.ros[k,3] = op$time[op$Bt==max_bt]  # harvest time
+    opt.df.ros[k,4] = max_bt                      # Total prawn biomass
     opt.df.ros[k,5] = predict(eta.lm, newdata = data.frame(dens = opt.df.ros[k,2]/area)) # Fraction of harvest that's marketable as function of stocking density
     opt.df.ros[k,6] = opt.df.ros[k,4] * opt.df.ros[k,5]           # Marketable harvest (total biomass times fraction marketable size)
-    opt.df.ros[k,7] = op$B[op$B*op$P==max(op$B*op$P)]     # Prawn size at harvest
-    opt.df.ros[k,8] = op$P[op$B*op$P==max(op$B*op$P)] / opt.df.ros[k,2]   # Prawn % survival at harvest
-    opt.df.ros[k,9] = p*(opt.df.ros[k,4]/1000)*opt.df.ros[k,5]    # Raw Profit
-    opt.df.ros[k,10] = p*(opt.df.ros[k,4]/1000)*opt.df.ros[k,5]*exp(-delta*opt.df.ros[k,3]) - cost*(start["P"])  #Net profit
-    opt.df.ros[k,11] = (p*(opt.df.ros[k,4]/1000)*opt.df.ros[k,5]*exp(-delta*opt.df.ros[k,3]) - cost*(start["P"])) / (cost*(start["P"])) # ROI  
+    opt.df.ros[k,7] = op$B[op$Bt==max_bt]     # Prawn size at harvest
+    opt.df.ros[k,8] = op$P[op$Bt==max_bt] / opt.df.ros[k,2]   # Prawn % survival at harvest
+    opt.df.ros[k,9] = p*(opt.df.ros[k,6]/1000)    # Raw Profit
+    opt.df.ros[k,10] = p*(opt.df.ros[k,6]/1000)*exp(-delta*opt.df.ros[k,3]) - cost*(start["P"])  #Net profit
+    opt.df.ros[k,11] = (p*(opt.df.ros[k,6]/1000)*exp(-delta*opt.df.ros[k,3]) - cost*(start["P"])) / (cost*(start["P"])) # ROI  
     
   }
  
@@ -79,7 +83,7 @@ opt.df.ros$Species = "M. rosenbergii"
   opt.ros = opt.df.ros[which(opt.df.ros$Profit == max(opt.df.ros$Profit)),]
 
     
-#Simulate an aquaculture cycle based on profit-optimized stocking density for ach species above ###########
+#Simulate an aquaculture cycle based on profit-optimized stocking density for each species above ###########
 t.p = c(0:(365*2))
     
 #run model through 2 years for M. volenhovenii ######
@@ -143,7 +147,7 @@ op.ros = as.data.frame(ode(nstart.p.ros,t.p,prawn_biomass,par.aqua))
   op.ros$Species = 'M. rosenbergii'
   
 #Simulations with volenhovenii when restricting harvesting to 8 months ########## 
-opt.df8mos = expand.grid(L_nought = 45, P_nought = seq(100, 10000, 100)) 
+opt.df8mos = opt.df 
   opt.df8mos$h.t = 8*30
   opt.df8mos$h.bm = 0
   opt.df8mos$h.frac = 0
@@ -180,7 +184,7 @@ opt.df8mos$Species = "M. volenhovenii"
 
   
 #Simulations with rosenbergii when restricting harvesting to 8 months ########## 
-opt.df.ros8mos = expand.grid(L_nought = 45, P_nought = seq(100, 10000, 100)) 
+opt.df.ros8mos = opt.df
   opt.df.ros8mos$h.t = 8*30
   opt.df.ros8mos$h.bm = 0
   opt.df.ros8mos$h.frac = 0

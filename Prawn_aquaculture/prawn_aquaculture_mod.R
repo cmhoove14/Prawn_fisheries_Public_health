@@ -29,9 +29,9 @@ t.p = seq(0, 365*2, 1)
 area = 1000
 
 par.aqua=c(
-  a.p = 0.096868,     # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, all pooled)
-  b.p = 3.2944,         # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, all pooled)
-  gam = 7e-6,           # Density-dependent growth parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
+  a.p = 0.087694,     # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, all pooled)
+  b.p = 3.3893,         # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, all pooled)
+  gam = 8e-6,           # Density-dependent growth parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
   muP = 0.00610958904,  # Prawn mortality at unit weight, from Lorenzen 1996 (pond aquaculture); informally adjusted based on Ranjeet & Kurup 2010 in fit_dens_dep_params.R
   d = -0.382,           # Exponential relationship of weight with mortality, from Lorenzen 1996 (pond aquaculture)
   om = 5e-9,            # Density-dependent mortality parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010 in fit_dens_dep_params.R
@@ -58,7 +58,7 @@ p.run = as.data.frame(ode(nstart.p,t.p,prawn_biomass,par.aqua))
   harvest.time = p.run$time[p.run$Bt==max(p.run$Bt)]
 
 #run to get reference for length to weight relationship 
-nstart.ref = c(P = 10000, L = 1)
+nstart.ref = c(P = 1000, L = 1)
 p.reference = as.data.frame(ode(nstart.ref,t.p,prawn_biomass,par.aqua))
   p.reference$B = ((par.aqua['a.p']/10*(p.reference$L/10)^par.aqua['b.p']))                # Mean prawn biomass, transformed from length
   p.reference$Bt = p.reference$B*p.reference$P                                                   # Total prawn biomass

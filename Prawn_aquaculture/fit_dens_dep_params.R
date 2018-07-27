@@ -14,7 +14,7 @@ surv.df$mean_B_perday = 0
 par.aqua['k'] = 0.0104333333       # Growth rate (mm/day, M. rosenbergii)
 
 for(k in 1:nrow(surv.df)){
-  start = c(P = surv.df[k,3], L = 38)  # set starting density
+  start = c(P = surv.df[k,3], L = 32)  # set starting density
   par.aqua['gam'] = surv.df[k,2]       # set gamma parameter
   par.aqua['om'] = surv.df[k,1]        # set omega parameter
   
@@ -45,4 +45,4 @@ for(g in 1:nsim){
     abline(gam.lm, lty = 2, col = 2)
 }
 
-# 6e-6 fits best
+# 8e-6 fits best
