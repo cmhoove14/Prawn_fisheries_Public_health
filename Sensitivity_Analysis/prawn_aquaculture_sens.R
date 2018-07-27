@@ -1,14 +1,14 @@
 source('Prawn_aquaculture/prawn_aquaculture_mod.R')
 source('Prawn_aquaculture/macrobrachium_aquaculture_data.R')
+load('Prawn_aquaculture/aquaculture_sims.RData')
 require(ggplot2)
 require(sensitivity)
 require(Rmisc)
 
 #Start with parameters that affect prawn aquaculture dynamics ##################
-#  Vary each parameter by 50% - 200% of it's original value
-  area = 10000
+#  Vary each parameter +/- 25% of it's original value
   sims=250
-  nstart.v = c(P = 8000, L = 38)
+  nstart.v = c(P = opt.vol$P_nought, L = 38)
   eta = predict(eta.lm, newdata = data.frame(dens = nstart.v['P']/area))
   
 #Prawn parameters
@@ -83,17 +83,18 @@ require(Rmisc)
     
     output = as.data.frame(ode(nstart.v, t.p, prawn_biomass, parameters1))
     output$B = ((par.aqua['a.p']*(output$L/10)^par.aqua['b.p'])/10)       
-    output$Bt = output$B*output$P      
+    output$Bt = output$B*output$P  
+    max_Bt = max(output$B*output$P)
     
-    params.fill[i,1] = output$time[output$B*output$P==max(output$B*output$P)]   #harvest time
-    params.fill[i,2] = max(output$B*output$P)                       #harvest total biomass
-    params.fill[i,3] = max(output$B*output$P) * eta                 #harvest marketable biomass
-    params.fill[i,4] = p*(max(output$B*output$P)/1000)               # Raw Profit (revenue)
-    params.fill[i,5] = p*(max(output$B*output$P)/1000)*
-                          exp(-delta*(output$time[output$B*output$P==max(output$B*output$P)])) - 
+    params.fill[i,1] = output$time[output$Bt==max_Bt]   #harvest time
+    params.fill[i,2] = max_Bt                       #harvest total biomass
+    params.fill[i,3] = max_Bt * eta                 #harvest marketable biomass
+    params.fill[i,4] = p*(params.fill[i,3]/1000)               # Raw Profit (revenue)
+    params.fill[i,5] = p*(params.fill[i,3]/1000)*
+                          exp(-delta*(output$time[output$Bt==max_Bt])) - 
                           c*(nstart.v["P"])  #Net profit
-    params.fill[i,6] = (p*(max(output$B*output$P)/1000)*
-                           exp(-delta*(output$time[output$B*output$P==max(output$B*output$P)])) - 
+    params.fill[i,6] = (p*(params.fill[i,3]/1000)*
+                           exp(-delta*(output$time[output$Bt==max_Bt])) - 
                            c*(nstart.v["P"])) / (c*(nstart.v["P"])) # ROI 
     if(i %% 50==0) print(i)
   }
@@ -104,7 +105,7 @@ require(Rmisc)
   #save default plot settings
     opar<-par()
   
-#Check scatter plots to assess sensitivity ############## 
+#Check scatter plots to assess sensitivity and check monotinicity ############## 
   #of harvest size and time, mean length at harvest, and pop size to tested parameters    
   par(mfrow = c(2,5), mar = c(4,3.75,1,0.4)+0.1)
 
