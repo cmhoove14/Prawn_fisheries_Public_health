@@ -123,7 +123,7 @@ eum_dat8mos <- rbind(opt.df8mos, opt.df.ros8mos)
                        limits = c(0, 365*2)) +
     scale_y_continuous(breaks = seq(0,200,50),
                        #labels = c('0','100','200','300','400','500'),
-                       limits = c(0, 200))
+                       limits = c(0, 210))
     
     
   pr.Bt
