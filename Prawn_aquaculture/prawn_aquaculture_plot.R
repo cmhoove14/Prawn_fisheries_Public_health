@@ -15,9 +15,9 @@ eum_dat <- rbind(opt.df, opt.df.ros)
                   legend.text = element_text(size = 12),#increase legend text size
                   legend.title = element_blank())  +    #suppress legend title
             geom_line(aes(y = Profit, col = Species), size = 1.25) +
-            #geom_vline(xintercept = harvest.time.ros, lty = 2, size = 1.25) +
-            #geom_vline(xintercept = harvest.time.vol, lty = 3, size = 1.25) +
-            labs(x = expression(paste('Stocking density (P', m^-2,')', sep = "")), y = 'Profit (USD)')  +
+            geom_hline(yintercept = 0, aes(col = grey20)) +
+            labs(x = expression(paste('Stocking density (', P[0],')', sep = "")), 
+                 y = expression(paste('Profit (', Pi[max], ')', sep = "")))  +
             scale_y_continuous(limits = c(-1000, 1000),
                                breaks = c(-1000, -500, 0, 500, 1000))
     eum_crv
