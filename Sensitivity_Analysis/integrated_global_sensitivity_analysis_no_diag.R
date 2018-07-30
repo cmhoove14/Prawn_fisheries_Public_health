@@ -167,7 +167,7 @@ par.all = c(par.aqua, par.snails,
                                 I.t.all = rep(0,1000),
                                 N.t.all = rep(0,1000))
   
-  lhcpars.all.sims = array(data = NA, dim = c(3651, 12, nsims))
+  lhcpars.all.sims = array(data = NA, dim = c(3651, 14, nsims))
   
 clus1 = makeCluster(detectCores()-1)
   clusterExport(clus1, c('lhcpars.all.fill', 'lhcpars.all.sims', 'lhcpars.aqua', 'lhcpars.epi', 'lhcpars.epi.fill', 'lhcpars',
@@ -180,7 +180,7 @@ clus1 = makeCluster(detectCores()-1)
     nstart.lhc = unlist(c(sn.eqbm['S1'], sn.eqbm['S2'], sn.eqbm['S3'], 
                    sn.eqbm['E1'], sn.eqbm['E2'], sn.eqbm['E3'], 
                    sn.eqbm['I1'], sn.eqbm['I2'], sn.eqbm['I3'], 
-                   sn.eqbm['Wt'], sn.eqbm['Wu'],
+                   sn.eqbm['W'], sn.eqbm['W'],
                    P = opt.ros$P_nought, L = opt.ros$L_nought)) #Optimal stocking parameters from rosenbergii ROI optimization
     
     #draw stocking parameters from prior aquaculture runs
@@ -198,7 +198,7 @@ clus1 = makeCluster(detectCores()-1)
     sim.lhc = as.data.frame(ode(nstart.lhc,t.all,snail_prawn_model,par.all.lhc,
                                 events = list(data = stocks.lhc)))
     
-    lhcpars.all.fill[i,1] = median(sim.lhc$Wt[c(((years-1)*365):(years*365))+1])
+    lhcpars.all.fill[i,1] = median(sim.lhc$W[c(((years-1)*365):(years*365))+1])
     
     lhcpars.all.fill[i,2] = median(sim.lhc$I1[c(((years-1)*365):(years*365))+1],
                                    sim.lhc$I2[c(((years-1)*365):(years*365))+1] + 
@@ -224,4 +224,4 @@ stopCluster(clus1)
 
 lhcfin = cbind(lhcpars, lhcpars.aqua.fill,lhcpars.epi.fill, lhcpars.all.fill)
 
-save.image("~/RemaisWork/Schisto/Stanford/Prawn_fisheries_Public_health/Sensitivity_Analysis/sens_sims.RData")
+save.image("~/RemaisWork/Schisto/Stanford/Prawn_fisheries_Public_health/Sensitivity_Analysis/sens_sims_no_diag.RData")
