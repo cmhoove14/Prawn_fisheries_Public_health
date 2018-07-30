@@ -5,48 +5,60 @@ require(tidyverse)
 #Worm burden
   w.mda = sim.mda %>% dplyr::select(time, W, Wt, Wu) %>% 
     gather("pop", "burden", W:Wu) %>% 
-    ggplot(aes(x = time, y = burden, lty = pop)) +
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
             theme_bw() +
-            theme(axis.text = element_text(size = 12),  #increase axis label size
+            theme(legend.position = c(0.8, 0.2),
+                  axis.text = element_text(size = 12),  #increase axis label size
                   axis.title = element_text(size = 15), #increase axis title size
                   axis.title.x=element_blank(),         #Suppress x axis
                   axis.text.x=element_blank(),          #Suppress x axis
                   title = element_text(size = 15)) +    #increase title size
             geom_line(size = 1.25, col = 'purple') +
             labs(x = 'time (years)', y = expression(italic('W'))) +
-            annotate('text', x = 0.05, y = 60, label = 'A)', size = 8) +
+            annotate('text', x = 365, y = 60, label = 'A)', size = 8) +
             scale_y_continuous(breaks = seq(0,60,10),
                                labels = c('0', '10', '20', '30', '40', '   50', '   60'),
                                limits = c(0, 61)) +
-            scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-                               labels = c(-1:years),
-                               limits = c(0, (365*(years+1)+10)))
+            geom_vline(xintercept = 365*(years+1), lty = 2)
+            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+            #                   labels = c(-1:years),
+            #                   limits = c(0, (365*(years+1)+10)))
     
   w.mda
   
 #plot snail infection dynamics over time with MDA events  
 snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
   gather("class", "density", S.t:N.t) %>% 
-  ggplot(aes(x = time, y = density, col = class)) +
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
               theme_bw() +
-              theme(legend.position = c(0.9, 0.9),      #place legend inside plot
+              theme(legend.position = c(0.75,0.4),
                     axis.text = element_text(size = 12),  #increase axis label size
                     axis.title = element_text(size = 15), #increase axis title size
                     axis.title.x=element_blank(),         #Suppress x axis
                     axis.text.x=element_blank(),          #Suppress x axis
-                    title = element_text(size = 15),      #increase title size
-                    legend.text = element_text(size = 14),#increase legend text size
-                    legend.title = element_blank())  +    #suppress legend title
+                    title = element_text(size = 15))  +   #increase title size
               geom_line(size = 1.25) +
-              scale_color_manual(values = c('orange', 'red','black', 'green')) +
-              annotate('text', x = 0.05, y = 50, label = 'E)', size = 8) +
-              labs(x = 'time (years)', y = expression(paste('N'[i], 'm'^'-2'))) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'B)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
               scale_y_continuous(breaks = seq(0,50,10),
                                  labels = seq(0,50,10),
                                  limits = c(0, 51)) +
-              scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-                                 labels = c(-1:years),
-                                 limits = c(0, (365*(years+1)+10))) 
+              geom_vline(xintercept = 365*(years+1), lty = 2)
+             # scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+             #                   labels = c(-1:years),
+             #                   limits = c(0, (365*(years+1)+10))) 
   
   snail.mda
   
@@ -71,22 +83,27 @@ snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
 #worm burden
   w.vol = sim.vol %>% dplyr::select(time, W, Wt, Wu) %>% 
     gather("pop", "burden", W:Wu) %>% 
-    ggplot(aes(x = time, y = burden, lty = pop)) +
-              theme_bw() +
-              theme(axis.text = element_text(size = 12),  #increase axis label size
-                    axis.title = element_text(size = 15), #increase axis title size
-                    axis.title.x=element_blank(),         #Suppress x axis
-                    axis.text.x=element_blank(),          #Suppress x axis
-                    title = element_text(size = 15)) +    #increase title size
-              geom_line(size = 1.25, col = 'purple') +
-              annotate('text', x = 0.05, y = 60, label = 'C)', size = 8) +
-              labs(x = 'time (years)', y = expression(italic('W'))) +
-              scale_y_continuous(breaks = seq(0,60,10),
-                                 labels = c('0', '10', '20', '30', '40', '   50', '   60'),
-                                 limits = c(0, 61)) +
-              scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-                                 labels = c(-1:years),
-                                 limits = c(0, (365*(years+1)+10)))
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
+            theme_bw() +
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 15), #increase axis title size
+                  axis.title.x=element_blank(),         #Suppress x axis
+                  axis.text.x=element_blank(),          #Suppress x axis
+                  title = element_text(size = 15)) +    #increase title size
+            geom_line(size = 1.25, col = 'purple') +
+            labs(x = 'time (years)', y = expression(italic('W'))) +
+            annotate('text', x = 365, y = 60, label = 'C)', size = 8) +
+            scale_y_continuous(breaks = seq(0,60,10),
+                               labels = c('0', '10', '20', '30', '40', '   50', '   60'),
+                               limits = c(0, 61)) +
+            geom_vline(xintercept = 365*(years+1), lty = 2)
+            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+            #                   labels = c(-1:years),
+            #                   limits = c(0, (365*(years+1)+10)))
   
   w.vol
   
@@ -116,26 +133,33 @@ snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
 #plot snail infection dynamics over time with volenhovenii stocking events  
 snail.vol = sim.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
   gather("class", "density", S.t:N.t) %>% 
-  ggplot(aes(x = time, y = density, col = class)) +
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
               theme_bw() +
-              theme(legend.position = c(0.9, 0.9),      #place legend inside plot
+              theme(legend.position = "none",
                     axis.text = element_text(size = 12),  #increase axis label size
                     axis.title = element_text(size = 15), #increase axis title size
                     axis.title.x=element_blank(),         #Suppress x axis
                     axis.text.x=element_blank(),          #Suppress x axis
-                    title = element_text(size = 15),      #increase title size
-                    legend.text = element_text(size = 14),#increase legend text size
-                    legend.title = element_blank())  +    #suppress legend title
+                    title = element_text(size = 15))  +   #increase title size
               geom_line(size = 1.25) +
-              scale_color_manual(values = c('orange', 'red','black', 'green')) +
-              annotate('text', x = 0.05, y = 50, label = 'E)', size = 8) +
-              labs(x = 'time (years)', y = expression(paste('N'[i], 'm'^'-2'))) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'D)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
               scale_y_continuous(breaks = seq(0,50,10),
                                  labels = seq(0,50,10),
-                                 limits = c(-.10, 51)) +
-              scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-                                 labels = c(-1:years),
-                                 limits = c(0, (365*(years+1)+10)))
+                                 limits = c(-0.1, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2)
+             # scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+             #                   labels = c(-1:years),
+             #                   limits = c(0, (365*(years+1)+10))) 
   
   snail.vol
   
@@ -143,22 +167,27 @@ snail.vol = sim.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
 #plots over time with rosenbergii stocking events  ###########
   w.ros = sim.ros %>% dplyr::select(time, W, Wt, Wu) %>% 
     gather("pop", "burden", W:Wu) %>% 
-    ggplot(aes(x = time, y = burden, lty = pop)) +
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
             theme_bw() +
-            theme(axis.text = element_text(size = 12),  #increase axis label size
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12),  #increase axis label size
                   axis.title = element_text(size = 15), #increase axis title size
                   axis.title.x=element_blank(),         #Suppress x axis
                   axis.text.x=element_blank(),          #Suppress x axis
                   title = element_text(size = 15)) +    #increase title size
             geom_line(size = 1.25, col = 'purple') +
-            annotate('text', x = 0.05, y = 50, label = 'D)', size = 8) +
             labs(x = 'time (years)', y = expression(italic('W'))) +
+            annotate('text', x = 365, y = 60, label = 'D)', size = 8) +
             scale_y_continuous(breaks = seq(0,60,10),
                                labels = c('0', '10', '20', '30', '40', '   50', '   60'),
                                limits = c(0, 61)) +
-            scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-                               labels = c(-1:years),
-                               limits = c(0, (365*(years+1)+10)))
+            geom_vline(xintercept = 365*(years+1), lty = 2)
+            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+            #                   labels = c(-1:years),
+            #                   limits = c(0, (365*(years+1)+10)))
   
   w.ros
   
@@ -179,26 +208,33 @@ snail.vol = sim.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
 #plot snail infection dynamics over time with rosenbergii stocking events  
 snail.ros = sim.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
   gather("class", "density", S.t:N.t) %>% 
-  ggplot(aes(x = time, y = density, col = class)) +
-                    theme_bw() +
-                    theme(legend.position = c(0.9, 0.9),      #place legend inside plot
-                          axis.text = element_text(size = 12),  #increase axis label size
-                          axis.title = element_text(size = 15), #increase axis title size
-                          axis.title.x=element_blank(),         #Suppress x axis
-                          axis.text.x=element_blank(),          #Suppress x axis
-                          title = element_text(size = 15),      #increase title size
-                          legend.text = element_text(size = 14),#increase legend text size
-                          legend.title = element_blank())  +    #suppress legend title
-                    geom_line(size = 1.25) +
-                    annotate('text', x = 0.05, y = 11, label = 'F)', size = 8) +
-                    scale_color_manual(values = c('orange', 'red','black', 'green')) +
-                    labs(x = 'time (years)', y = expression(paste('N'[i], 'm'^'-2'))) +
-                    scale_y_continuous(breaks = seq(0,50,10),
-                                       labels = seq(0,50,10),
-                                       limits = c(-.10, 51)) +
-                    scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-                                       labels = c(-1:years),
-                                       limits = c(0, (365*(years+1)+10)))
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    axis.title.x=element_blank(),         #Suppress x axis
+                    axis.text.x=element_blank(),          #Suppress x axis
+                    title = element_text(size = 15))  +   #increase title size
+              geom_line(size = 1.25) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'D)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = seq(0,50,10),
+                                 limits = c(-0.1, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2)
+             # scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+             #                   labels = c(-1:years),
+             #                   limits = c(0, (365*(years+1)+10))) 
   
   snail.ros
   
@@ -233,49 +269,54 @@ p.rosvol = ggplot(sim.rosvol, aes(x = time)) +
 #plots over time with volenhovenii stocking events and mda events ##############
 w.mda.vol = sim.mda.vol %>% dplyr::select(time, W, Wt, Wu) %>% 
     gather("pop", "burden", W:Wu) %>% 
-    ggplot(aes(x = time, y = burden, lty = pop)) +
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
             theme_bw() +
-            theme(axis.text = element_text(size = 12),  #increase axis label size
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12),  #increase axis label size
                   axis.title = element_text(size = 15), #increase axis title size
-                  axis.title.x=element_blank(),         #Suppress x axis
-                  axis.text.x=element_blank(),          #Suppress x axis
                   title = element_text(size = 15)) +    #increase title size
             geom_line(size = 1.25, col = 'purple') +
             labs(x = 'time (years)', y = expression(italic('W'))) +
-            annotate('text', x = 0.05, y = 60, label = 'A)', size = 8) +
+            annotate('text', x = 365, y = 60, label = 'E)', size = 8) +
             scale_y_continuous(breaks = seq(0,60,10),
                                labels = c('0', '10', '20', '30', '40', '   50', '   60'),
                                limits = c(0, 61)) +
-            scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-                               labels = c(-1:years),
-                               limits = c(0, (365*(years+1)+10)))
+            geom_vline(xintercept = 365*(years+1), lty = 2) +
+            scale_x_continuous(breaks = seq(365, 365*(years+11), 365*5),
+                               labels = c(0,5,10,15,20)) 
   
   w.mda.vol
 
 #Plot snail infection dynamics under repeated MDA and volenhovenii stocking
 snail.mda.vol = sim.mda.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
   gather("class", "density", S.t:N.t) %>% 
-  ggplot(aes(x = time, y = density, col = class)) +
-                  theme_bw() +
-                  theme(legend.position = c(0.9, 0.9),      #place legend inside plot
-                        axis.text = element_text(size = 12),  #increase axis label size
-                        axis.title = element_text(size = 15), #increase axis title size
-                        axis.title.x=element_blank(),         #Suppress x axis
-                        axis.text.x=element_blank(),          #Suppress x axis
-                        title = element_text(size = 15),      #increase title size
-                        legend.text = element_text(size = 14),#increase legend text size
-                        legend.background = element_blank(),  #clear legend background
-                        legend.title = element_blank())  +    #suppress legend title
-                  geom_line(size = 1.25) +
-                  annotate('text', x = 0.05, y = 50, label = 'G)', size = 8) +
-                  scale_color_manual(values = c('orange', 'red','black', 'green')) +
-                  labs(x = 'time (years)', y = expression(paste('N'[i], 'm'^'-2'))) +
-                  scale_y_continuous(breaks = seq(0,50,10),
-                                     labels = seq(0,50,10),
-                                     limits = c(0, 51)) +
-                  scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-                                     labels = c(-1:years),
-                                     limits = c(0, (365*(years+1)+10)))
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    title = element_text(size = 15))  +   #increase title size
+              geom_line(size = 1.25) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'F)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = seq(0,50,10),
+                                 limits = c(-0.1, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2) +
+              scale_x_continuous(breaks = seq(365, 365*(years+11), 365*5),
+                                 labels = c(0, 5, 10, 15, 20))
   
   snail.mda.vol
   
@@ -283,46 +324,60 @@ snail.mda.vol = sim.mda.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
 #plot worm burden over time with volenhovenii stocking events and mda events
 w.mda.ros = sim.mda.ros %>% dplyr::select(time, W, Wt, Wu) %>% 
     gather("pop", "burden", W:Wu) %>% 
-    ggplot(aes(x = time, y = burden, lty = pop)) +
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
             theme_bw() +
-            theme(axis.text = element_text(size = 12),  #increase axis label size
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12),  #increase axis label size
                   axis.title = element_text(size = 15), #increase axis title size
                   axis.title.x=element_blank(),         #Suppress x axis
                   axis.text.x=element_blank(),          #Suppress x axis
                   title = element_text(size = 15)) +    #increase title size
             geom_line(size = 1.25, col = 'purple') +
             labs(x = 'time (years)', y = expression(italic('W'))) +
-            annotate('text', x = 0.05, y = 60, label = 'A)', size = 8) +
+            annotate('text', x = 365, y = 60, label = 'E)', size = 8) +
             scale_y_continuous(breaks = seq(0,60,10),
                                labels = c('0', '10', '20', '30', '40', '   50', '   60'),
                                limits = c(0, 61)) +
-            scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-                               labels = c(-1:years),
-                               limits = c(0, (365*(years+1)+10)))
+            geom_vline(xintercept = 365*(years+1), lty = 2)
+            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+            #                   labels = c(-1:years),
+            #                   limits = c(0, (365*(years+1)+10)))
   
   w.mda.ros
   
 #Plot snail infection dynamics under repeated MDA and rosenbergii stocking
 snail.mda.ros = sim.mda.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
   gather("class", "density", S.t:N.t) %>% 
-  ggplot(aes(x = time, y = density, col = class)) +
-    theme_bw() +
-    theme(legend.position = "none",             #suppress legend 
-          axis.text = element_text(size = 12),  #increase axis label size
-          axis.title = element_text(size = 15), #increase axis title size
-          axis.title.x=element_blank(),         #Suppress x axis
-          axis.text.x=element_blank(),          #Suppress x axis
-          title = element_text(size = 15)) +    #increase title size)      
-    geom_line(size = 1.25) +
-    annotate('text', x = 0.05, y = 50, label = 'H)', size = 8) +
-    scale_color_manual(values = c('orange', 'red','black', 'green')) +
-    labs(x = 'time (years)', y = expression(paste('N'[i], 'm'^'-2'))) +
-    scale_y_continuous(breaks = seq(0,50,10),
-                       labels = seq(0,50,10),
-                       limits = c(0, 51)) +
-    scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-                       labels = c(-1:years),
-                       limits = c(0, (365*(years+1)+10)))
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    axis.title.x=element_blank(),         #Suppress x axis
+                    axis.text.x=element_blank(),          #Suppress x axis
+                    title = element_text(size = 15))  +   #increase title size
+              geom_line(size = 1.25) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'F)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = seq(0,50,10),
+                                 limits = c(-0.1, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2)
+             # scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+             #                   labels = c(-1:years),
+             #                   limits = c(0, (365*(years+1)+10))) 
   
   snail.mda.ros
   
@@ -367,14 +422,12 @@ snail.mda.ros = sim.mda.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   
   fig1.layout = matrix(c(1,2,
                          3,4,
-                         5,6,
-                         7,8), ncol = 2, byrow = T)
+                         5,6), ncol = 2, byrow = T)
 
   windows(width = 1000, height = 1000)
-  multiplot(w.mda, p.rosvol, 
-            w.vol, w.ros, 
-            w.mda.vol, w.mda.ros, 
-            snail.mda.vol, snail.mda.ros, 
+  multiplot(w.mda, snail.mda, 
+            w.vol, snail.vol, 
+            w.mda.vol, snail.mda.vol,
             layout = fig1.layout)
   
 #plot alternative figure with six panels #############
