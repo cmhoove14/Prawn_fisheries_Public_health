@@ -47,3 +47,14 @@ th_model = nls(V2 ~ 1/(c*V1), data = th_points, start = list(c=1))
 summary(th_model)
 lines(x, 1/(th_model$m$getPars()*x))
 
+#Test per capita predation function with attack rate penalty implemented in different ways
+n_dens = c(0:45)
+
+a_rate <- function(a, Th, n){
+  (a*n)/(1+a*Th*n)
+}
+
+plot(n_dens, sapply(n_dens, a_rate, a = 0.1, Th = 12), type = 'l')
+  lines(n_dens, sapply(n_dens, a_rate, a = 0.1*0.03, Th = 12), col = 2) #attack rate penalty on attack rate parameter
+  lines(n_dens, 0.03*sapply(n_dens, a_rate, a = 0.1, Th = 12), col = 4) #penalty on actual predation rate
+  
