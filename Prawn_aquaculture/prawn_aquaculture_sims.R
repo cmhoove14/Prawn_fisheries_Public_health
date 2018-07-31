@@ -41,6 +41,7 @@ opt.df$p.t = opt.df$P_nought * opt.df$p.surv     #number of prawns alive at harv
 opt.df$Species = "M. volenhovenii"
   opt.df.criteria = subset(opt.df, p.bm >=30 & h.t <= 365)
   opt.vol = opt.df[which(opt.df$Profit == max(opt.df$Profit)),]
+  opt.vol$bm0 = (par.aqua['a.p']/10)*(opt.vol$L_nought/10)^par.aqua['b.p'] * opt.vol$P_nought
 
 #Simulation for eumetric curve for M. rosenbergii #####
 opt.df.ros = opt.df
@@ -81,6 +82,7 @@ opt.df.ros$p.t = opt.df.ros$P_nought * opt.df.ros$p.surv     #number of prawns a
 opt.df.ros$Species = "M. rosenbergii"
   opt.df.ros.criteria = subset(opt.df.ros, p.bm >=30 & h.t <= 365)
   opt.ros = opt.df.ros[which(opt.df.ros$Profit == max(opt.df.ros$Profit)),]
+  opt.ros$bm0 = (par.aqua['a.p']/10)*(opt.ros$L_nought/10)^par.aqua['b.p'] * opt.ros$P_nought
 
     
 #Simulate an aquaculture cycle based on profit-optimized stocking density for each species above ###########
@@ -90,7 +92,6 @@ t.p = c(0:(365*2))
 par.aqua['k'] = 0.00339726  # alternate value for M. volenhovenii
 nstart.p.vol = c(P = opt.vol$P_nought, L = opt.vol$L_nought)   #optimal starting conditions for M. volenhovenii as estimated above
 op.vol = as.data.frame(ode(nstart.p.vol,t.p,prawn_biomass,par.aqua))
-  c = 0.1+0.005*(nstart.p.vol["L"]-33) # make juvenile prawns cost a function of their size with reference at $0.1/juvenile
 
 #post-process to estimate additional parameters
 # 0) prawn density rather than raw prawn numbers
@@ -104,11 +105,13 @@ op.vol = as.data.frame(ode(nstart.p.vol,t.p,prawn_biomass,par.aqua))
 # 3) profit (in terms of revenue (discounted by time since stocking) minus stocking costs )  
   op.vol$profit = eta.vol*p*(op.vol$Bt/1000)*exp(-delta*(op.vol$t)) - cost*(nstart.p["P"])
 # 4) starting total biomass
-  start.mass.kg.vol = op.vol$Bt[op.vol$time==0]/1000
+  start.mass.kg.vol = op.vol$Bt[op.vol$time==0]
 # 5) harvest mass in kg (harvest assumed to occur when biomass is maximized)   
-  harvest.mass.kg.vol = eta.vol*max(op.vol$Bt)/1000
+  harvest.mass.kg.vol = eta.vol*max(op.vol$Bt)
 # 6) average mass of prawns at harvest  
   harvest.size.vol = op.vol$B[op.vol$Bt==max(op.vol$Bt)]
+# 6.5) average length of prawns at harvest  
+  harvest.length.vol = op.vol$L[op.vol$Bt==max(op.vol$Bt)]
 # 7) time of harvest (when biomass is maximized)
   harvest.time.vol = op.vol$time[op.vol$Bt==max(op.vol$Bt)]
 # 8) time in months
@@ -120,7 +123,6 @@ op.vol = as.data.frame(ode(nstart.p.vol,t.p,prawn_biomass,par.aqua))
 par.aqua['k'] = 0.0104333333  # alternate value for M. rosenbergii, from Sampaio & Valenti 1996
 nstart.p.ros = c(P = opt.ros$P_nought, L = opt.ros$L_nought)   #optimal starting conditions for M. rosenbergii as estimated above
 op.ros = as.data.frame(ode(nstart.p.ros,t.p,prawn_biomass,par.aqua))
-  c = 0.1+0.005*(nstart.p.ros["L"]-33) # make juvenile prawns cost a function of their size with reference at $0.1/juvenile
 
 #post-process to estimate additional parameters
 # 0) prawn density rather than raw prawn numbers
@@ -134,11 +136,13 @@ op.ros = as.data.frame(ode(nstart.p.ros,t.p,prawn_biomass,par.aqua))
 # 3) profit (in terms of revenue (discounted by time since stocking) minus stocking costs )  
   op.ros$profit = eta.ros*p*(op.ros$Bt/1000)*exp(-delta*(op.ros$t)) - cost*nstart.p["P"]
 # 4) starting total biomass
-  start.mass.kg.ros = op.ros$Bt[op.ros$time==0]/1000
+  start.mass.kg.ros = op.ros$Bt[op.ros$time==0]
 # 5) harvest mass in kg (harvest assumed to occur when biomass is maximized)   
-  harvest.mass.kg.ros = eta.ros*max(op.ros$Bt)/1000
+  harvest.mass.kg.ros = eta.ros*max(op.ros$Bt)
 # 6) average mass of prawns at harvest  
   harvest.size.ros = op.ros$B[op.ros$Bt==max(op.ros$Bt)]
+# 6.5) average length of prawns at harvest  
+  harvest.length.ros = op.ros$L[op.ros$Bt==max(op.ros$Bt)]
 # 7) time of harvest (when biomass is maximized)
   harvest.time.ros = op.ros$time[op.ros$Bt==max(op.ros$Bt)]
 # 8) time in months
