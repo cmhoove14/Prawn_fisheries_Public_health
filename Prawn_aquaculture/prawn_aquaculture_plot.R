@@ -2,25 +2,86 @@
 load("Prawn_aquaculture/aquaculture_sims.RData")
 
 require(ggplot2)
+ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+    library(grid)
+    
+    # Make a list from the ... arguments and plotlist
+    plots <- c(list(...), plotlist)
+    
+    numPlots = length(plots)
+    
+    # If layout is NULL, then use 'cols' to determine layout
+    if (is.null(layout)) {
+      # Make the panel
+      # ncol: Number of columns of plots
+      # nrow: Number of rows needed, calculated from # of cols
+      layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                       ncol = cols, nrow = ceiling(numPlots/cols))
+    }
+    
+    if (numPlots==1) {
+      print(plots[[1]])
+      
+    } else {
+      # Set up the page
+      grid.newpage()
+      pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+      
+      # Make each plot, in the correct location
+      for (i in 1:numPlots) {
+        # Get the i,j matrix positions of the regions that contain this subplot
+        matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+        
+        print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                        layout.pos.col = matchidx$col))
+      }
+    }
+  }
 
 
 #Plot eumetric curve for unrestricted harvest time ######
 eum_dat <- rbind(opt.df, opt.df.ros)  
   
   eum_crv = ggplot(eum_dat, aes(x = P_nought/1000)) +
+              theme_bw() +
+              theme(legend.position = c(0.2, 0.1),        #place legend inside plot
+                    axis.text = element_text(size = 15),  #increase axis label size
+                    axis.title = element_text(size = 18), #increase axis title size
+                    legend.text = element_text(size = 12),#increase legend text size
+                    axis.title.x = element_blank(),       #Suppress x axis since it shares it with below plot
+                    axis.text.x = element_blank(),
+                    legend.title = element_blank())  +    #suppress legend title
+              geom_line(aes(y = Profit, col = Species), size = 1.25) +
+              geom_hline(yintercept = 0, aes(col = grey20)) +
+              annotate("text", x = 0, y = 1000, label = "A", size = 8) +
+              labs(x = expression(paste('Stocking density (', P[0],')', sep = "")), 
+                   y = expression(paste('Profit (', Pi[max], ')', sep = "")))  +
+              scale_y_continuous(limits = c(-1000, 1000),
+                                 breaks = c(-1000, -500, 0, 500, 1000))
+    eum_crv
+    
+eum_time = ggplot(eum_dat, aes(x = P_nought/1000)) +
             theme_bw() +
-            theme(legend.position = c(0.2, 0.1),        #place legend inside plot
+            theme(legend.position = 'none',        #place legend inside plot
                   axis.text = element_text(size = 15),  #increase axis label size
                   axis.title = element_text(size = 18), #increase axis title size
                   legend.text = element_text(size = 12),#increase legend text size
                   legend.title = element_blank())  +    #suppress legend title
-            geom_line(aes(y = Profit, col = Species), size = 1.25) +
-            geom_hline(yintercept = 0, aes(col = grey20)) +
+            geom_line(aes(y = h.t, col = Species), size = 1.25) +
+            annotate("text", x = 0, y = 730, label = "B", size = 8) +
             labs(x = expression(paste('Stocking density (', P[0],')', sep = "")), 
-                 y = expression(paste('Profit (', Pi[max], ')', sep = "")))  +
-            scale_y_continuous(limits = c(-1000, 1000),
-                               breaks = c(-1000, -500, 0, 500, 1000))
-    eum_crv
+                 y = expression(paste('Harvest time (', T[opt]^sp, ')', sep = "")))  +
+            scale_y_continuous(limits = c(0, 730),
+                               breaks = c(0, 365, 730), 
+                               labels = c("0", " 365", " 730"))  
+
+  eum_time
+  
+  eum.layout = matrix(c(1,2), ncol = 1, byrow = T)
+
+  windows(width = 100, height = 75)
+  multiplot(eum_crv, eum_time, layout = eum.layout)
+
 
 #Plot eumetric curve for harvest time fixed at 8 months######
 eum_dat8mos <- rbind(opt.df8mos, opt.df.ros8mos)  
@@ -129,42 +190,6 @@ eum_dat8mos <- rbind(opt.df8mos, opt.df.ros8mos)
   pr.Bt
  
 #Combine plots to produce figure 2 #############
-  
-  multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-    library(grid)
-    
-    # Make a list from the ... arguments and plotlist
-    plots <- c(list(...), plotlist)
-    
-    numPlots = length(plots)
-    
-    # If layout is NULL, then use 'cols' to determine layout
-    if (is.null(layout)) {
-      # Make the panel
-      # ncol: Number of columns of plots
-      # nrow: Number of rows needed, calculated from # of cols
-      layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                       ncol = cols, nrow = ceiling(numPlots/cols))
-    }
-    
-    if (numPlots==1) {
-      print(plots[[1]])
-      
-    } else {
-      # Set up the page
-      grid.newpage()
-      pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-      
-      # Make each plot, in the correct location
-      for (i in 1:numPlots) {
-        # Get the i,j matrix positions of the regions that contain this subplot
-        matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-        
-        print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                        layout.pos.col = matchidx$col))
-      }
-    }
-  }
   
   fig2.layout = matrix(c(1,2,
                          3,4), ncol = 2, byrow = T)
