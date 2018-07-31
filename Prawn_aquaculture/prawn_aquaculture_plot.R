@@ -56,8 +56,8 @@ eum_dat <- rbind(opt.df, opt.df.ros)
               annotate("text", x = 0, y = 1000, label = "A", size = 8) +
               labs(x = expression(paste('Stocking density (', P[0],')', sep = "")), 
                    y = expression(paste('Profit (', Pi[max], ')', sep = "")))  +
-              scale_y_continuous(limits = c(-1000, 1000),
-                                 breaks = c(-1000, -500, 0, 500, 1000))
+              scale_y_continuous(limits = c(-500, 1000),
+                                 breaks = c(-500, 0, 500, 1000))
     eum_crv
     
 eum_time = ggplot(eum_dat, aes(x = P_nought/1000)) +
@@ -73,7 +73,7 @@ eum_time = ggplot(eum_dat, aes(x = P_nought/1000)) +
                  y = expression(paste('Harvest time (', T[opt]^sp, ')', sep = "")))  +
             scale_y_continuous(limits = c(0, 730),
                                breaks = c(0, 365, 730), 
-                               labels = c("0", " 365", " 730"))  
+                               labels = c("0", "365", "730"))  
 
   eum_time
   
@@ -116,6 +116,7 @@ eum_dat8mos <- rbind(opt.df8mos, opt.df.ros8mos)
             geom_line(aes(y = L, col = Species), size = 1.25) +
             geom_vline(xintercept = harvest.time.ros, lty = 2, size = 1.25) +
             geom_vline(xintercept = harvest.time.vol, lty = 3, size = 1.25) +
+            annotate("text", x = 0, y = 200, label = "A)", size = 8) +
             labs(x = 'time (days)', y = 'Length (mm)', col = 'Species') +
             scale_x_continuous(breaks = c(seq(0,365*2,90)),
                                labels = c(seq(0,365*2,90)),
@@ -135,6 +136,7 @@ eum_dat8mos <- rbind(opt.df8mos, opt.df.ros8mos)
             #axis.ticks.x=element_blank(),        #Suppress x axis
             legend.position = 'none')  +          #suppress legend title
       geom_line(aes(y = P.dens, col = Species), size = 1.25) +
+      annotate("text", x = 0, y = 3.2, label = "C)", size = 8) +
       labs(x = 'time (days)', y = expression(paste('Prawn density (Pm'^'-2',')', sep = '')), col = 'Species') +
       geom_vline(xintercept = harvest.time.ros, lty = 2, size = 1.25) +
       geom_vline(xintercept = harvest.time.vol, lty = 3, size = 1.25) +
@@ -143,7 +145,7 @@ eum_dat8mos <- rbind(opt.df8mos, opt.df.ros8mos)
                          limits = c(0, 365*2)) +
       scale_y_continuous(breaks = seq(0,3, 0.5),
                          #labels = c('0', '0.5', '1.0', '1.5', '2.0'),
-                         limits = c(0, 3))
+                         limits = c(0, 3.3))
     
     pr.P
     
@@ -159,6 +161,7 @@ eum_dat8mos <- rbind(opt.df8mos, opt.df.ros8mos)
       geom_line(aes(y = B, col = Species), size = 1.25) +
       geom_vline(xintercept = harvest.time.ros, lty = 2, size = 1.25) +
       geom_vline(xintercept = harvest.time.vol, lty = 3, size = 1.25) +
+      annotate("text", x = 0, y = 200, label = "B)", size = 8) +
       labs(x = 'time (days)', y = 'Weight (g)', col = 'Species') +
       scale_x_continuous(breaks = c(seq(0,365*2,90)),
                          labels = c(seq(0,365*2,90)),
@@ -178,6 +181,7 @@ eum_dat8mos <- rbind(opt.df8mos, opt.df.ros8mos)
     geom_line(aes(y = Bt, col = Species), size = 1.25) +
     geom_vline(xintercept = harvest.time.ros, lty = 2, size = 1.25) +
     geom_vline(xintercept = harvest.time.vol, lty = 3, size = 1.25) +
+    annotate("text", x = 0, y = 200, label = "D)", size = 8) +
     labs(x = 'time (days)', y = 'Total biomass (kg)', col = 'Species') +
     scale_x_continuous(breaks = c(seq(0,365*2,90)),
                        labels = c(seq(0,365*2,90)),
