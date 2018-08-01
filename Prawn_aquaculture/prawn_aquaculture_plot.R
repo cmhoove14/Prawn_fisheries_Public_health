@@ -1,7 +1,7 @@
 #Load workspace from sims script
 load("Prawn_aquaculture/aquaculture_sims.RData")
 
-require(ggplot2)
+require(tidyverse)
  multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
     library(grid)
     
@@ -201,3 +201,27 @@ eum_dat8mos <- rbind(opt.df8mos, opt.df.ros8mos)
   windows(width = 150, height = 100)
   multiplot(pr.l, pr.B, pr.P, pr.Bt,  layout = fig2.layout)
   
+
+  
+#Produce supplementary figure of aquaculture dynamics across different stocking densities ########
+  windows(width = 150, height = 150)
+  aqua_sims %>% mutate(time = as.numeric(time),
+                       Value = as.numeric(Value)) %>% 
+    filter(Variable %in% c("P_dens", "L", "Bt", "profit")) %>% 
+    mutate(Variable = case_when(Variable == "P_dens" ~ "Density (P)",
+                                Variable == "L" ~ "Mean Length (mm)",
+                                Variable == "Bt" ~ "Total biomass (kg)",
+                                Variable == "profit" ~ "Profit (USD)")) %>% 
+    ggplot(aes(x = time, y = Value, col = P0)) +
+      geom_line(size = 1.25) +
+      scale_color_manual(name = expression(P[0]),
+                         values = c("gray90", "gray80", "red",
+                                    "gray60", "gray50", "gray40",
+                                    "gray30", "gray20")) +
+      facet_grid(Variable ~ species, scales = "free_y", switch = "y") +
+      theme_bw() + 
+      theme(axis.text = element_text(size = 12),  #increase axis label size
+            axis.title = element_text(size = 18), #increase axis title size
+            legend.text = element_text(size = 15))#increase legend text size
+            
+
