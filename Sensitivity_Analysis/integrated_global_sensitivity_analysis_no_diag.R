@@ -68,7 +68,7 @@ par.all = c(par.aqua, par.snails,
   }
 
 #Plots to check monotinicity    
-  par(mfrow = c(3,1))
+  par(mfrow = c(3,1), mar = c(4,3,1,1))
   
   for(i in 1:(ncol(mono_pars_epi)-2)){
     plot(mono_pars_epi[, (i+2)], mono_fill_epi[ , 10, i], xlab = colnames(mono_pars_epi[(i+2)]), ylab = "W",
