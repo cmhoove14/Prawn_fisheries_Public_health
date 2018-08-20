@@ -60,7 +60,7 @@ snail_prawn_model = function(t, n, parameters) {
     handle3 = 1/(th*Bm.r3)
     
     # Functional responses for each size/infection class
-    psiS1 = (alpha_star1*(S1/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+    psiS1 = (alpha_star1*(S1/A)^n) / (1 + sum(alpha_star1*handle1*(S1/A),
                                             alpha_star2*handle2*(S2/A),
                                             alpha_star3*handle3*(S3/A),
                                             alpha_star1*handle1*(E1/A),
@@ -68,9 +68,9 @@ snail_prawn_model = function(t, n, parameters) {
                                             alpha_star3*handle3*(E3/A),
                                             alpha_star1*handle1*(I1/A),
                                             alpha_star2*handle2*(I2/A),
-                                            alpha_star3*handle3*(I3/A)))
+                                            alpha_star3*handle3*(I3/A))^n)
     
-    psiS2 = (alpha_star2*(S2/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+    psiS2 = (alpha_star2*(S2/A)^n) / (1 + sum(alpha_star1*handle1*(S1/A),
                                             alpha_star2*handle2*(S2/A),
                                             alpha_star3*handle3*(S3/A),
                                             alpha_star1*handle1*(E1/A),
@@ -78,9 +78,9 @@ snail_prawn_model = function(t, n, parameters) {
                                             alpha_star3*handle3*(E3/A),
                                             alpha_star1*handle1*(I1/A),
                                             alpha_star2*handle2*(I2/A),
-                                            alpha_star3*handle3*(I3/A)))
+                                            alpha_star3*handle3*(I3/A))^n)
     
-    psiS3 = (alpha_star3*(S3/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+    psiS3 = (alpha_star3*(S3/A)^n) / (1 + sum(alpha_star1*handle1*(S1/A),
                                             alpha_star2*handle2*(S2/A),
                                             alpha_star3*handle3*(S3/A),
                                             alpha_star1*handle1*(E1/A),
@@ -88,9 +88,9 @@ snail_prawn_model = function(t, n, parameters) {
                                             alpha_star3*handle3*(E3/A),
                                             alpha_star1*handle1*(I1/A),
                                             alpha_star2*handle2*(I2/A),
-                                            alpha_star3*handle3*(I3/A)))
+                                            alpha_star3*handle3*(I3/A))^n)
     
-    psiE1 = (alpha_star1*(E1/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+    psiE1 = (alpha_star1*(E1/A)^n) / (1 + sum(alpha_star1*handle1*(S1/A),
                                             alpha_star2*handle2*(S2/A),
                                             alpha_star3*handle3*(S3/A),
                                             alpha_star1*handle1*(E1/A),
@@ -98,9 +98,9 @@ snail_prawn_model = function(t, n, parameters) {
                                             alpha_star3*handle3*(E3/A),
                                             alpha_star1*handle1*(I1/A),
                                             alpha_star2*handle2*(I2/A),
-                                            alpha_star3*handle3*(I3/A)))
+                                            alpha_star3*handle3*(I3/A))^n)
     
-    psiE2 = (alpha_star2*(E2/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+    psiE2 = (alpha_star2*(E2/A)^n) / (1 + sum(alpha_star1*handle1*(S1/A),
                                             alpha_star2*handle2*(S2/A),
                                             alpha_star3*handle3*(S3/A),
                                             alpha_star1*handle1*(E1/A),
@@ -108,9 +108,9 @@ snail_prawn_model = function(t, n, parameters) {
                                             alpha_star3*handle3*(E3/A),
                                             alpha_star1*handle1*(I1/A),
                                             alpha_star2*handle2*(I2/A),
-                                            alpha_star3*handle3*(I3/A)))
+                                            alpha_star3*handle3*(I3/A))^n)
     
-    psiE3 = (alpha_star3*(E3/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+    psiE3 = (alpha_star3*(E3/A)^n) / (1 + sum(alpha_star1*handle1*(S1/A),
                                             alpha_star2*handle2*(S2/A),
                                             alpha_star3*handle3*(S3/A),
                                             alpha_star1*handle1*(E1/A),
@@ -118,9 +118,9 @@ snail_prawn_model = function(t, n, parameters) {
                                             alpha_star3*handle3*(E3/A),
                                             alpha_star1*handle1*(I1/A),
                                             alpha_star2*handle2*(I2/A),
-                                            alpha_star3*handle3*(I3/A)))
+                                            alpha_star3*handle3*(I3/A))^n)
     
-    psiI1 = (alpha_star1*(I1/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+    psiI1 = (alpha_star1*(I1/A)^n) / (1 + sum(alpha_star1*handle1*(S1/A),
                                             alpha_star2*handle2*(S2/A),
                                             alpha_star3*handle3*(S3/A),
                                             alpha_star1*handle1*(E1/A),
@@ -128,9 +128,9 @@ snail_prawn_model = function(t, n, parameters) {
                                             alpha_star3*handle3*(E3/A),
                                             alpha_star1*handle1*(I1/A),
                                             alpha_star2*handle2*(I2/A),
-                                            alpha_star3*handle3*(I3/A)))
+                                            alpha_star3*handle3*(I3/A))^n)
     
-    psiI2 = (alpha_star2*(I2/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+    psiI2 = (alpha_star2*(I2/A)^n) / (1 + sum(alpha_star1*handle1*(S1/A),
                                             alpha_star2*handle2*(S2/A),
                                             alpha_star3*handle3*(S3/A),
                                             alpha_star1*handle1*(E1/A),
@@ -138,9 +138,9 @@ snail_prawn_model = function(t, n, parameters) {
                                             alpha_star3*handle3*(E3/A),
                                             alpha_star1*handle1*(I1/A),
                                             alpha_star2*handle2*(I2/A),
-                                            alpha_star3*handle3*(I3/A)))
+                                            alpha_star3*handle3*(I3/A))^n)
     
-    psiI3 = (alpha_star3*(I3/A)) / (1 + sum(alpha_star1*handle1*(S1/A),
+    psiI3 = (alpha_star3*(I3/A)^n) / (1 + sum(alpha_star1*handle1*(S1/A),
                                             alpha_star2*handle2*(S2/A),
                                             alpha_star3*handle3*(S3/A),
                                             alpha_star1*handle1*(E1/A),
@@ -148,7 +148,7 @@ snail_prawn_model = function(t, n, parameters) {
                                             alpha_star3*handle3*(E3/A),
                                             alpha_star1*handle1*(I1/A),
                                             alpha_star2*handle2*(I2/A),
-                                            alpha_star3*handle3*(I3/A)))
+                                            alpha_star3*handle3*(I3/A))^n)
     
     #print(c(psiS1, psiS2, psiS3, psiE1, psiE2, psiE3, psiI1, psiI2, psiI3)*P)
     
