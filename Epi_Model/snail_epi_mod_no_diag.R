@@ -52,7 +52,7 @@ par.snails=c(
   psi1 = 0,          # Predation rate of prawns on small snails, ignored in this model
   psi2 = 0,          # Predation rate of prawns on medium snails, ignored in this model
   psi3 = 0,          # Predation rate of prawns on large snails, ignored in this model
-  n = 2,             # Exponent of Holling's functional response (=1 for type 2 response, =2 for type 3 response)
+  nfr = 2,           # Exponent of functional response (=1 for type 2 response, =2 for type 3 response)
 
   ## Snail growth parameters
   g1 = 1/37,         # Growth rate of small snails (size class transition rate, in terms of days to grow 4mm; adapted from McCreesh et al. 2014, assuming water temp. of 25 C)
