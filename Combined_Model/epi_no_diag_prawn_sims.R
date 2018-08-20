@@ -170,4 +170,4 @@ mda.ros = rbind(mdas, stocks.ros)
   sim.mda.ros = rbind(yr1, sim.mda.ros)
     
   
-save.image(file = "Combined_Model/epi_no_diag_prawn_sims.RData")  
+save.image(file = "Combined_Model/epi_no_diag_prawn_sims_n-2.RData")  
