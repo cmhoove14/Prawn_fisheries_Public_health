@@ -5,13 +5,13 @@ t.rk06 = c(1:(8*30)) # time to harvest in Ranjeet and Kurup trials is 8 months
 
 nsim = 20
 surv.df = expand.grid(om = seq(5e-10, 1e-8, length.out = nsim), 
-                      gam = seq(1e-6, 1e-5, length.out = nsim),
+                      gam = seq(5e-6, 5e-5, length.out = nsim),
                       P0 = seq(10000, 70000, length.out = nsim))
 
 surv.df$surv = 0
 surv.df$mean_B_perday = 0
 
-par.aqua['k'] = 0.0104333333       # Growth rate (mm/day, M. rosenbergii)
+par.aqua['k'] = k.ros       # Growth rate (mm/day, M. rosenbergii)
 
 for(k in 1:nrow(surv.df)){
   start = c(P = surv.df[k,3], L = 32)  # set starting density
@@ -35,7 +35,8 @@ for(o in 1:nsim){
     abline(om.lm, lty = 2, col = 2)
 }
 
-# 5e-9 fits best
+# 6e-9 fits best
+  par.aqua['om'] <- 6e-9
 
 for(g in 1:nsim){
   plot(surv.df$P0[surv.df$gam == unique(surv.df$gam)[g]]/10000, surv.df$mean_B_perday[surv.df$gam == unique(surv.df$gam)[g]],
@@ -45,4 +46,5 @@ for(g in 1:nsim){
     abline(gam.lm, lty = 2, col = 2)
 }
 
-# 8e-6 fits best
+# 1e-5 fits best
+  par.aqua['gam'] <- 1e-5
