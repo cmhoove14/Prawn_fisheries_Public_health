@@ -76,6 +76,12 @@ plot(l_vec, sapply(l_vec, f1, a = 0.127836, b = 2.9506), type = 'l', lwd = 2,  #
   lines(l_vec, sapply(l_vec, f1, a = exp(-2.6132), b = 3.5502), lwd = 2, col = 4)  # all males
   lines(l_vec, sapply(l_vec, f1, a = exp(-2.4339), b = 3.3893), lwd = 2, col = 5)  # all pooled
 
+f_mm <- function(l, a, b){
+  a*l^b
+} 
+
+  lines(l_vec, sapply(l_vec, f_mm, a = 1.21e-6, b = 3.43), lwd = 2, col = 7)
+
 #Also look at data from Kuris et al 1987
   
 f2 <- function(l, a, b){

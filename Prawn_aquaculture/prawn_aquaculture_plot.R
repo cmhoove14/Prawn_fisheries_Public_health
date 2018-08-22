@@ -178,11 +178,11 @@ eum_dat8mos <- rbind(opt.df8mos, opt.df.ros8mos)
     theme(axis.text = element_text(size = 15),  #increase axis label size
           axis.title = element_text(size = 18), #increase axis title size
           legend.position = 'none')  +    #suppress legend title
-    geom_line(aes(y = Bt, col = Species), size = 1.25) +
+    geom_line(aes(y = marketable_mass, col = Species), size = 1.25) +
     geom_vline(xintercept = harvest.time.ros, lty = 2, size = 1.25) +
     geom_vline(xintercept = harvest.time.vol, lty = 3, size = 1.25) +
     annotate("text", x = 0, y = 200, label = "D)", size = 8) +
-    labs(x = 'time (days)', y = 'Total biomass (kg)', col = 'Species') +
+    labs(x = 'time (days)', y = 'Marketable biomass (kg)', col = 'Species') +
     scale_x_continuous(breaks = c(seq(0,365*2,90)),
                        labels = c(seq(0,365*2,90)),
                        limits = c(0, 365*2)) +
@@ -207,10 +207,10 @@ eum_dat8mos <- rbind(opt.df8mos, opt.df.ros8mos)
   windows(width = 150, height = 150)
   aqua_sims %>% mutate(time = as.numeric(time),
                        Value = as.numeric(Value)) %>% 
-    filter(Variable %in% c("P_dens", "L", "Bt", "profit")) %>% 
+    filter(Variable %in% c("P_dens", "L", "harvest_mass", "profit")) %>% 
     mutate(Variable = case_when(Variable == "P_dens" ~ "Density (P)",
                                 Variable == "L" ~ "Mean Length (mm)",
-                                Variable == "Bt" ~ "Total biomass (kg)",
+                                Variable == "harvest_mass" ~ "Total biomass (kg)",
                                 Variable == "profit" ~ "Profit (USD)")) %>% 
     ggplot(aes(x = time, y = Value, col = P0)) +
       geom_line(size = 1.25) +
