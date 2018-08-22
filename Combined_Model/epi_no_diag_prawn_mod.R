@@ -29,7 +29,7 @@ snail_prawn_model = function(t, n, parameters) {
     M = m*0.5*W*mate
     
     # Mean and total prawn biomass, converting from length (mm) to weight (g)
-    Bm.p = (a.p/10)*(L/10)^b.p
+    Bm.p = a.p*L^b.p
     Bm.t = P*Bm.p
     
     # Mean snail biomass in each size class, converting from length (cm) to weight (g)
