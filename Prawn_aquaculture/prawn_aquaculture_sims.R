@@ -4,8 +4,8 @@ source('Prawn_aquaculture/macrobrachium_aquaculture_data.R')
 require(tidyverse)
 
 #Simulation for eumetric curve for M. volenhovenii #####
-#Starting length of 32 mm corresponds to juveniles of ~0.45 grams
-opt.df = expand.grid(L_nought = 32, P_nought = seq(100, 10000, 100)) 
+#Starting length of 40 mm corresponds to juveniles of ~0.4 grams
+opt.df = expand.grid(L_nought = 40, P_nought = seq(100, 10000, 100)) 
   opt.df$h.t = 0
   opt.df$h.bm = 0
   opt.df$h.frac = 0
@@ -123,9 +123,9 @@ op.vol = as.data.frame(ode(nstart.p.vol,t.p,prawn_biomass,par.aqua))
 # 2.5) marketable prawns at harvest
   eta.vol = predict(eta.lm, newdata = data.frame(dens = nstart.p.vol["P"]/area)) # Fraction of harvest that's marketable as function of stocking density
 # 2.6) marketable biomass 
-  op.vol$marketable_mass = eta.vol*p*op.vol$Bt
+  op.vol$marketable_mass = eta.vol*op.vol$Bt
 # 3) profit (in terms of revenue (discounted by time since stocking) minus stocking costs )  
-  op.vol$profit = eta.vol*p*op.vol$Bt*exp(-delta*(op.vol$t)) - cost*(nstart.p.vol["P"])
+  op.vol$profit = eta.vol*p*op.vol$Bt*exp(-delta*(op.vol$time)) - cost*(nstart.p.vol["P"])
 # 4) starting total biomass
   start.mass.kg.vol = op.vol$Bt[op.vol$time==0]
 # 5) harvest mass in kg (harvest assumed to occur when profit is maximized)   
@@ -156,9 +156,9 @@ op.ros = as.data.frame(ode(nstart.p.ros,t.p,prawn_biomass,par.aqua))
 # 2.5) marketable prawns at harvest
   eta.ros = predict(eta.lm, newdata = data.frame(dens = nstart.p.ros["P"]/area)) # Fraction of harvest that's marketable as function of stocking density
 # 2.6) marketable biomass 
-  op.ros$marketable_mass = eta.ros*p*op.ros$Bt
+  op.ros$marketable_mass = eta.ros*op.ros$Bt
 # 3) profit (in terms of revenue (discounted by time since stocking) minus stocking costs )  
-  op.ros$profit = eta.ros*p*op.ros$Bt*exp(-delta*(op.ros$t)) - cost*(nstart.p.ros["P"])
+  op.ros$profit = eta.ros*p*op.ros$Bt*exp(-delta*(op.ros$time)) - cost*(nstart.p.ros["P"])
 # 4) starting total biomass
   start.mass.kg.ros = op.ros$Bt[op.ros$time==0]
 # 5) harvest mass in kg (harvest assumed to occur when profit is maximized)   

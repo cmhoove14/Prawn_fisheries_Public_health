@@ -7,11 +7,12 @@
 #high transmission led to high mortality rates among the snail population due to accumulation in I compartment
 #transmission parameters were tweaked to give mean lfie expectancy of ~44 days
 
-source('Epi_Model/snail_epi_mod.R')
+source('Epi_Model/snail_epi_mod_no_diag.R')
 
-nstart.ls = c(S1 = sn.eqbm$S1, S2 = sn.eqbm$S2, S3 = sn.eqbm$S3, 
-              E1 = sn.eqbm$E1, E2 = sn.eqbm$E2, E3 = sn.eqbm$E3, 
-              I2 = sn.eqbm$I2, I3 = sn.eqbm$I3, W = sn.eqbm$W)
+nstart.ls = c(S1 = allvh.eqbm$S1, S2 = allvh.eqbm$S2, S3 = allvh.eqbm$S3, 
+              E1 = allvh.eqbm$E1, E2 = allvh.eqbm$E2, E3 = allvh.eqbm$E3, 
+              I1 = allvh.eqbm$I1, I2 = allvh.eqbm$I2, I3 = allvh.eqbm$I3, 
+              Wt = allvh.eqbm$Wt, Wu = allvh.eqbm$Wu)
 
 t2 = c(1:(365*2))
 
@@ -22,20 +23,20 @@ t2 = c(1:(365*2))
 #par.snails['muI'] = 1/25
 
 #rerun the model to equilibrium for accurate estimation of lifespan
-sn.eqbm.run = as.data.frame(ode(nstart.sn,t.sn,snail_epi,par.snails))
+sn.eqbm.run = as.data.frame(ode(nstart.ls,t2,snail_epi_allvh,par.snails))
   sn.eqbm = sn.eqbm.run[dim(sn.eqbm.run)[1],]
 
 #plot worm burden trajectory to check it doesn't go crazy  
-plot(sn.eqbm.run$time, sn.eqbm.run$W, type='l', lwd = 2, col = 2,
+plot(sn.eqbm.run$time, sn.eqbm.run$Wt, type='l', lwd = 2, col = 2,
      xlab = 'time', ylab = 'mean worm burden')  
   
 par.snails['f'] = 0
 
-sn.run.ls = as.data.frame(ode(nstart.ls,t2,snail_epi,par.snails))
+sn.run.ls = as.data.frame(ode(nstart.ls,t2,snail_epi_allvh,par.snails))
   sn.run.ls$S.t = (sn.run.ls$S1 + sn.run.ls$S2 + sn.run.ls$S3)
   sn.run.ls$E.t = (sn.run.ls$E1 + sn.run.ls$E2 + sn.run.ls$E3)
-  sn.run.ls$I.t = (sn.run.ls$I2 + sn.run.ls$I3)
-  sn.run.ls$size1 = (sn.run.ls$S1 + sn.run.ls$E1)
+  sn.run.ls$I.t = (sn.run.ls$I1 + sn.run.ls$I2 + sn.run.ls$I3)
+  sn.run.ls$size1 = (sn.run.ls$S1 + sn.run.ls$E1 + sn.run.ls$I1)
   sn.run.ls$size2 = (sn.run.ls$S2 + sn.run.ls$E2 + sn.run.ls$I2)
   sn.run.ls$size3 = (sn.run.ls$S3 + sn.run.ls$E3 + sn.run.ls$I3)
   
@@ -80,7 +81,7 @@ sum(x*deriv2)    #original ~22 days
 #same procedure, but "turn off" infection
 par.snails['beta'] = 0
 
-sn.eqbm.run = as.data.frame(ode(nstart.sn,t.sn,snail_epi,par.snails))
+sn.eqbm.run = as.data.frame(ode(nstart.sn,t.sn,snail_epi_allvh,par.snails))
   sn.eqbm = sn.eqbm.run[dim(sn.eqbm.run)[1],]
 
 #plot worm burden trajectory to check it doesn't go crazy  
@@ -89,11 +90,11 @@ plot(sn.eqbm.run$time, sn.eqbm.run$W, type='l', lwd = 2, col = 2,
 
 par.snails['f'] = 0
 
-sn.run.ls = as.data.frame(ode(nstart.ls,t2,snail_epi,par.snails))
+sn.run.ls = as.data.frame(ode(nstart.ls,t2,snail_epi_allvh,par.snails))
   sn.run.ls$S.t = (sn.run.ls$S1 + sn.run.ls$S2 + sn.run.ls$S3)
   sn.run.ls$E.t = (sn.run.ls$E1 + sn.run.ls$E2 + sn.run.ls$E3)
-  sn.run.ls$I.t = (sn.run.ls$I2 + sn.run.ls$I3)
-  sn.run.ls$size1 = (sn.run.ls$S1 + sn.run.ls$E1)
+  sn.run.ls$I.t = (sn.run.ls$I1 + sn.run.ls$I2 + sn.run.ls$I3)
+  sn.run.ls$size1 = (sn.run.ls$I1 + sn.run.ls$S1 + sn.run.ls$E1)
   sn.run.ls$size2 = (sn.run.ls$S2 + sn.run.ls$E2 + sn.run.ls$I2)
   sn.run.ls$size3 = (sn.run.ls$S3 + sn.run.ls$E3 + sn.run.ls$I3)
 
