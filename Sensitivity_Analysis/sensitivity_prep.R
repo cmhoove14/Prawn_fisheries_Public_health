@@ -15,7 +15,7 @@ par.all = c(par.aqua, par.snails,
 
   par.all['c'] = cost
   par.all['p'] = p
-  par.all['eta'] = eta
+  par.all['eta'] = eta.ros
 
   
 #generate parameter ranges to sample over ################# 
