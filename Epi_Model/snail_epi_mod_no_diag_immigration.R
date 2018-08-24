@@ -149,6 +149,7 @@ allvh.eqbm.run.imm0 = as.data.frame(ode(nstart.sn,t.sn,snail_epi_allvh_imm,par.s
   par.snails.imm["siteI3"] <- allvh.eqbm.imm0$I3 
 
 #Rerun to eqbm with immigration
-allvh.eqbm.run.imm = as.data.frame(ode(as.numeric(allvh.eqbm.imm0[-1]),t.sn,snail_epi_allvh_imm,par.snails.imm))
+allvh.eqbm.run.imm = as.data.frame(ode(setNames(as.numeric(allvh.eqbm.imm0[-1]), names(allvh.eqbm.imm0)[-1]),
+                                       t.sn,snail_epi_allvh_imm,par.snails.imm))
   allvh.eqbm.imm = allvh.eqbm.run.imm[dim(allvh.eqbm.run.imm)[1],]
   
