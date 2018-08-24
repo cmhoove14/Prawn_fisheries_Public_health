@@ -19,7 +19,7 @@ for(k in 1:nrow(surv.df)){
   par.aqua['om'] = surv.df[k,1]        # set omega parameter
   
   op = as.data.frame(ode(start,t.rk06,prawn_biomass,par.aqua))   # run simulation
-  op$B = par.aqua['a.p'] *op$L^par.aqua['b.p']       # Mean prawn biomass, transformed from length
+  op$B = 10^(par.aqua['a.p'] + par.aqua['b.p']*log10(op$L/10))       # Mean prawn biomass, transformed from length)
   
   surv.df[k,4] = op$P[op$time == max(op$time)]/surv.df[k,3]      # store survival rate in simulation
   surv.df[k,5] = op$B[op$time == max(op$time)]/max(op$time)      # store mean daily growth rate in simulation  
@@ -46,5 +46,5 @@ for(g in 1:nsim){
     abline(gam.lm, lty = 2, col = 2)
 }
 
-# 3.5e-6 fits best
-  par.aqua['gam'] <- 3.5e-6
+# 5e-6 fits best
+  par.aqua['gam'] <- 5e-6
