@@ -21,8 +21,8 @@ nstart.sn = c(S1 = 5*area, S2 = 5*area, S3 = 5*area,
               I1 = 5*area, I2 = 5*area, I3 = 5*area, 
               Wt = 50, Wu = 50)
 t.sn = seq(0,365*300,10)
-cov = 0.6  #MDA coverage
-eff = 0.94 #MDA efficacy 
+cov = 0.75  #MDA coverage
+eff = 0.85 #MDA efficacy 
 
 par.snails.imm=c(
   ## Location parameters
@@ -70,7 +70,7 @@ par.snails.imm=c(
   theta1 = 167.8/127.8,         # Scale factor describing increase in cercarial shedding rate in larger (size class 2) snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
   theta2 = 1006.8/127.8,         # Scale factor describing increase in cercarial shedding rate in larger (size class 2) snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
 
-  phi = 0.2,           # clumping parameter of the negative binomial distribution used in the mating probability function
+  phi = 0.08,           # clumping parameter of the negative binomial distribution used in the mating probability function
   
   ## Schisto mortality parameters
   muW = 1/(3.3*365), # Natural mortality rate of adult worms in humans, assuming average lifespan of 3.3 years, from Sokolow et al. 2015
@@ -138,15 +138,15 @@ allvh.eqbm.run.imm0 = as.data.frame(ode(nstart.sn,t.sn,snail_epi_allvh_imm,par.s
 
 #Add immigration parameters based on immigration-free eqbm  
   par.snails.imm["iota"] <- 0.15
-  par.snails.imm["siteS1"] <- allvh.eqbm.imm0$S1 # / sum(allvh.eqbm.imm0[2:10]) * area 
-  par.snails.imm["siteS2"] <- allvh.eqbm.imm0$S2 # / sum(allvh.eqbm.imm0[2:10]) * area   
-  par.snails.imm["siteS3"] <- allvh.eqbm.imm0$S3 # / sum(allvh.eqbm.imm0[2:10]) * area   
-  par.snails.imm["siteE1"] <- allvh.eqbm.imm0$E1 # / sum(allvh.eqbm.imm0[2:10]) * area    
-  par.snails.imm["siteE2"] <- allvh.eqbm.imm0$E2 # / sum(allvh.eqbm.imm0[2:10]) * area    
-  par.snails.imm["siteE3"] <- allvh.eqbm.imm0$E3 # / sum(allvh.eqbm.imm0[2:10]) * area    
-  par.snails.imm["siteI1"] <- allvh.eqbm.imm0$I1 # / sum(allvh.eqbm.imm0[2:10]) * area    
-  par.snails.imm["siteI2"] <- allvh.eqbm.imm0$I2 # / sum(allvh.eqbm.imm0[2:10]) * area    
-  par.snails.imm["siteI3"] <- allvh.eqbm.imm0$I3 # / sum(allvh.eqbm.imm0[2:10]) * area    
+  par.snails.imm["siteS1"] <- allvh.eqbm.imm0$S1 
+  par.snails.imm["siteS2"] <- allvh.eqbm.imm0$S2 
+  par.snails.imm["siteS3"] <- allvh.eqbm.imm0$S3 
+  par.snails.imm["siteE1"] <- allvh.eqbm.imm0$E1 
+  par.snails.imm["siteE2"] <- allvh.eqbm.imm0$E2 
+  par.snails.imm["siteE3"] <- allvh.eqbm.imm0$E3 
+  par.snails.imm["siteI1"] <- allvh.eqbm.imm0$I1 
+  par.snails.imm["siteI2"] <- allvh.eqbm.imm0$I2 
+  par.snails.imm["siteI3"] <- allvh.eqbm.imm0$I3 
 
 #Rerun to eqbm with immigration
 allvh.eqbm.run.imm = as.data.frame(ode(as.numeric(allvh.eqbm.imm0[-1]),t.sn,snail_epi_allvh_imm,par.snails.imm))
