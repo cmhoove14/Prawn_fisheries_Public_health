@@ -1,7 +1,7 @@
 source('Epi_Model/snail_epi_mod_no_diag_immigration.R')
 source('Prawn_aquaculture/prawn_aquaculture_mod.R')
 
-snail_prawn_model = function(t, n, parameters) {  
+snail_prawn_model_imm = function(t, n, parameters) {  
   with(as.list(parameters),{
     
     S1=n[1]
@@ -28,8 +28,8 @@ snail_prawn_model = function(t, n, parameters) {
     mate = phi_Wk(W = W, phi = phi)  #Mating probability
     M = m*0.5*W*mate
     
-    # Mean and total prawn biomass, converting from length (mm) to weight (g)
-    Bm.p = a.p*L^b.p
+    # Mean and total prawn biomass, converting from length (cm) to weight (g)
+    Bm.p = 10^a.p*(L/10)^b.p
     Bm.t = P*Bm.p
     
     # Mean snail biomass in each size class, converting from length (cm) to weight (g)
