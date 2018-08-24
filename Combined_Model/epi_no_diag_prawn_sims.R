@@ -23,6 +23,7 @@ nstart.vol = c(S1 = allvh.eqbm$S1, S2 = allvh.eqbm$S2, S3 = allvh.eqbm$S3,
     vol.harvests = stocks.vol[seq(1, nrow(stocks.vol), 2), 2]
 
   par.all.vol = c(par.aqua, par.snails,
+                  eps = sqrt(area),   # Attack rate penalty 
                   a.s = 0.187178454,  # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
                   b.s = 2.536764792,  # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
                   ar.slp = 0.9050,    # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014
@@ -45,6 +46,7 @@ nstart.ros = c(S1 = allvh.eqbm$S1, S2 = allvh.eqbm$S2, S3 = allvh.eqbm$S3,
   ros.harvests = stocks.ros[seq(1, nrow(stocks.ros), 2), 2]
   
   par.all.ros = c(par.aqua, par.snails,
+                  eps = sqrt(area),   # Attack rate penalty 
                   a.s = 0.187178454,  # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
                   b.s = 2.536764792,  # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
                   ar.slp = 0.9050,    # Coefficient for relationship between biomass ratio and attack rate, fitted to data from Sokolow et al. 2014

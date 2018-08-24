@@ -1,4 +1,4 @@
-source('Epi_Model/snail_epi_mod_no_diag.R')
+source('Epi_Model/snail_epi_mod_no_diag_immigration.R')
 source('Prawn_aquaculture/prawn_aquaculture_mod.R')
 
 snail_prawn_model = function(t, n, parameters) {  
@@ -50,9 +50,9 @@ snail_prawn_model = function(t, n, parameters) {
     #alpha1 = ifelse(-log(3) + ar*log(Bm.r1) < 0, -log(3) + ar*log(Bm.r1), 0)
     
     # Adjusted attack rates, accounting for area of interest and limiting factors in the wild
-    alpha_star1 = alpha1/sqrt(A)
-    alpha_star2 = alpha2/sqrt(A)
-    alpha_star3 = alpha3/sqrt(A)
+    alpha_star1 = alpha1/eps
+    alpha_star2 = alpha2/eps
+    alpha_star3 = alpha3/eps
     
     # Handling times for each size class as a function of biomass ratio
     handle1 = 1/(th*Bm.r1)
