@@ -9,9 +9,8 @@
   
 #get all parameters in the same vector ###########
 par.all = c(par.aqua, 
-            k.ros = k.ros, 
             c = cost, 
-            p = p, 
+            p = price, 
             eta = as.numeric(predict(eta.lm, newdata = data.frame(dens = 2.6/area))), 
             delta = -log(1-0.03)/365,
             par.snails.imm,
