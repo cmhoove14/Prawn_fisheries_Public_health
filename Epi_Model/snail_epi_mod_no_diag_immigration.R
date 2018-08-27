@@ -137,7 +137,7 @@ allvh.eqbm.run.imm0 = as.data.frame(ode(nstart.sn,t.sn,snail_epi_allvh_imm,par.s
   allvh.eqbm.imm0 = allvh.eqbm.run.imm0[dim(allvh.eqbm.run.imm0)[1],]
 
 #Add immigration parameters based on immigration-free eqbm  
-  par.snails.imm["iota"] <- 0.15
+  par.snails.imm["iota"] <- 0.2/365  # 20% per year as in Head et al snail migration paper
   par.snails.imm["siteS1"] <- allvh.eqbm.imm0$S1 
   par.snails.imm["siteS2"] <- allvh.eqbm.imm0$S2 
   par.snails.imm["siteS3"] <- allvh.eqbm.imm0$S3 
