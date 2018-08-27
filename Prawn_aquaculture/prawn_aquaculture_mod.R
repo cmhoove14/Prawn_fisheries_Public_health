@@ -35,12 +35,13 @@ par.aqua=c(
   muP = 2.21/365,  # Natural prawn mortality rate (M. volenhovenii males) from Nwosu & Wolfi 2006
   d = -0.382,      # Exponential relationship of weight with mortality, from Lorenzen 1996 (pond aquaculture)
   om = 5.5e-9,       # Density-dependent mortality parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010 in fit_dens_dep_params.R
-  k = 3.19/365,    # Growth rate (mm/day)
-  linf = 213.63            # Max length (mm), from Nwosu & Wolfi 2006 (M. vollenhovenii males)
+  k = 3.19/365,    # Growth rate (mm/day) of M. vollenhovenii
+  linf = 213.63,            # Max length (mm), from Nwosu & Wolfi 2006 (M. vollenhovenii males)
+  k.ros = 0.371/30 # Growth rate (mm/day) of M. rosenbergii
 )
 
 # Economic parameters (price estimates from Dasgupta and Tidwell)
-p = 12                                           # Weighted average market price of prawns, in dollars/kg 
+price = 12                                       # Weighted average market price of prawns, in dollars/kg 
 cost = 0.10                                      # Cost of juveniles, in dollars per
 delta = -log(1-0.03)/365                         # Discount rate, equivalent to 3%/year
 
@@ -54,5 +55,3 @@ p.reference = as.data.frame(ode(nstart.ref,t.p,prawn_biomass,par.aqua))
   p.reference$B = 10^par.aqua['a.p']*(p.reference$L/10)^par.aqua['b.p']                # Mean prawn biomass, transformed from length
   p.reference$Bt = p.reference$B*p.reference$P                                                   # Total prawn biomass
  
-  plot(p.reference$L, p.reference$B, type = 'l', xlab = "length (mm)", ylab = "mass (g)")
-  
