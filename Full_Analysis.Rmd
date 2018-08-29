@@ -81,7 +81,6 @@ eum_dat <- rbind(opt.vol.df, opt.ros.df)
 ```
 
 ```{r Fig2_Prep, warning=FALSE, include=FALSE, cache = TRUE}
-  
 test_p0s <- seq(500, 7500, 1000)  
 
 aqua_sims_vol <- do.call(rbind, lapply(test_p0s, sim_aqua_time))
@@ -101,7 +100,7 @@ aqua_sims = as.data.frame(rbind(aqua_sims_vol, aqua_sims_ros)) %>%
                                 Variable == "L" ~ "Average Length (mm)",
                                 Variable == "n_harvest" ~ "Number of harvests",
                                 Variable == "profit" ~ "Profit (USD)")) %>% 
-    ggplot(aes(x = time, y = Value, col = P_nought)) +
+    ggplot(aes(x = time, y = Value, col = P_start)) +
       geom_line(size = 1.25) +
       scale_color_manual(name = expression(P[0]),
                          values = c("gray90", "gray80", "red",
@@ -117,9 +116,47 @@ aqua_sims = as.data.frame(rbind(aqua_sims_vol, aqua_sims_ros)) %>%
 
 ```
 
+# Example cycle  
+Figure showing prawn aquaculture dynamics through time  
+
+```{r sim_time_fig, echo=FALSE, warning = FALSE, fig.height=6, fig.width=8}
+# First get simulation through time starting at optimal stocking density ######
+opt.vol.time <- sim_aqua_time(opt.vol$P_nought)
+opt.ros.time <- sim_aqua_time(opt.ros$P_nought, species = "M. rosenbergii")
+
+  opt.time <- rbind(as.data.frame(opt.vol.time), as.data.frame(opt.ros.time)) %>% 
+    mutate(n_harvest = ifelse(as.numeric(as.character(p_mass)) >= 30, as.numeric(as.character(n_harvest)), NA),
+           cum_profits = as.numeric(as.character(n_harvest)) * as.numeric(as.character(profit))) %>% 
+    gather(key = "Variable", value = "Value", P_dens, L, harvest_mass, profit, n_harvest, cum_profits)
+
+    opt.time %>% mutate(time = as.numeric(time),
+                        Value = as.numeric(Value),
+                        Species = factor(Species, levels = c("M. rosenbergii", "M. vollenhovenii"))) %>% 
+      filter(Variable %in% c("P_dens", "L", "harvest_mass", "cum_profits")) %>% 
+      mutate(Variable = case_when(Variable == "P_dens" ~ "Density, P",
+                                  Variable == "L" ~ "Mean Length, L (mm)",
+                                  Variable == "harvest_mass" ~ "Harvest mass (kg)",
+                                  Variable == "cum_profits" ~ "Ten-year Cumulative profit (USD)")) %>% 
+      ggplot(aes(x = time, y = Value, col = Species)) +
+        geom_line(size = 1.25) +
+        geom_vline(xintercept = opt.vol$time, lty = 2, size = 1.1) +
+        geom_vline(xintercept = opt.ros$time, lty = 3, size = 1.1) +
+        scale_color_manual(values = c("red", "blue")) +
+        facet_wrap( ~ Variable, scales = "free_y", nrow = 2) +
+        labs(x = "Time (days)") +
+        theme_bw() + 
+        theme(legend.position = c(0.3, 0.2),
+              axis.text = element_text(size = 12),  #increase axis label size
+              axis.title = element_text(size = 18), #increase axis title size
+              legend.title = element_blank(), #increase axis title size
+              strip.text = element_text(size = 14))
+
+```
+
+
 # Eumetric curves   
 
-```{r Fig3, echo=FALSE, warning = FALSE, fig.height=10.5, fig.width=8}
+```{r Fig3, include=FALSE, warning = FALSE, fig.height=10.5, fig.width=8}
   eum_crv = ggplot(eum_dat, aes(x = P_nought/1000)) +
               theme_bw() +
               theme(legend.position = c(0.2, 0.1),        #place legend inside plot
@@ -217,8 +254,7 @@ source("Sensitivity_Analysis/sensitivity_prep.R")
   eum_sim <- expand.grid.df(lhcpars.aqua, test_starts)
   
   eum_sims_vol <- eum_sim %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. vollenhovenii"))
-    eum_sims_vol$par_set <- rep(1:nsims, nrow(test_starts))   #Add identifier for unique parameter sets
-    
+  
     eum_sims_vol_sum <- eum_sims_vol %>%       #Summarise across parameter sets
       group_by(P_nought) %>%  
       summarise(Profit_Cycle_Med = median(profit),
@@ -239,7 +275,6 @@ source("Sensitivity_Analysis/sensitivity_prep.R")
                 n_par_sets = n())
     
   eum_sims_ros <- eum_sim %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. rosenbergii"))
-    eum_sims_ros$par_set <- rep(1:nsims+nsims, nrow(test_starts))   #Add identifier for unique parameter sets
   
     eum_sims_ros_sum <- eum_sims_ros %>%       #Summarise across parameter sets
       group_by(P_nought) %>%  
@@ -260,10 +295,8 @@ source("Sensitivity_Analysis/sensitivity_prep.R")
                 Species = unique(Species),
                 n_par_sets = n())
   
-    
   eum_sims_all_sum = as.data.frame(rbind(eum_sims_vol_sum, eum_sims_ros_sum)) %>% 
     mutate(Species = factor(Species, levels = c("M. rosenbergii", "M. vollenhovenii")))
-
 ```
 
 ```{r Fig3_with_uncertainty, echo=FALSE, warning = FALSE, fig.height=10.5, fig.width=8}
@@ -272,7 +305,7 @@ source("Sensitivity_Analysis/sensitivity_prep.R")
       geom_line(size = 1.25) +
       geom_ribbon(aes(x = P_nought/1000, ymin = cum_Profit_loq/1000, ymax = cum_Profit_upq/1000, fill = Species), alpha = 0.3, size = 0) +
       theme_bw() +
-      theme(legend.position = c(0.2, 0.095),        #place legend inside plot
+      theme(legend.position = c(0.2, 0.10),        #place legend inside plot
             axis.text = element_text(size = 15),  #increase axis label size
             axis.title = element_text(size = 18), #increase axis title size
             legend.text = element_text(size = 12),#increase legend text size
@@ -284,7 +317,8 @@ source("Sensitivity_Analysis/sensitivity_prep.R")
       annotate("text", x = 0, y = 12.5, label = "A)", size = 8) +
       labs(y = expression(paste('10-Year Profits', ' (1000s USD)', sep = "")))  +
       scale_y_continuous(limits = c(-3000, 12750)/1000,
-                         breaks = seq(-2.500, 12.500, 2.500)) +
+                         breaks = seq(-2.500, 12.500, 2.500),
+                         labels = paste("", seq(-2.500, 12.500, 2.500))) +
       scale_x_continuous(limits = c(0, 8),
                          breaks = c(0, 2, 4, 6, 8))  
 
@@ -304,7 +338,7 @@ source("Sensitivity_Analysis/sensitivity_prep.R")
       geom_hline(yintercept = 0, aes(col = grey20)) +
       annotate("text", x = 0, y = 500, label = "B)", size = 8) +
       labs(y = expression(paste('Profit per cycle (USD)', sep = "")))  +
-      scale_y_continuous(limits = c(-525, 550),
+      scale_y_continuous(limits = c(-550, 550),
                          breaks = seq(-500, 500, 250)) +
       scale_x_continuous(limits = c(0, 8),
                          breaks = c(0, 2, 4, 6, 8))  
@@ -344,80 +378,83 @@ source("Sensitivity_Analysis/sensitivity_prep.R")
       scale_color_manual(values = c("red", "blue")) +
       labs(x = expression(paste('Stocking density, ', P[0],' (', Pm^-2, ")", sep = "")), 
            y = "Harvests per 10 years")  +
-      scale_y_continuous(limits = c(0, 30),
-                         breaks = c(0,10,20,30),
-                         labels = c("   0", "  10", "  20", "  30")) +
+      scale_y_continuous(limits = c(0, 25),
+                         breaks = seq(0,25,5),
+                         labels = paste("    ", seq(0,25,5))) +
       scale_x_continuous(limits = c(0, 8),
                          breaks = c(0, 2, 4, 6, 8))  
-
-  eum_crv2
 
   multiplot(eum_crv2, prf_crv2, eum_harvests2, layout = eum.layout)
 ```
 
 # Optimal management table  
 
-Also want a table showing set of parameters and outputs from "optimal management"
+Also want a table showing set of parameters and outputs from "optimal management". Two approaches here: can either take uncertainty 
 
 ```{r op_mgmt_table, echo=FALSE, cache = TRUE}
+#Function to return summary of a vector as median (IQR)
+get_sum <- function(vec){
+  paste0(round(median(vec), 2), 
+         " (", round(quantile(vec, 0.25), 2), 
+         " - ", round(quantile(vec, 0.75), 2), ")"  )
+} 
+  #Get optimal stocking parameters considering uncertainty for vollenhovenii
+    opt.vol.unc <- eum_sims_vol %>% 
+      group_by(P_nought) %>% 
+      summarise(Cum_profit_med = median(cum_profits),
+                harvest_time_sum = get_sum(time),
+                harvest_mass_sum = get_sum(harvest_mass),
+                harvest_length_sum = get_sum(L),
+                harvest_number_sum = get_sum(P),
+                profit_cycle_sum = get_sum(profit),
+                roi_sum = get_sum(roi),
+                n_harvest_sum = get_sum(n_harvest),
+                cum_profit_sum = get_sum(cum_profits)) %>% 
+      filter(Cum_profit_med == max(Cum_profit_med))
+    
+    knitr::kable(t(opt.vol.unc), caption = "Estimates of M. vollenhovenii optimal management (uncertainty during optimization)")
+
+  #Get optimal stocking parameters considering uncertainty for rosenbergii
+    opt.ros.unc <- eum_sims_ros %>% 
+      group_by(P_nought) %>% 
+      summarise(Cum_profit_med = median(cum_profits),
+                harvest_time_sum = get_sum(time),
+                harvest_mass_sum = get_sum(harvest_mass),
+                harvest_length_sum = get_sum(L),
+                harvest_number_sum = get_sum(P),
+                profit_cycle_sum = get_sum(profit),
+                roi_sum = get_sum(roi),
+                n_harvest_sum = get_sum(n_harvest),
+                cum_profit_sum = get_sum(cum_profits)) %>% 
+      filter(Cum_profit_med == max(Cum_profit_med))
+    
+    knitr::kable(t(opt.ros.unc), caption = "Estimates of M. vollenhovenii optimal management (uncertainty during optimization)")
+
   vol_op_mgmt <- expand.grid.df(lhcpars.aqua, expand.grid(L_nought = opt.vol$L_nought, P_nought = opt.vol$P_nought)) %>% 
     bind_cols(pmap_df(., sim_aqua_eum, species = "M. vollenhovenii")) %>% group_by(P_nought, L_nought) %>% 
-    summarise(#biomass0 = P_nought * (10^(a.p+b.p*log10(L_nought/10))),
-              harvest_time_med = median(time),
-              harvest_time_loq = quantile(time, 0.25),
-              harvest_time_upq = quantile(time, 0.75),
-              harvest_mass_med = median(harvest_mass),
-              harvest_mass_loq = quantile(harvest_mass, 0.25),
-              harvest_mass_upq = quantile(harvest_mass, 0.75),
-              harvest_length_med = median(L),
-              harvest_length_loq = quantile(L, 0.25),
-              harvest_length_upq = quantile(L, 0.75),
-              harvest_number_med = median(P),
-              harvest_number_loq = quantile(P, 0.25),
-              harvest_number_upq = quantile(P, 0.75),
-              profit_cycle_med = median(profit),
-              profit_cycle_loq = quantile(profit, 0.25),
-              profit_cycle_upq = quantile(profit, 0.75),
-              roi_med = median(roi),
-              roi_loq = quantile(roi, 0.25),
-              roi_upq = quantile(roi, 0.75),
-              n_harvest_med = median(n_harvest),
-              n_harvest_loq = quantile(n_harvest, 0.25),
-              n_harvest_upq = quantile(n_harvest, 0.75),
-              cum_profit_med = median(cum_profits),
-              cum_profit_loq = quantile(cum_profits, 0.25),
-              cum_profit_upq = quantile(cum_profits, 0.75)) %>% 
-  knitr::kable(digits = 3)
+    summarise(harvest_time_med = get_sum(time),
+              harvest_mass_med = get_sum(harvest_mass),
+              harvest_length_med = get_sum(L),
+              harvest_number_med = get_sum(P),
+              profit_cycle_med = get_sum(profit),
+              roi_med = get_sum(roi),
+              n_harvest_med = get_sum(n_harvest),
+              cum_profit_med = get_sum(cum_profits))
+
+  knitr::kable(t(vol_op_mgmt), caption = "Estimates of M. vollenhovenii optimal management (parametric uncertainty)")
 
   ros_op_mgmt <- expand.grid.df(lhcpars.aqua, expand.grid(L_nought = opt.ros$L_nought, P_nought = opt.ros$P_nought)) %>% 
     bind_cols(pmap_df(., sim_aqua_eum, species = "M. rosenbergii")) %>% group_by(P_nought, L_nought) %>% 
-    summarise(#biomass0 = P_nought * (10^(a.p+b.p*log10(L_nought/10))),
-              harvest_time_med = median(time),
-              harvest_time_loq = quantile(time, 0.25),
-              harvest_time_upq = quantile(time, 0.75),
-              harvest_mass_med = median(harvest_mass),
-              harvest_mass_loq = quantile(harvest_mass, 0.25),
-              harvest_mass_upq = quantile(harvest_mass, 0.75),
-              harvest_length_med = median(L),
-              harvest_length_loq = quantile(L, 0.25),
-              harvest_length_upq = quantile(L, 0.75),
-              harvest_number_med = median(P),
-              harvest_number_loq = quantile(P, 0.25),
-              harvest_number_upq = quantile(P, 0.75),
-              profit_cycle_med = median(profit),
-              profit_cycle_loq = quantile(profit, 0.25),
-              profit_cycle_upq = quantile(profit, 0.75),
-              roi_med = median(roi),
-              roi_loq = quantile(roi, 0.25),
-              roi_upq = quantile(roi, 0.75),
-              n_harvest_med = median(n_harvest),
-              n_harvest_loq = quantile(n_harvest, 0.25),
-              n_harvest_upq = quantile(n_harvest, 0.75),
-              cum_profit_med = median(cum_profits),
-              cum_profit_loq = quantile(cum_profits, 0.25),
-              cum_profit_upq = quantile(cum_profits, 0.75)) %>% 
-  knitr::kable(digits = 3)
+    summarise(harvest_time_med = get_sum(time),
+              harvest_mass_med = get_sum(harvest_mass),
+              harvest_length_med = get_sum(L),
+              harvest_number_med = get_sum(P),
+              profit_cycle_med = get_sum(profit),
+              roi_med = get_sum(roi),
+              n_harvest_med = get_sum(n_harvest),
+              cum_profit_med = get_sum(cum_profits))
 
+  knitr::kable(t(ros_op_mgmt), caption = "Estimates of M. rosenbergii optimal management (parametric uncertainty)")
 ```
 
 
@@ -530,10 +567,10 @@ yr1 = as.data.frame(ode(nstart.yr1,t.yr1,snail_epi_allvh_imm,par.snails.imm))
 
 #Simulate annual MDA for n years ########
 #mda events
-  mdas = data.frame(var = rep('Wt', years),
-                    time = 365*c(1:years)+1,
-                    value = rep((1-cov*eff), years),
-                    method = rep('multiply', years))
+  mdas = data.frame(var = rep('Wt', years+1),
+                    time = 365*c(0:years+1)+1,
+                    value = rep((1-eff), years+1),
+                    method = rep('multiply', years+1))
   
   sim.mda = as.data.frame(ode(nstart.yr1,t.all,snail_epi_allvh_imm,par.snails.imm,
                           events = list(data = mdas)))
@@ -625,8 +662,7 @@ mda.ros = rbind(mdas, stocks.ros)
 ```
 
 ```{r Fig_5, echo = FALSE, warning = FALSE, fig.height=10.5, fig.width=8}
-#plots over time with only MDA events #####
-#Worm burden
+# Worm burden over time with only MDA intervention #####
   w.mda = sim.mda %>% dplyr::select(time, W, Wt, Wu) %>% 
     gather("pop", "burden", W:Wu) %>% 
     mutate(Population = case_when(pop == "W" ~ "Mean", 
@@ -645,7 +681,7 @@ mda.ros = rbind(mdas, stocks.ros)
             annotate('text', x = 365, y = 60, label = 'A)', size = 8) +
             scale_y_continuous(breaks = seq(0,60,10),
                                labels = c('0', '10', '20', '30', '40', '   50', '   60'),
-                               limits = c(0, 61)) +
+                               limits = c(0, 65)) +
             geom_vline(xintercept = 365*(years+1), lty = 2)
             #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
             #                   labels = c(-1:years),
@@ -653,7 +689,7 @@ mda.ros = rbind(mdas, stocks.ros)
     
   w.mda
   
-#plot snail infection dynamics over time with MDA events  
+# snail infection dynamics over time with MDA events  ########
 snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
   gather("class", "density", S.t:N.t) %>% 
   mutate(Infection = case_when(class == "N.t" ~ "Total",
@@ -686,8 +722,7 @@ snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   
   snail.mda
 
-#plots over time with volenhovenii stocking events ######
-#worm burden
+# worm burden over time with volenhovenii stocking events ######
   w.vol = sim.vol %>% dplyr::select(time, W, Wt, Wu) %>% 
     gather("pop", "burden", W:Wu) %>% 
     mutate(Population = case_when(pop == "W" ~ "Mean", 
@@ -714,7 +749,7 @@ snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   
   w.vol
   
-#plot snail infection dynamics over time with volenhovenii stocking events  
+# snail infection dynamics over time with volenhovenii stocking events  #########
 snail.vol = sim.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
   gather("class", "density", S.t:N.t) %>% 
   mutate(Infection = case_when(class == "N.t" ~ "Total",
@@ -747,7 +782,7 @@ snail.vol = sim.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   
   snail.vol
   
-#plots over time with rosenbergii stocking events  ###########
+# worm burden over time with rosenbergii stocking events  ###########
   w.ros = sim.ros %>% dplyr::select(time, W, Wt, Wu) %>% 
     gather("pop", "burden", W:Wu) %>% 
     mutate(Population = case_when(pop == "W" ~ "Mean", 
@@ -774,7 +809,7 @@ snail.vol = sim.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   
   w.ros
   
-#plot snail infection dynamics over time with rosenbergii stocking events  
+# snail infection dynamics over time with rosenbergii stocking events  ########
 snail.ros = sim.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
   gather("class", "density", S.t:N.t) %>% 
   mutate(Infection = case_when(class == "N.t" ~ "Total",
@@ -787,27 +822,24 @@ snail.ros = sim.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
               theme(legend.position = "none",
                     axis.text = element_text(size = 12),  #increase axis label size
                     axis.title = element_text(size = 15), #increase axis title size
-                    axis.title.x=element_blank(),         #Suppress x axis
-                    axis.text.x=element_blank(),          #Suppress x axis
                     title = element_text(size = 15))  +   #increase title size
               geom_line(size = 1.25) +
               scale_color_manual(values = c("Total"="black", 
                                             "Susceptible"="green", 
                                             "Exposed"="orange", 
                                             "Infected"="red")) +
-              annotate('text', x = 365, y = 50, label = 'D)', size = 8) +
+              annotate('text', x = 365, y = 50, label = 'C)', size = 8) +
               labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
               scale_y_continuous(breaks = seq(0,50,10),
                                  labels = seq(0,50,10),
                                  limits = c(-0.1, 51)) +
-              geom_vline(xintercept = 365*(years+1), lty = 2)
-             # scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-             #                   labels = c(-1:years),
-             #                   limits = c(0, (365*(years+1)+10))) 
+              geom_vline(xintercept = 365*(years+1), lty = 2) +
+              scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                                 labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
   
   snail.ros
   
-#plots over time with volenhovenii stocking events and mda events ##############
+# worm burden over time with volenhovenii stocking events and mda events ##############
 w.mda.vol = sim.mda.vol %>% dplyr::select(time, W, Wt, Wu) %>% 
     gather("pop", "burden", W:Wu) %>% 
     mutate(Population = case_when(pop == "W" ~ "Mean", 
@@ -831,7 +863,7 @@ w.mda.vol = sim.mda.vol %>% dplyr::select(time, W, Wt, Wu) %>%
   
   w.mda.vol
 
-#Plot snail infection dynamics under repeated MDA and volenhovenii stocking
+# snail infection dynamics under repeated MDA and volenhovenii stocking ##########
 snail.mda.vol = sim.mda.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
   gather("class", "density", S.t:N.t) %>% 
   mutate(Infection = case_when(class == "N.t" ~ "Total",
@@ -861,7 +893,7 @@ snail.mda.vol = sim.mda.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   
   snail.mda.vol
 
-#plot worm burden over time with volenhovenii stocking events and mda events #######
+# worm burden over time with rosenbergii stocking events and mda events #######
 w.mda.ros = sim.mda.ros %>% dplyr::select(time, W, Wt, Wu) %>% 
     gather("pop", "burden", W:Wu) %>% 
     mutate(Population = case_when(pop == "W" ~ "Mean", 
@@ -888,7 +920,7 @@ w.mda.ros = sim.mda.ros %>% dplyr::select(time, W, Wt, Wu) %>%
   
   w.mda.ros
   
-#Plot snail infection dynamics under repeated MDA and rosenbergii stocking
+# snail infection dynamics under repeated MDA and rosenbergii stocking #####
 snail.mda.ros = sim.mda.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
   gather("class", "density", S.t:N.t) %>% 
   mutate(Infection = case_when(class == "N.t" ~ "Total",
@@ -922,7 +954,32 @@ snail.mda.ros = sim.mda.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   snail.mda.ros
   
   
-#plot combined figure with multiplot ###############   
+# worm burden over time for MDA only, prawn only, and mda+prawn interventions #########
+  w.mda2 <- sim.mda %>% mutate(Intervention = "MDA Only") %>% dplyr::select(time, W, Intervention)
+  w.ros2 <- sim.ros %>% mutate(Intervention = "Prawns Only") %>% dplyr::select(time, W, Intervention)
+  w.mda.ros2 <- sim.mda.ros %>% mutate(Intervention = "MDA + Prawns") %>% dplyr::select(time, W, Intervention)
+  
+  w.plot <- rbind(w.mda2, w.ros2, w.mda.ros2) %>% 
+    ggplot(aes(x = time, y = W, col = Intervention)) + 
+      geom_line(size = 1.25) + 
+      theme_bw() +
+    theme(legend.position = c(0.8, 0.8),
+          axis.text = element_text(size = 12),  #increase axis label size
+          axis.title = element_text(size = 14), #increase axis title size
+          axis.title.x=element_blank(),         #Suppress x axis
+          axis.text.x=element_blank(),          #Suppress x axis
+          title = element_text(size = 14)) +    #increase title size
+    scale_color_manual(values = c("MDA Only"="purple", 
+                                  "Prawns Only"="blue", 
+                                  "MDA + Prawns"="gold")) +
+    annotate('text', x = 365, y = 60, label = 'A)', size = 8) +
+    labs(x = 'time (years)', y = expression(italic('W'))) +
+    scale_y_continuous(breaks = seq(0,60,10),
+                       labels = c('   0', '  10', '  20', '  30', '  40', '  50', '  60'),
+                       limits = c(0, 61)) +
+    geom_vline(xintercept = 365*(years+1), lty = 2)
+
+# plot combined 6-panel figure with multiplot ###############   
   fig5.layout = matrix(c(1,2,
                          3,4,
                          5,6), ncol = 2, byrow = T)
@@ -931,6 +988,12 @@ snail.mda.ros = sim.mda.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
             w.vol, snail.vol, 
             w.mda.vol, snail.mda.vol,
             layout = fig5.layout)
-  
+ 
+# plot combined 3-panel figure with combined worm burden trajectories with multiplot ###############   
+  fig5.3p.layout = matrix(c(1,2,3), ncol = 1, byrow = T)
+
+  multiplot(w.plot, snail.mda, snail.ros, layout = fig5.3p.layout)
+   
 ```
 
+# Sensitivity analysis  

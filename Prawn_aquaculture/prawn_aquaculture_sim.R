@@ -37,7 +37,8 @@ sim_aqua_eum <- function(a.p, b.p, gam, muP, d, om, k, linf, k.ros, c, p, delta,
              roi = profit / (cost*P_nought),
              n_harvest = floor((years*365)/time),
              cum_profits = n_harvest*profit,
-             Species = species)
+             Species = species) %>% 
+      filter(p_mass >= 30)
     
     op_mgmt <- sim_df %>% filter(cum_profits == max(cum_profits))
     
@@ -64,12 +65,12 @@ sim_aqua_time <- function(P_nought, species = "M. vollenhovenii"){
 #Simulate for two years  
   sim_df <- as.data.frame(ode(sim_start,t.p,prawn_biomass,par.aqua)) %>% 
       mutate(P_dens = P/area,
-             P_nought = P_nought / area,
+             P_start = P_nought / area,
              p_mass = 10^(par.aqua["a.p"]+par.aqua["b.p"]*log10(L/10)),     
              total_mass = (P*p_mass) /1000,    
              harvest_mass = total_mass * market_frac,
              revenue = harvest_mass*price,
-             profit = revenue*exp(-delta*time) - cost*P_nought,
+             profit = (revenue*exp(-delta*time)) - (cost*P_nought),
              roi = profit / (cost*P_nought),
              n_harvest = floor((years*365)/time),
              cum_profits = n_harvest*profit,
