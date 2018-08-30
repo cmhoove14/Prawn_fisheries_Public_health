@@ -30,7 +30,7 @@ par.snails.imm=c(
   H = 1.5 * area,          # Human population at site of interest
   
   ## Reproductive parameters
-  f = 0.26,          # Birth rate of adult snails (snails/reproductive snail/day, including survival to detection; more like a recruitment rate)
+  f = 0.16,          # Birth rate of adult snails (snails/reproductive snail/day, including survival to detection; more like a recruitment rate)
   Kn = 50*area,      # Carrying capacity of snails (snails/m^2), from Sokolow et al. 2015
   z = 0.5,           # Fraction of exposed snails that can reproduce, from Sokolow et al. 2015
   
@@ -66,9 +66,9 @@ par.snails.imm=c(
   beta = 4e-7,       # Human-to-snail infection probability in reference area (infected snails/miracidia/snail/day); from Sokolow et al. 2015 
   m = 0.8,           # Miracidial shedding rate per adult female worm divided by miracidial mortality; from Sokolow et al. 2015
   sigma = 1/30,      # Latent period for exposed snails (infectious snails/exposed snail/day); from Sokolow et al. 2015 
-  lambda = 0.005,  # Snail-to-human infection probability scaled to 1 m^2 (composite including cercarial shedding, mortality, infection, survival to patency) from Sokolow et al. 2015
+  lambda = 5e-6,  # Snail-to-human infection probability scaled to 1 m^2 (composite including cercarial shedding, mortality, infection, survival to adult worm) from Sokolow et al. 2015
   theta1 = 167.8/127.8,         # Scale factor describing increase in cercarial shedding rate in larger (size class 2) snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
-  theta2 = 1006.8/127.8,         # Scale factor describing increase in cercarial shedding rate in larger (size class 2) snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
+  theta2 = 1006.8/127.8,         # Scale factor describing increase in cercarial shedding rate in larger (size class 3) snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
 
   phi = 0.08,           # clumping parameter of the negative binomial distribution used in the mating probability function
   
@@ -124,9 +124,9 @@ snail_epi_allvh_imm = function(t, n, parameters) {
     
     dI3dt = iota*siteI3 + sigma*E3 + g2*I2 - (muN3+muI)*I3 - psi3*I3 - iota*I3
     
-    dWtdt = lambda*I1/A + theta1*lambda*I2/A + theta2*lambda*I3/A - (muW + muH)*Wt
+    dWtdt = lambda*I1 + theta1*lambda*I2 + theta2*lambda*I3 - (muW + muH)*Wt
     
-    dWudt = lambda*I1/A + theta1*lambda*I2/A + theta2*lambda*I3/A - (muW + muH)*Wu
+    dWudt = lambda*I1 + theta1*lambda*I2 + theta2*lambda*I3 - (muW + muH)*Wu
     
     return(list(c(dS1dt, dS2dt, dS3dt, dE1dt, dE2dt, dE3dt, dI1dt, dI2dt, dI3dt, dWtdt, dWudt)))
   }) 
@@ -151,5 +151,5 @@ allvh.eqbm.run.imm0 = as.data.frame(ode(nstart.sn,t.sn,snail_epi_allvh_imm,par.s
 #Rerun to eqbm with immigration
 allvh.eqbm.run.imm = as.data.frame(ode(setNames(as.numeric(allvh.eqbm.imm0[-1]), names(allvh.eqbm.imm0)[-1]),
                                        t.sn,snail_epi_allvh_imm,par.snails.imm))
-  allvh.eqbm.imm = allvh.eqbm.run.imm[dim(allvh.eqbm.run.imm)[1],]
+  allvh.eqbm.imm = allvh.eqbm.run.imm %>% filter(time == max(time)) %>% select(S1:Wu) %>% unlist()
   
