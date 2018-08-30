@@ -457,50 +457,29 @@ get_sum <- function(vec){
   knitr::kable(t(ros_op_mgmt), caption = "Estimates of M. rosenbergii optimal management (parametric uncertainty)")
 ```
 
-
-**Parameter**                     **Definition**                      *M. vollenhovenii*                          *M. rosenbergii*
---------------------              --------------------------------    ----------------------     ------------------------------------------
-${P_0}_{opt}^{sp}$                Optimal stocking density             `r opt.vol$P_nought/area` $Pm^{-2}$                  `r opt.ros$P_nought/area` $Pm^{-2}$
-$L_0$                             Mean length at stocking              `r opt.vol$L_nought` $mm$                            `r opt.ros$L_nought` $mm$
-$\Omega(t_0)$                     Total biomass at stocking            `r round(opt.vol$bm0/1000, 2)` $kg$                  `r round(opt.ros$bm0/1000, 2)` $kg$
-$T_{opt}^{sp}$                    Optimal harvest time                 `r opt.vol$h.t` $days$                               `r opt.ros$h.t` $days$
-$Y(T_{opt}^{sp},{P_0}_{opt}^{sp})$   Commercial yield                  `r round(opt.vol$m.bm/1000, 2)` $kg$                 `r round(opt.ros$m.bm/1000, 2)` $kg$
-$L(T_{opt}^{sp})$   Mean length at harvest                  `r round(opt.vol$m.bm/1000, 2)` $kg$                 `r round(opt.ros$m.bm/1000, 2)` $kg$
---------------------              --------------------------------    ----------------------     ------------------------------------------
-
 # Epi simulations  
 
-```{r snail_prep, include=FALSE, cache = TRUE}
+```{r snail_prep, include=FALSE}
 source("Combined_Model/epi_no_diag_prawn_immigration_mod.R")
 
 ## Set initial values and parameters ###########
 years = 10   #number of years to simulate
-t.all = c(0:(years*2*365)+366)  #total time vector
+t.all = c(1:(365*years*2))+365
+
+#Starting values from model equilibrium
+nstart = allvh.eqbm.imm
 
 #Volenhovenii stocking and harvesting events ###########
-nstart.vol = c(S1 = allvh.eqbm.imm$S1, S2 = allvh.eqbm.imm$S2, S3 = allvh.eqbm.imm$S3, 
-               E1 = allvh.eqbm.imm$E1, E2 = allvh.eqbm.imm$E2, E3 = allvh.eqbm.imm$E3, 
-               I1 = allvh.eqbm.imm$I1, I2 = allvh.eqbm.imm$I2, I3 = allvh.eqbm.imm$I3, 
-               Wt = allvh.eqbm.imm$Wt, Wu = allvh.eqbm.imm$Wu, 
-               P = opt.vol$P_nought, L = opt.vol$L_nought) #Optimal stocking parameters from volenhovenii profit optimization above
-
 #Create data frame representing stocking and harvesting events for M. vollenhovenii
   harvest.t.vol = opt.vol$time           #Optimal harvest time from volenhovenii optimization
   n.harvest.vol = floor((years*365)/harvest.t.vol)
   stocks.vol = data.frame(var = rep(c('P', 'L'), n.harvest.vol+1),
                           time = rep(366 + harvest.t.vol*c(0:n.harvest.vol), each = 2),
-                          value = rep(c(nstart.vol['P'], nstart.vol['L']), n.harvest.vol+1),
+                          value = rep(c(opt.vol$P_nought, opt.vol$L_nought), n.harvest.vol+1),
                           method = rep('rep', (n.harvest.vol+1)*2))
   
     vol.harvests = stocks.vol[seq(1, nrow(stocks.vol), 2), 2]  
-#Remove all prawns after ten years of intervention  
-  vol_rmv <- data.frame(var = c("P", "L"),
-                        time = rep(years*365+366, 2),
-                        value = c(1e-6,1e-6),
-                        method = rep('rep', 2))
-  
-  stocks.vol <- rbind(stocks.vol, vol_rmv)
-  
+
   par.all.vol = c(par.aqua, par.snails.imm,
                   eps = 10,   # Attack rate penalty 
                   a.s = 0.187178454,  # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
@@ -509,31 +488,18 @@ nstart.vol = c(S1 = allvh.eqbm.imm$S1, S2 = allvh.eqbm.imm$S2, S3 = allvh.eqbm.i
                   th = 0.38561)       # Coefficient for relationship between biomass ratio and handling time, fitted to data from Sokolow et al. 2014
   
   par.all.vol['k'] <- k.vol
+  
 #Rosenbergii stocking and harvesting events ###########
-nstart.ros = c(S1 = allvh.eqbm.imm$S1, S2 = allvh.eqbm.imm$S2, S3 = allvh.eqbm.imm$S3, 
-               E1 = allvh.eqbm.imm$E1, E2 = allvh.eqbm.imm$E2, E3 = allvh.eqbm.imm$E3, 
-               I1 = allvh.eqbm.imm$I1, I2 = allvh.eqbm.imm$I2, I3 = allvh.eqbm.imm$I3, 
-               Wt = allvh.eqbm.imm$Wt, Wu = allvh.eqbm.imm$Wu, 
-               P = opt.ros$P_nought, L = opt.ros$L_nought) #Optimal stocking parameters from volenhovenii ROI optimization
-
 #Create dataframe represnting stocking and harvesting of M. rosenbergii prawns  
   harvest.t.ros = opt.ros$time
   n.harvest.ros = floor((years*365)/harvest.t.ros)
   stocks.ros = data.frame(var = rep(c('P', 'L'), n.harvest.ros+1),
                           time = rep(366 + harvest.t.ros*c(0:n.harvest.ros), each = 2),
-                          value = rep(c(nstart.ros['P'], nstart.ros['L']), n.harvest.ros+1),
+                          value = rep(c(opt.ros$P_nought, opt.ros$L_nought), n.harvest.ros+1),
                           method = rep('rep', (n.harvest.ros+1)*2))
   
     ros.harvests = stocks.ros[seq(1, nrow(stocks.ros), 2), 2]
   
-#Remove all prawns after ten years of intervention  
-  ros_rmv <- data.frame(var = c("P", "L"),
-                        time = rep(years*365+366, 2),
-                        value = c(1e-6,1e-6),
-                        method = rep('rep', 2))
-  
-  stocks.ros <- rbind(stocks.ros, ros_rmv)
-
   par.all.ros = c(par.aqua, par.snails.imm,
                   eps = 10,   # Attack rate penalty 
                   a.s = 0.187178454,  # Allometric parameter for snail length-weight relationship, fitted to Sanna's data on B. glabrata
@@ -543,126 +509,84 @@ nstart.ros = c(S1 = allvh.eqbm.imm$S1, S2 = allvh.eqbm.imm$S2, S3 = allvh.eqbm.i
   
   par.all.ros['k'] = k.ros  # alternate value for M. rosenbergii, from Sampaio & Valenti 1996: 0.0104333333
   
-
-#allow for one year run in to display epi model at eqbm ###########
-t.yr1 = c(0:365) 
-nstart.yr1 = c(S1 = allvh.eqbm.imm$S1, S2 = allvh.eqbm.imm$S2, S3 = allvh.eqbm.imm$S3, 
-               E1 = allvh.eqbm.imm$E1, E2 = allvh.eqbm.imm$E2, E3 = allvh.eqbm.imm$E3, 
-               I1 = allvh.eqbm.imm$I1, I2 = allvh.eqbm.imm$I2, I3 = allvh.eqbm.imm$I3, 
-               Wt = allvh.eqbm.imm$Wt, Wu = allvh.eqbm.imm$Wu)
-
-yr1 = as.data.frame(ode(nstart.yr1,t.yr1,snail_epi_allvh_imm,par.snails.imm))
-
-  yr1$P = 0   #Add prawn variable to integrate with prawn stocking sims
-  yr1$L = 0   #Add prawn variable to integrate with prawn stocking sims
-  yr1$W = cov*yr1$Wt + (1-cov)*yr1$Wu
-  yr1$prev = pnbinom(2, size = par.snails.imm['phi'], mu = yr1$W, lower.tail = FALSE)   
-  yr1$S.t = (yr1$S1 + yr1$S2 + yr1$S3) / area        # density susceptible snails
-  yr1$E.t = (yr1$E1 + yr1$E2 + yr1$E3) / area        # density exposed snails 
-  yr1$I.t = (yr1$I1 + yr1$I2 + yr1$I3 ) / area                # density infected snails
-  yr1$N.t = (yr1$S.t + yr1$E.t + yr1$I.t)            # density snails
-  yr1$t.1 = (yr1$S1 + yr1$E1 + yr1$I1) / area                    # density snails of size class 1
-  yr1$t.2 = (yr1$S2 + yr1$E2 + yr1$I2) / area      # density snails of size class 2
-  yr1$t.3 = (yr1$S3 + yr1$E3 + yr1$I3) / area      # density snails of size class 3
-
-#Simulate annual MDA for n years ########
-#mda events
+#mda events #######
   mdas = data.frame(var = rep('Wt', years+1),
                     time = 365*c(0:years+1)+1,
                     value = rep((1-eff), years+1),
                     method = rep('multiply', years+1))
-  
-  sim.mda = as.data.frame(ode(nstart.yr1,t.all,snail_epi_allvh_imm,par.snails.imm,
-                          events = list(data = mdas)))
-  
-  sim.mda$P = 0   #Add prawn variable to integrate with prawn stocking sims
-  sim.mda$L = 0   #Add prawn variable to integrate with prawn stocking sims
-  sim.mda$W = cov*sim.mda$Wt + (1-cov)*sim.mda$Wu
-  sim.mda$prev = pnbinom(2, size = par.snails.imm['phi'], mu = sim.mda$W, lower.tail = FALSE)   
-  sim.mda$S.t = (sim.mda$S1 + sim.mda$S2 + sim.mda$S3) / area        # density susceptible snails
-  sim.mda$E.t = (sim.mda$E1 + sim.mda$E2 + sim.mda$E3) / area        # density exposed snails 
-  sim.mda$I.t = (sim.mda$I1 + sim.mda$I2 + sim.mda$I3 ) / area                    # density infected snails
-  sim.mda$N.t = (sim.mda$S.t + sim.mda$E.t + sim.mda$I.t)            # density snails
-  sim.mda$t.1 = (sim.mda$S1 + sim.mda$E1 + sim.mda$I1) / area                    # density snails of size class 1
-  sim.mda$t.2 = (sim.mda$S2 + sim.mda$E2 + sim.mda$I2) / area      # density snails of size class 2
-  sim.mda$t.3 = (sim.mda$S3 + sim.mda$E3 + sim.mda$I3) / area      # density snails of size class 3
-  
-  sim.mda = rbind(yr1, sim.mda)
-  
-#Simulate M. volenhovenii stocking for n years ########
-sim.vol = as.data.frame(ode(nstart.vol,t.all,snail_prawn_model_imm,par.all.vol,
-                              events = list(data = stocks.vol)))
-  
-  sim.vol$W = cov*sim.vol$Wt + (1-cov)*sim.vol$Wu
-  sim.vol$prev = pnbinom(2, size = par.all.vol["phi"], mu = sim.vol$W, lower.tail = FALSE)   
-  sim.vol$S.t = (sim.vol$S1 + sim.vol$S2 + sim.vol$S3) / area        # density susceptible snails
-  sim.vol$E.t = (sim.vol$E1 + sim.vol$E2 + sim.vol$E3) / area        # density exposed snails 
-  sim.vol$I.t = (sim.vol$I1 + sim.vol$I2 + sim.vol$I3 ) / area                    # density infected snails
-  sim.vol$N.t = (sim.vol$S.t + sim.vol$E.t + sim.vol$I.t)            # density snails
-  sim.vol$t.1 = (sim.vol$S1 + sim.vol$E1 + sim.vol$I1) / area                          # density snails of size class 1
-  sim.vol$t.2 = (sim.vol$S2 + sim.vol$E2 + sim.vol$I2) / area      # density snails of size class 2
-  sim.vol$t.3 = (sim.vol$S3 + sim.vol$E3 + sim.vol$I3) / area      # density snails of size class 3
-  
-  sim.vol = rbind(yr1, sim.vol)
-  
-#Simulate M. rosenbergii stocking for n years ########
-  sim.ros = as.data.frame(ode(nstart.ros,t.all,snail_prawn_model_imm,par.all.ros,
-                              events = list(data = stocks.ros)))
-  
-  sim.ros$W = cov*sim.ros$Wt + (1-cov)*sim.ros$Wu
-  sim.ros$prev = pnbinom(2, size = par.all.ros["phi"], mu = sim.ros$W, lower.tail = FALSE)   
-  sim.ros$S.t = (sim.ros$S1 + sim.ros$S2 + sim.ros$S3) / area        # density susceptible snails
-  sim.ros$E.t = (sim.ros$E1 + sim.ros$E2 + sim.ros$E3) / area        # density exposed snails 
-  sim.ros$I.t = (sim.ros$I1 + sim.ros$I2 + sim.ros$I3 ) / area                    # density infected snails
-  sim.ros$N.t = (sim.ros$S.t + sim.ros$E.t + sim.ros$I.t)            # density snails
-  sim.ros$t.1 = (sim.ros$S1 + sim.ros$E1 + sim.ros$I1) / area                          # density snails of size class 1
-  sim.ros$t.2 = (sim.ros$S2 + sim.ros$E2 + sim.ros$I2) / area      # density snails of size class 2
-  sim.ros$t.3 = (sim.ros$S3 + sim.ros$E3 + sim.ros$I3) / area      # density snails of size class 3
-  
-  sim.ros = rbind(yr1, sim.ros)
 
-#Simulate annual mda along with volenhovenii stocking #############
-mda.vol = rbind(mdas, stocks.vol)
+#Combined MDA and vollenhovenii stocking events #######
+  mda.vol = rbind(mdas, stocks.vol)
   mda.vol = mda.vol[order(mda.vol$time),]
-  
-  sim.mda.vol = as.data.frame(ode(nstart.vol,t.all,snail_prawn_model_imm,par.all.vol,
-                              events = list(data = mda.vol)))
-  
-  sim.mda.vol$W = cov*sim.mda.vol$Wt + (1-cov)*sim.mda.vol$Wu
-  sim.mda.vol$prev = pnbinom(2, size = par.all.vol["phi"], mu = sim.mda.vol$W, lower.tail = FALSE)   
-  sim.mda.vol$S.t = (sim.mda.vol$S1 + sim.mda.vol$S2 + sim.mda.vol$S3) / area        # density susceptible snails
-  sim.mda.vol$E.t = (sim.mda.vol$E1 + sim.mda.vol$E2 + sim.mda.vol$E3) / area        # density exposed snails 
-  sim.mda.vol$I.t = (sim.mda.vol$I1 + sim.mda.vol$I2 + sim.mda.vol$I3 ) / area                    # density infected snails
-  sim.mda.vol$N.t = (sim.mda.vol$S.t + sim.mda.vol$E.t + sim.mda.vol$I.t)            # density snails
-  sim.mda.vol$t.1 = (sim.mda.vol$S1 + sim.mda.vol$E1 + sim.mda.vol$I1) / area                          # density snails of size class 1
-  sim.mda.vol$t.2 = (sim.mda.vol$S2 + sim.mda.vol$E2 + sim.mda.vol$I2) / area      # density snails of size class 2
-  sim.mda.vol$t.3 = (sim.mda.vol$S3 + sim.mda.vol$E3 + sim.mda.vol$I3) / area      # density snails of size class 3
-  
-  sim.mda.vol = rbind(yr1, sim.mda.vol)
 
-#Simulate annual mda along with rosenbergii stocking #############
-mda.ros = rbind(mdas, stocks.ros)
+#Combined MDA and rosenbergii stocking events #######
+  mda.ros = rbind(mdas, stocks.ros)
   mda.ros = mda.ros[order(mda.ros$time),]
   
-  sim.mda.ros = as.data.frame(ode(nstart.ros,t.all,snail_prawn_model_imm,par.all.ros,
-                                  events = list(data = mda.ros)))
+#allow for one year run in to display epi model at eqbm ###########
+t.yr1 = c(0:365) 
+
+yr1 = as.data.frame(ode(nstart,t.yr1,snail_epi_allvh_imm,par.snails.imm)) %>% 
+  mutate(P = 0, #Add prawn variable to integrate with prawn stocking sims
+         L = 0, #Add prawn variable to integrate with prawn stocking sims
+         W = cov*Wt + (1-cov)*Wu,
+         prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
+         S.t = (S1 + S2 + S3) / area,  # density susceptible snails
+         E.t = (E1 + E2 + E3) / area,  # density exposed snails 
+         I.t = (I1 + I2 + I3 ) / area, # density infected snails
+         N.t = (S.t + E.t + I.t), # total density snails
+         t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
+         t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
+         t.3 = (S3 + E3 + I3) / area) # density snails of size class 3  
+
+# Prep parameter sets and first year for sims with no migration #########
+#Simulations with migration to/from external sources absent
+  par.all.vol.nomig  <- par.all.vol
+  par.all.ros.nomig  <- par.all.ros
+  par.snails.nomig <- par.snails.imm
   
-  sim.mda.ros$W = cov*sim.mda.ros$Wt + (1-cov)*sim.mda.ros$Wu
-  sim.mda.ros$prev = pnbinom(2, size = par.all.ros["phi"], mu = sim.mda.ros$W, lower.tail = FALSE)   
-  sim.mda.ros$S.t = (sim.mda.ros$S1 + sim.mda.ros$S2 + sim.mda.ros$S3) / area        # density susceptible snails
-  sim.mda.ros$E.t = (sim.mda.ros$E1 + sim.mda.ros$E2 + sim.mda.ros$E3) / area        # density exposed snails 
-  sim.mda.ros$I.t = (sim.mda.ros$I1 + sim.mda.ros$I2 + sim.mda.ros$I3 ) / area                    # density infected snails
-  sim.mda.ros$N.t = (sim.mda.ros$S.t + sim.mda.ros$E.t + sim.mda.ros$I.t)            # density snails
-  sim.mda.ros$t.1 = (sim.mda.ros$S1 + sim.mda.ros$E1 + sim.mda.ros$I1) / area                          # density snails of size class 1
-  sim.mda.ros$t.2 = (sim.mda.ros$S2 + sim.mda.ros$E2 + sim.mda.ros$I2) / area      # density snails of size class 2
-  sim.mda.ros$t.3 = (sim.mda.ros$S3 + sim.mda.ros$E3 + sim.mda.ros$I3) / area      # density snails of size class 3
+  par.all.vol.nomig["iota"] <- 0
+  par.all.ros.nomig["iota"] <- 0
+  par.snails.nomig["iota"] <- 0
   
-  sim.mda.ros = rbind(yr1, sim.mda.ros)
-    
+#allow for one year run in to display epi model at eqbm
+yr1.nomig = as.data.frame(ode(nstart,t.yr1,snail_epi_allvh_imm,par.snails.nomig))  %>% 
+  mutate(P = 0, #Add prawn variable to integrate with prawn stocking sims
+         L = 0, #Add prawn variable to integrate with prawn stocking sims
+         W = cov*Wt + (1-cov)*Wu,
+         prev = pnbinom(2, size = par.snails.nomig['phi'], mu = W, lower.tail = FALSE),
+         S.t = (S1 + S2 + S3) / area,  # density susceptible snails
+         E.t = (E1 + E2 + E3) / area,  # density exposed snails 
+         I.t = (I1 + I2 + I3 ) / area, # density infected snails
+         N.t = (S.t + E.t + I.t), # total density snails
+         t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
+         t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
+         t.3 = (S3 + E3 + I3) / area) # density snails of size class 3  
+
 ```
 
-```{r Fig_5, echo = FALSE, warning = FALSE, fig.height=10.5, fig.width=8}
-# Worm burden over time with only MDA intervention #####
+## MDA Intervention  
+### With migration  
+```{r mda_sim, echo=FALSE, fig.height=5, fig.width=8}
+#Simulate annual MDA for n years ########
+  
+  sim.mda = as.data.frame(ode(nstart,t.all,snail_epi_allvh_imm,par.snails.imm,
+                          events = list(data = mdas))) %>% 
+    mutate(P = 0, #Add prawn variable to integrate with prawn stocking sims
+           L = 0, #Add prawn variable to integrate with prawn stocking sims
+           W = cov*Wt + (1-cov)*Wu,
+           prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
+           S.t = (S1 + S2 + S3) / area,  # density susceptible snails
+           E.t = (E1 + E2 + E3) / area,  # density exposed snails 
+           I.t = (I1 + I2 + I3 ) / area, # density infected snails
+           N.t = (S.t + E.t + I.t), # total density snails
+           t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
+           t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
+           t.3 = (S3 + E3 + I3) / area) # density snails of size class 3  
+  
+  sim.mda = rbind(yr1, sim.mda)
+
+# Plot Worm burden over time with only MDA intervention #####
   w.mda = sim.mda %>% dplyr::select(time, W, Wt, Wu) %>% 
     gather("pop", "burden", W:Wu) %>% 
     mutate(Population = case_when(pop == "W" ~ "Mean", 
@@ -689,7 +613,7 @@ mda.ros = rbind(mdas, stocks.ros)
     
   w.mda
   
-# snail infection dynamics over time with MDA events  ########
+# Plot snail infection dynamics over time with MDA events  ########
 snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
   gather("class", "density", S.t:N.t) %>% 
   mutate(Infection = case_when(class == "N.t" ~ "Total",
@@ -721,8 +645,245 @@ snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
              #                   limits = c(0, (365*(years+1)+10))) 
   
   snail.mda
+  
+```
 
-# worm burden over time with volenhovenii stocking events ######
+### No migration  
+```{r mda_sim_nomig, echo=FALSE, fig.height=5, fig.width=8}
+#Simulate annual MDA for n years with no migration ########
+sim.mda.nomig = as.data.frame(ode(nstart,t.all,snail_epi_allvh_imm,par.snails.nomig,
+                          events = list(data = mdas))) %>% 
+    mutate(P = 0, #Add prawn variable to integrate with prawn stocking sims
+           L = 0, #Add prawn variable to integrate with prawn stocking sims
+           W = cov*Wt + (1-cov)*Wu,
+           prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
+           S.t = (S1 + S2 + S3) / area,  # density susceptible snails
+           E.t = (E1 + E2 + E3) / area,  # density exposed snails 
+           I.t = (I1 + I2 + I3 ) / area, # density infected snails
+           N.t = (S.t + E.t + I.t), # total density snails
+           t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
+           t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
+           t.3 = (S3 + E3 + I3) / area) # density snails of size class 3  
+  
+  sim.mda.nomig = rbind(yr1.nomig, sim.mda.nomig)
+
+# PLot Worm burden over time with only MDA intervention and no migration #####
+  w.mda.nomig = sim.mda.nomig %>% dplyr::select(time, W, Wt, Wu) %>% 
+    gather("pop", "burden", W:Wu) %>% 
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
+            theme_bw() +
+            theme(legend.position = c(0.825, 0.175),
+                  axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 14), #increase axis title size
+                  axis.title.x=element_blank(),         #Suppress x axis
+                  axis.text.x=element_blank(),          #Suppress x axis
+                  title = element_text(size = 14)) +    #increase title size
+            geom_line(col = 'purple') +
+            labs(x = 'time (years)', y = expression(italic('W'))) +
+            annotate('text', x = 365, y = 60, label = 'A)', size = 8) +
+            scale_y_continuous(breaks = seq(0,60,10),
+                               labels = c('0', '10', '20', '30', '40', '   50', '   60'),
+                               limits = c(0, 65)) +
+            geom_vline(xintercept = 365*(years+1), lty = 2)
+            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+            #                   labels = c(-1:years),
+            #                   limits = c(0, (365*(years+1)+10)))
+    
+  w.mda.nomig
+  
+
+# Plot snail infection dynamics over time with MDA events and no migration ########
+snail.mda.nomig = sim.mda.nomig %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
+  gather("class", "density", S.t:N.t) %>% 
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
+              theme_bw() +
+              theme(legend.position = c(0.75,0.4),
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 14), #increase axis title size
+                    axis.title.x=element_blank(),         #Suppress x axis
+                    axis.text.x=element_blank(),          #Suppress x axis
+                    title = element_text(size = 14))  +   #increase title size
+              geom_line(size = 1.25) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'B)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = seq(0,50,10),
+                                 limits = c(0, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2)
+             # scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+             #                   labels = c(-1:years),
+             #                   limits = c(0, (365*(years+1)+10))) 
+  
+  snail.mda.nomig
+```
+
+## Prawn-only Intervention  
+```{r sim_script, include = FALSE}
+source("Combined_Model/epi_no_diag_prawn_sim.R")
+```
+
+### M. rosenbergii  
+#### With migration  
+```{r ros_sim, echo=FALSE, fig.height=5, fig.width=8}
+#Simulate M. rosenbergii stocking for n years ########
+  sim.ros = prawn_sim(t.runup = c(1:366), 
+                      t.intervene = c(366:((years+1)*365)), 
+                      t.post = c(((years+1)*365):((years*2+1)*365)),
+                      nstart = nstart,
+                      parameters = par.all.ros, 
+                      stock.events = stocks.ros)
+
+# Plot worm burden over time with rosenbergii stocking events  ###########
+  w.ros = sim.ros %>% dplyr::select(time, W, Wt, Wu) %>% 
+    gather("pop", "burden", W:Wu) %>% 
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
+            theme_bw() +
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 15), #increase axis title size
+                  axis.title.x=element_blank(),         #Suppress x axis
+                  axis.text.x=element_blank(),          #Suppress x axis
+                  title = element_text(size = 15)) +    #increase title size
+            geom_line(col = 'purple') +
+            labs(x = 'time (years)', y = expression(italic('W'))) +
+            annotate('text', x = 365, y = 60, label = 'D)', size = 8) +
+            scale_y_continuous(breaks = seq(0,60,10),
+                               labels = c('0', '10', '20', '30', '40', '   50', '   60'),
+                               limits = c(0, 61)) +
+            geom_vline(xintercept = 365*(years+1), lty = 2)
+            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+            #                   labels = c(-1:years),
+            #                   limits = c(0, (365*(years+1)+10)))
+  
+  w.ros
+  
+  
+#  Plot snail infection dynamics over time with rosenbergii stocking events  ########
+snail.ros = sim.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
+  gather("class", "density", S.t:N.t) %>% 
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    title = element_text(size = 15))  +   #increase title size
+              geom_line(size = 1.25) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'C)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = seq(0,50,10),
+                                 limits = c(-0.1, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2) +
+              scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                                 labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
+  
+  snail.ros
+```
+
+#### No migration  
+```{r ros_sim_nomig, echo=FALSE, fig.height=5, fig.width=8}
+# Simulate M. rosenbergii stocking for n years ########
+sim.ros.nomig = prawn_sim(t.runup = c(1:366), 
+                          t.intervene = c(366:((years+1)*365)), 
+                          t.post = c(((years+1)*365):((years*2+1)*365)),
+                          nstart = nstart,
+                          parameters = par.all.ros.nomig, 
+                          stock.events = stocks.ros)
+
+# Plot worm burden over time with rosenbergii stocking events  ###########
+  w.ros.nomig = sim.ros.nomig %>% dplyr::select(time, W, Wt, Wu) %>% 
+    gather("pop", "burden", W:Wu) %>% 
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
+            theme_bw() +
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 15), #increase axis title size
+                  axis.title.x=element_blank(),         #Suppress x axis
+                  axis.text.x=element_blank(),          #Suppress x axis
+                  title = element_text(size = 15)) +    #increase title size
+            geom_line(col = 'purple') +
+            labs(x = 'time (years)', y = expression(italic('W'))) +
+            annotate('text', x = 365, y = 60, label = 'D)', size = 8) +
+            scale_y_continuous(breaks = seq(0,60,10),
+                               labels = c('0', '10', '20', '30', '40', '   50', '   60'),
+                               limits = c(0, 61)) +
+            geom_vline(xintercept = 365*(years+1), lty = 2)
+            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+            #                   labels = c(-1:years),
+            #                   limits = c(0, (365*(years+1)+10)))
+  
+  w.ros.nomig
+  
+# Plot snail infection dynamics over time with rosenbergii stocking events and no migration ########
+snail.ros.nomig = sim.ros.nomig %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
+  gather("class", "density", S.t:N.t) %>% 
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    title = element_text(size = 15))  +   #increase title size
+              geom_line(size = 1.25) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'C)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = seq(0,50,10),
+                                 limits = c(-0.1, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2) +
+              scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                                 labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
+
+snail.ros.nomig    
+```
+
+### M. vollenhovenii  
+#### With migration  
+```{r vol_sim, echo=FALSE, fig.height=5, fig.width=8}
+# Simulate M. vollenhovenii stocking for n years ########
+  sim.vol = prawn_sim(t.runup = c(1:366), 
+                      t.intervene = c(366:((years+1)*365)), 
+                      t.post = c(((years+1)*365):((years*2+1)*365)),
+                      nstart = nstart,
+                      parameters = par.all.vol.nomig, 
+                      stock.events = stocks.vol)
+
+# Plot worm burden over time with volenhovenii stocking events ######
   w.vol = sim.vol %>% dplyr::select(time, W, Wt, Wu) %>% 
     gather("pop", "burden", W:Wu) %>% 
     mutate(Population = case_when(pop == "W" ~ "Mean", 
@@ -749,7 +910,7 @@ snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   
   w.vol
   
-# snail infection dynamics over time with volenhovenii stocking events  #########
+# Plot snail infection dynamics over time with volenhovenii stocking events  #########
 snail.vol = sim.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
   gather("class", "density", S.t:N.t) %>% 
   mutate(Infection = case_when(class == "N.t" ~ "Total",
@@ -782,8 +943,20 @@ snail.vol = sim.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   
   snail.vol
   
-# worm burden over time with rosenbergii stocking events  ###########
-  w.ros = sim.ros %>% dplyr::select(time, W, Wt, Wu) %>% 
+```
+
+#### No migration  
+```{r vol_sim_nomig, echo=FALSE, fig.height=5, fig.width=8}
+#Simulate M. volenhovenii stocking for n years ########
+sim.vol.nomig = prawn_sim(t.runup = c(1:366), 
+                          t.intervene = c(366:((years+1)*365)), 
+                          t.post = c(((years+1)*365):((years*2+1)*365)),
+                          nstart = nstart,
+                          parameters = par.all.vol.nomig, 
+                          stock.events = stocks.vol)
+  
+# Plot worm burden over time with volenhovenii stocking events ######
+  w.vol.nomig = sim.vol.nomig %>% dplyr::select(time, W, Wt, Wu) %>% 
     gather("pop", "burden", W:Wu) %>% 
     mutate(Population = case_when(pop == "W" ~ "Mean", 
                                   pop == "Wt" ~ "Treated", 
@@ -798,7 +971,7 @@ snail.vol = sim.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
                   title = element_text(size = 15)) +    #increase title size
             geom_line(col = 'purple') +
             labs(x = 'time (years)', y = expression(italic('W'))) +
-            annotate('text', x = 365, y = 60, label = 'D)', size = 8) +
+            annotate('text', x = 365, y = 60, label = 'C)', size = 8) +
             scale_y_continuous(breaks = seq(0,60,10),
                                labels = c('0', '10', '20', '30', '40', '   50', '   60'),
                                limits = c(0, 61)) +
@@ -807,10 +980,10 @@ snail.vol = sim.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
             #                   labels = c(-1:years),
             #                   limits = c(0, (365*(years+1)+10)))
   
-  w.ros
+  w.vol.nomig
   
-# snail infection dynamics over time with rosenbergii stocking events  ########
-snail.ros = sim.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
+# Plot snail infection dynamics over time with vollenhovenii stocking events and no migration ########
+snail.vol.nomig = sim.vol.nomig %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
   gather("class", "density", S.t:N.t) %>% 
   mutate(Infection = case_when(class == "N.t" ~ "Total",
                                class == "S.t" ~ "Susceptible",
@@ -836,64 +1009,24 @@ snail.ros = sim.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
               geom_vline(xintercept = 365*(years+1), lty = 2) +
               scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
                                  labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
-  
-  snail.ros
-  
-# worm burden over time with volenhovenii stocking events and mda events ##############
-w.mda.vol = sim.mda.vol %>% dplyr::select(time, W, Wt, Wu) %>% 
-    gather("pop", "burden", W:Wu) %>% 
-    mutate(Population = case_when(pop == "W" ~ "Mean", 
-                                  pop == "Wt" ~ "Treated", 
-                                  pop == "Wu" ~ "Untreated")) %>% 
-    ggplot(aes(x = time, y = burden, lty = Population)) +
-            theme_bw() +
-            theme(legend.position = "none",
-                  axis.text = element_text(size = 12),  #increase axis label size
-                  axis.title = element_text(size = 15), #increase axis title size
-                  title = element_text(size = 15)) +    #increase title size
-            geom_line(col = 'purple') +
-            labs(x = 'time (years)', y = expression(italic('W'))) +
-            annotate('text', x = 365, y = 60, label = 'E)', size = 8) +
-            scale_y_continuous(breaks = seq(0,60,10),
-                               labels = c('0', '10', '20', '30', '40', '   50', '   60'),
-                               limits = c(0, 61)) +
-            geom_vline(xintercept = 365*(years+1), lty = 2) +
-            scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
-                               labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
-  
-  w.mda.vol
 
-# snail infection dynamics under repeated MDA and volenhovenii stocking ##########
-snail.mda.vol = sim.mda.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
-  gather("class", "density", S.t:N.t) %>% 
-  mutate(Infection = case_when(class == "N.t" ~ "Total",
-                               class == "S.t" ~ "Susceptible",
-                               class == "E.t" ~ "Exposed",
-                               class == "I.t" ~ "Infected")) %>% 
-  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
-  ggplot(aes(x = time, y = density, col = Infection)) +
-              theme_bw() +
-              theme(legend.position = "none",
-                    axis.text = element_text(size = 12),  #increase axis label size
-                    axis.title = element_text(size = 15), #increase axis title size
-                    title = element_text(size = 15))  +   #increase title size
-              geom_line(size = 1.25) +
-              scale_color_manual(values = c("Total"="black", 
-                                            "Susceptible"="green", 
-                                            "Exposed"="orange", 
-                                            "Infected"="red")) +
-              annotate('text', x = 365, y = 50, label = 'F)', size = 8) +
-              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
-              scale_y_continuous(breaks = seq(0,50,10),
-                                 labels = seq(0,50,10),
-                                 limits = c(-0.1, 51)) +
-              geom_vline(xintercept = 365*(years+1), lty = 2) +
-              scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
-                                 labels = seq(365, 365*(years*2+1), 365*5)/365-1)
+snail.vol.nomig    
   
-  snail.mda.vol
+```
 
-# worm burden over time with rosenbergii stocking events and mda events #######
+## Combined Intervention  
+### M. rosenbergii  
+#### With migration  
+```{r ros_mda_sim, echo=FALSE, fig.height=5, fig.width=8}
+#Simulate annual mda along with rosenbergii stocking #############
+  sim.mda.ros = prawn_sim(t.runup = c(1:366), 
+                          t.intervene = c(366:((years+1)*365)), 
+                          t.post = c(((years+1)*365):((years*2+1)*365)),
+                          nstart = nstart,
+                          parameters = par.all.ros, 
+                          stock.events = mda.ros)
+
+# Plot worm burden over time with rosenbergii stocking events and mda events #######
 w.mda.ros = sim.mda.ros %>% dplyr::select(time, W, Wt, Wu) %>% 
     gather("pop", "burden", W:Wu) %>% 
     mutate(Population = case_when(pop == "W" ~ "Mean", 
@@ -920,7 +1053,7 @@ w.mda.ros = sim.mda.ros %>% dplyr::select(time, W, Wt, Wu) %>%
   
   w.mda.ros
   
-# snail infection dynamics under repeated MDA and rosenbergii stocking #####
+# snail infection dynamics over time with rosenbergii stocking events and mda events #####
 snail.mda.ros = sim.mda.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
   gather("class", "density", S.t:N.t) %>% 
   mutate(Infection = case_when(class == "N.t" ~ "Total",
@@ -953,6 +1086,232 @@ snail.mda.ros = sim.mda.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   
   snail.mda.ros
   
+```
+
+#### No migration  
+```{r ros_mda_sim_nomig, echo=FALSE, fig.height=5, fig.width=8}
+#Simulate annual mda along with rosenbergii stocking #############
+  sim.mda.ros.nomig = prawn_sim(t.runup = c(1:366), 
+                                t.intervene = c(366:((years+1)*365)), 
+                                t.post = c(((years+1)*365):((years*2+1)*365)),
+                                nstart = nstart,
+                                parameters = par.all.ros.nomig, 
+                                stock.events = mda.ros)
+
+# Plot worm burden over time with rosenbergii stocking events and mda events #######
+w.mda.ros.nomig = sim.mda.ros.nomig %>% dplyr::select(time, W, Wt, Wu) %>% 
+    gather("pop", "burden", W:Wu) %>% 
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
+            theme_bw() +
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 15), #increase axis title size
+                  axis.title.x=element_blank(),         #Suppress x axis
+                  axis.text.x=element_blank(),          #Suppress x axis
+                  title = element_text(size = 15)) +    #increase title size
+            geom_line(col = 'purple') +
+            labs(x = 'time (years)', y = expression(italic('W'))) +
+            annotate('text', x = 365, y = 60, label = 'E)', size = 8) +
+            scale_y_continuous(breaks = seq(0,60,10),
+                               labels = c('0', '10', '20', '30', '40', '   50', '   60'),
+                               limits = c(0, 61)) +
+            geom_vline(xintercept = 365*(years+1), lty = 2)
+            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+            #                   labels = c(-1:years),
+            #                   limits = c(0, (365*(years+1)+10)))
+  
+  w.mda.ros.nomig
+  
+# snail infection dynamics over time with rosenbergii stocking events and mda events #####
+snail.mda.ros.nomig = sim.mda.ros.nomig %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
+  gather("class", "density", S.t:N.t) %>% 
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    axis.title.x=element_blank(),         #Suppress x axis
+                    axis.text.x=element_blank(),          #Suppress x axis
+                    title = element_text(size = 15))  +   #increase title size
+              geom_line(size = 1.25) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'F)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = seq(0,50,10),
+                                 limits = c(-0.1, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2)
+             # scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+             #                   labels = c(-1:years),
+             #                   limits = c(0, (365*(years+1)+10))) 
+  
+  snail.mda.ros.nomig
+  
+```
+
+
+### M. vollenhovenii  
+#### With migration  
+```{r vol_mda_sim, echo=FALSE, fig.height=5, fig.width=8}
+# Simulate annual mda along with volenhovenii stocking #############
+  sim.mda.vol = prawn_sim(t.runup = c(1:366), 
+                          t.intervene = c(366:((years+1)*365)), 
+                          t.post = c(((years+1)*365):((years*2+1)*365)),
+                          nstart = nstart,
+                          parameters = par.all.vol, 
+                          stock.events = mda.vol)
+  
+# plot worm burden over time with volenhovenii stocking events and mda events ##############
+w.mda.vol = sim.mda.vol %>% dplyr::select(time, W, Wt, Wu) %>% 
+    gather("pop", "burden", W:Wu) %>% 
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
+            theme_bw() +
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 15), #increase axis title size
+                  title = element_text(size = 15)) +    #increase title size
+            geom_line(col = 'purple') +
+            labs(x = 'time (years)', y = expression(italic('W'))) +
+            annotate('text', x = 365, y = 60, label = 'E)', size = 8) +
+            scale_y_continuous(breaks = seq(0,60,10),
+                               labels = c('0', '10', '20', '30', '40', '   50', '   60'),
+                               limits = c(0, 61)) +
+            geom_vline(xintercept = 365*(years+1), lty = 2) +
+            scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                               labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
+  
+  w.mda.vol
+
+# PLot snail infection dynamics over time with volenhovenii stocking events and mda events ##########
+snail.mda.vol = sim.mda.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
+  gather("class", "density", S.t:N.t) %>% 
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    title = element_text(size = 15))  +   #increase title size
+              geom_line(size = 1.25) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'F)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = seq(0,50,10),
+                                 limits = c(-0.1, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2) +
+              scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                                 labels = seq(365, 365*(years*2+1), 365*5)/365-1)
+  
+  snail.mda.vol
+
+
+```
+
+#### No migration  
+```{r vol_mda_sim_nomig, echo=FALSE, fig.height=5, fig.width=8}
+#Simulate annual mda along with volenhovenii stocking #############
+  sim.mda.vol.nomig = prawn_sim(t.runup = c(1:366), 
+                                t.intervene = c(366:((years+1)*365)), 
+                                t.post = c(((years+1)*365):((years*2+1)*365)),
+                                nstart = nstart,
+                                parameters = par.all.vol.nomig, 
+                                stock.events = mda.vol)
+
+# plot worm burden over time with volenhovenii stocking events and mda events ##############
+w.mda.vol.nomig = sim.mda.vol.nomig %>% dplyr::select(time, W, Wt, Wu) %>% 
+    gather("pop", "burden", W:Wu) %>% 
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
+            theme_bw() +
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 15), #increase axis title size
+                  title = element_text(size = 15)) +    #increase title size
+            geom_line(col = 'purple') +
+            labs(x = 'time (years)', y = expression(italic('W'))) +
+            annotate('text', x = 365, y = 60, label = 'E)', size = 8) +
+            scale_y_continuous(breaks = seq(0,60,10),
+                               labels = c('0', '10', '20', '30', '40', '   50', '   60'),
+                               limits = c(0, 61)) +
+            geom_vline(xintercept = 365*(years+1), lty = 2) +
+            scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                               labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
+  
+  w.mda.vol.nomig
+
+# PLot snail infection dynamics over time with volenhovenii stocking events and mda events ##########
+snail.mda.vol.nomig = sim.mda.vol.nomig %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
+  gather("class", "density", S.t:N.t) %>% 
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    title = element_text(size = 15))  +   #increase title size
+              geom_line(size = 1.25) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'F)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = seq(0,50,10),
+                                 limits = c(-0.1, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2) +
+              scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                                 labels = seq(365, 365*(years*2+1), 365*5)/365-1)
+  
+  snail.mda.vol.nomig
+  
+```
+
+## Combined epi plots  
+### Six panel variety  
+```{r 6_pan_variety, echo=FALSE, fig.height=10.5, fig.width=8}
+# plot combined 6-panel figure with multiplot ###############   
+  fig5.layout = matrix(c(1,2,
+                         3,4,
+                         5,6), ncol = 2, byrow = T)
+
+  multiplot(w.mda, snail.mda, 
+            w.vol, snail.vol, 
+            w.mda.vol, snail.mda.vol,
+            layout = fig5.layout)
+
+```
+
+### Combined worm burden plots  
+```{r epi_plot1, echo = FALSE, warning = FALSE, fig.height=4.5, fig.width=6}
   
 # worm burden over time for MDA only, prawn only, and mda+prawn interventions #########
   w.mda2 <- sim.mda %>% mutate(Intervention = "MDA Only") %>% dplyr::select(time, W, Intervention)
@@ -979,21 +1338,54 @@ snail.mda.ros = sim.mda.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
                        limits = c(0, 61)) +
     geom_vline(xintercept = 365*(years+1), lty = 2)
 
-# plot combined 6-panel figure with multiplot ###############   
-  fig5.layout = matrix(c(1,2,
-                         3,4,
-                         5,6), ncol = 2, byrow = T)
+# worm burden over time for MDA only, prawn only, and mda+prawn interventions no migration#########
+  w.mda2.nomig <- sim.mda.nomig %>% mutate(Intervention = "MDA Only") %>% dplyr::select(time, W, Intervention)
+  w.ros2.nomig <- sim.ros.nomig %>% mutate(Intervention = "Prawns Only") %>% dplyr::select(time, W, Intervention)
+  w.mda.ros2.nomig <- sim.mda.ros.nomig %>% mutate(Intervention = "MDA + Prawns") %>% dplyr::select(time, W, Intervention)
+  
+  w.plot.nomig <- rbind(w.mda2.nomig, w.ros2.nomig, w.mda.ros2.nomig) %>% 
+    ggplot(aes(x = time, y = W, col = Intervention)) + 
+      geom_line(size = 1.25) + 
+      theme_bw() +
+    theme(legend.position = c(0.8, 0.8),
+          axis.text = element_text(size = 12),  #increase axis label size
+          axis.title = element_text(size = 14), #increase axis title size
+          axis.title.x=element_blank(),         #Suppress x axis
+          axis.text.x=element_blank(),          #Suppress x axis
+          title = element_text(size = 14)) +    #increase title size
+    scale_color_manual(values = c("MDA Only"="purple", 
+                                  "Prawns Only"="blue", 
+                                  "MDA + Prawns"="gold")) +
+    annotate('text', x = 365, y = 60, label = 'A)', size = 8) +
+    labs(x = 'time (years)', y = expression(italic('W'))) +
+    scale_y_continuous(breaks = seq(0,60,10),
+                       labels = c('   0', '  10', '  20', '  30', '  40', '  50', '  60'),
+                       limits = c(0, 61)) +
+    geom_vline(xintercept = 365*(years+1), lty = 2)
+  
+```
 
-  multiplot(w.mda, snail.mda, 
-            w.vol, snail.vol, 
-            w.mda.vol, snail.mda.vol,
-            layout = fig5.layout)
- 
+### Three panel essentials  
+```{r 3_pan_variety, echo=FALSE, fig.height=10.5, fig.width=8}
 # plot combined 3-panel figure with combined worm burden trajectories with multiplot ###############   
-  fig5.3p.layout = matrix(c(1,2,3), ncol = 1, byrow = T)
+  epi_3p_layout = matrix(c(1,2,3), ncol = 1, byrow = T)
 
-  multiplot(w.plot, snail.mda, snail.ros, layout = fig5.3p.layout)
-   
+  multiplot(w.plot, snail.mda, snail.ros, layout = epi_3p_layout)
+
+```
+
+### 6-panel migration vs no migration comparison   
+```{r 6_pan_mig_comp, echo = FALSE, warning = FALSE, fig.height=10.5, fig.width=8}
+# plot combined 6-panel figure with combined worm burden trajectories with multiplot (shows migration and no migration results) ###############   
+  epi_6p_layout = matrix(c(1,2,
+                           3,4,
+                           5,6), ncol = 2, byrow = T)
+
+  multiplot(w.plot, w.plot.nomig, 
+            snail.mda, snail.mda.nomig,
+            snail.ros, snail.ros.nomig,
+            layout = epi_6p_layout)
+
 ```
 
 # Sensitivity analysis  
