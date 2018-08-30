@@ -18,7 +18,7 @@ snail_prawn_model_imm = function(t, n, parameters) {
     P=n[12]
     L=n[13]
     
-    N1 = S1+E1     # Total snails of size class 1
+    N1 = S1+E1+I1     # Total snails of size class 1
     N2 = S2+E2+I2  # Total snails of size class 2
     N3 = S3+E3+I3  # Total snails of size class 3
     N = N1+N2+N3   # Total number of snails
