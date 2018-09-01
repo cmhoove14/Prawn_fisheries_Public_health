@@ -7,7 +7,7 @@ nstart.sn = c(S1 = 5*area, S2 = 5*area, S3 = 5*area,
               Wt = 50, Wu = 50)
 
 t.sn = seq(0,365*300,10)
-cov = 0.75  #MDA coverage
+cvrg = 0.75  #MDA coverage
 eff = 0.85 #MDA efficacy 
 
 # Parameters used in the epidemiological model 

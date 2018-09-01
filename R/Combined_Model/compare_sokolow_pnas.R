@@ -36,7 +36,7 @@ sim_constant_prawn <- function(P_dens, var){
                                 seq(1,365*30,30),
                                 snail_prawn_model_imm,
                                 par.all)) %>% 
-    mutate(W = cov*Wt + (1-cov)*Wu,
+    mutate(W = cvrg*Wt + (1-cvrg)*Wu,
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
            I.t = (I1 + I2 + I3 ) / area, # density infected snails

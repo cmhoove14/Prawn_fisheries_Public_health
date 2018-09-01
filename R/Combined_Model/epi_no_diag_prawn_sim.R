@@ -11,7 +11,7 @@ prawn_sim <- function(t.runup, t.intervene, t.post,
                              parameters)) %>% 
     mutate(P = 0,
            L = 0,
-           W = cov*Wt + (1-cov)*Wu,
+           W = cvrg*Wt + (1-cvrg)*Wu,
            prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
@@ -31,7 +31,7 @@ prawn_sim <- function(t.runup, t.intervene, t.post,
                                  model.intervene,
                                  parameters,
                                  events = list(data = stock.events))) %>% 
-    mutate(W = cov*Wt + (1-cov)*Wu,
+    mutate(W = cvrg*Wt + (1-cvrg)*Wu,
            prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
@@ -50,7 +50,7 @@ prawn_sim <- function(t.runup, t.intervene, t.post,
                             parameters)) %>% 
     mutate(P = 0,
            L = 0,
-           W = cov*Wt + (1-cov)*Wu,
+           W = cvrg*Wt + (1-cvrg)*Wu,
            prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 

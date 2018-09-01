@@ -31,7 +31,7 @@ snail_prawn_model_imm = function(t, n, parameters) {
     N2 = S2+E2+I2  # Total snails of size class 2
     N3 = S3+E3+I3  # Total snails of size class 3
     N = N1+N2+N3   # Total number of snails
-    W = cov*Wt + (1-cov)*Wu  #Mean worm burden weighted between treated and untreated populations
+    W = cvrg*Wt + (1-cvrg)*Wu  #Mean worm burden weighted between treated and untreated populations
     
     # Miracidial density per person as a function of mean worm burden (W) and miracidial shedding rate (m)
     mate = phi_Wk(W = W, phi = phi)  #Mating probability

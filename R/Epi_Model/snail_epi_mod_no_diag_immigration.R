@@ -29,7 +29,7 @@ snail_epi_allvh_imm = function(t, n, parameters) {
     Wt=n[10]
     Wu=n[11]
     
-    W = cov*Wt + (1-cov)*Wu
+    W = cvrg*Wt + (1-cvrg)*Wu
     
     mate = phi_Wk(W = W, phi = phi)  #Mating probability
     S = S1+S2+S3    # Total susceptible snails
