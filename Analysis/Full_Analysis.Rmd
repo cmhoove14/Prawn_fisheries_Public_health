@@ -252,6 +252,8 @@ source("../Data/combined_parameters.R")
 
 source("../R/Sensitivity_Analysis/sensitivity_prep.R")
 
+par.all = c(par.aqua, par.snails.imm, par.epi_prawn)
+
 # Get aquaculture parameters from LHC
   lhcpars.aqua = lhcpars[,which(colnames(lhcpars) %in% c(names(par.aqua), 'k.ros', 'c', 'p', 'delta'))]
   
@@ -554,7 +556,7 @@ t.yr1 = c(0:365)
 yr1 = as.data.frame(ode(nstart,t.yr1,snail_epi_allvh_imm,par.snails.imm)) %>% 
   mutate(P = 0, #Add prawn variable to integrate with prawn stocking sims
          L = 0, #Add prawn variable to integrate with prawn stocking sims
-         W = cov*Wt + (1-cov)*Wu,
+         W = cvrg*Wt + (1-cvrg)*Wu,
          prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
          S.t = (S1 + S2 + S3) / area,  # density susceptible snails
          E.t = (E1 + E2 + E3) / area,  # density exposed snails 
@@ -578,7 +580,7 @@ yr1 = as.data.frame(ode(nstart,t.yr1,snail_epi_allvh_imm,par.snails.imm)) %>%
 yr1.nomig = as.data.frame(ode(nstart,t.yr1,snail_epi_allvh_imm,par.snails.nomig))  %>% 
   mutate(P = 0, #Add prawn variable to integrate with prawn stocking sims
          L = 0, #Add prawn variable to integrate with prawn stocking sims
-         W = cov*Wt + (1-cov)*Wu,
+         W = cvrg*Wt + (1-cvrg)*Wu,
          prev = pnbinom(2, size = par.snails.nomig['phi'], mu = W, lower.tail = FALSE),
          S.t = (S1 + S2 + S3) / area,  # density susceptible snails
          E.t = (E1 + E2 + E3) / area,  # density exposed snails 
@@ -602,7 +604,7 @@ yr1.nomig = as.data.frame(ode(nstart,t.yr1,snail_epi_allvh_imm,par.snails.nomig)
                               events = list(data = mdas))) %>% 
     mutate(P = 0, #Add prawn variable to integrate with prawn stocking sims
            L = 0, #Add prawn variable to integrate with prawn stocking sims
-           W = cov*Wt + (1-cov)*Wu,
+           W = cvrg*Wt + (1-cvrg)*Wu,
            prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
@@ -634,10 +636,9 @@ yr1.nomig = as.data.frame(ode(nstart,t.yr1,snail_epi_allvh_imm,par.snails.nomig)
             scale_y_continuous(breaks = seq(0,80,10),
                                labels = paste("  ", seq(0,80,10)),
                                limits = c(0, 85)) +
-            geom_vline(xintercept = 365*(years+1), lty = 2)
-            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-            #                   labels = c(-1:years),
-            #                   limits = c(0, (365*(years+1)+10)))
+            geom_vline(xintercept = 365*(years+1), lty = 2) +
+            scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                               labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
     
   w.mda
   
@@ -651,7 +652,7 @@ snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
   ggplot(aes(x = time, y = density, col = Infection)) +
               theme_bw() +
-              theme(legend.position = c(0.75,0.4),
+              theme(legend.position = c(0.35,0.4),
                     axis.text = element_text(size = 12),  #increase axis label size
                     axis.title = element_text(size = 14), #increase axis title size
                     axis.title.x=element_blank(),         #Suppress x axis
@@ -667,10 +668,9 @@ snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
               scale_y_continuous(breaks = seq(0,50,10),
                                  labels = seq(0,50,10),
                                  limits = c(0, 51)) +
-              geom_vline(xintercept = 365*(years+1), lty = 2)
-             # scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-             #                   labels = c(-1:years),
-             #                   limits = c(0, (365*(years+1)+10))) 
+              geom_vline(xintercept = 365*(years+1), lty = 2) +
+              scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                                 labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
   
   snail.mda
   
@@ -686,7 +686,7 @@ sim.mda.nomig = as.data.frame(ode(nstart,
                                   events = list(data = mdas))) %>% 
     mutate(P = 0, #Add prawn variable to integrate with prawn stocking sims
            L = 0, #Add prawn variable to integrate with prawn stocking sims
-           W = cov*Wt + (1-cov)*Wu,
+           W = cvrg*Wt + (1-cvrg)*Wu,
            prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
@@ -718,10 +718,9 @@ sim.mda.nomig = as.data.frame(ode(nstart,
             scale_y_continuous(breaks = seq(0,80,10),
                                labels = paste("  ", seq(0,80,10)),
                                limits = c(0, 85)) +
-            geom_vline(xintercept = 365*(years+1), lty = 2)
-            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-            #                   labels = c(-1:years),
-            #                   limits = c(0, (365*(years+1)+10)))
+            geom_vline(xintercept = 365*(years+1), lty = 2) +
+            scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                               labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
     
   w.mda.nomig
   
@@ -736,7 +735,7 @@ snail.mda.nomig = sim.mda.nomig %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
   ggplot(aes(x = time, y = density, col = Infection)) +
               theme_bw() +
-              theme(legend.position = c(0.75,0.4),
+              theme(legend.position = c(0.35,0.4),
                     axis.text = element_text(size = 12),  #increase axis label size
                     axis.title = element_text(size = 14), #increase axis title size
                     axis.title.x=element_blank(),         #Suppress x axis
@@ -752,10 +751,9 @@ snail.mda.nomig = sim.mda.nomig %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
               scale_y_continuous(breaks = seq(0,50,10),
                                  labels = seq(0,50,10),
                                  limits = c(0, 51)) +
-              geom_vline(xintercept = 365*(years+1), lty = 2)
-             # scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-             #                   labels = c(-1:years),
-             #                   limits = c(0, (365*(years+1)+10))) 
+              geom_vline(xintercept = 365*(years+1), lty = 2) +
+              scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                                 labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
   
   snail.mda.nomig
 ```
@@ -795,10 +793,9 @@ source("../R/Combined_Model/epi_no_diag_prawn_sim.R")
             scale_y_continuous(breaks = seq(0,80,10),
                                labels = paste("  ", seq(0,80,10)),
                                limits = c(0, 85)) +
-            geom_vline(xintercept = 365*(years+1), lty = 2)
-            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-            #                   labels = c(-1:years),
-            #                   limits = c(0, (365*(years+1)+10)))
+            geom_vline(xintercept = 365*(years+1), lty = 2) +
+            scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                               labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
   
   w.ros
   
@@ -864,10 +861,9 @@ sim.ros.nomig = prawn_sim(t.runup = c(1:366),
             scale_y_continuous(breaks = seq(0,80,10),
                                labels = paste("  ", seq(0,80,10)),
                                limits = c(0, 85)) +
-            geom_vline(xintercept = 365*(years+1), lty = 2)
-            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-            #                   labels = c(-1:years),
-            #                   limits = c(0, (365*(years+1)+10)))
+            geom_vline(xintercept = 365*(years+1), lty = 2) +
+            scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                               labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
   
   w.ros.nomig
   
@@ -933,10 +929,9 @@ snail.ros.nomig
             scale_y_continuous(breaks = seq(0,80,10),
                                labels = paste("  ", seq(0,80,10)),
                                limits = c(0, 85)) +
-            geom_vline(xintercept = 365*(years+1), lty = 2)
-            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-            #                   labels = c(-1:years),
-            #                   limits = c(0, (365*(years+1)+10)))
+            geom_vline(xintercept = 365*(years+1), lty = 2) +
+            scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                               labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
   
   w.vol
   
@@ -966,10 +961,9 @@ snail.vol = sim.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
               scale_y_continuous(breaks = seq(0,50,10),
                                  labels = seq(0,50,10),
                                  limits = c(-0.1, 51)) +
-              geom_vline(xintercept = 365*(years+1), lty = 2)
-             # scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-             #                   labels = c(-1:years),
-             #                   limits = c(0, (365*(years+1)+10))) 
+              geom_vline(xintercept = 365*(years+1), lty = 2) +
+              scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                                 labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
   
   snail.vol
   
@@ -1005,10 +999,9 @@ sim.vol.nomig = prawn_sim(t.runup = c(1:366),
             scale_y_continuous(breaks = seq(0,80,10),
                                labels = paste("  ", seq(0,80,10)),
                                limits = c(0, 85)) +
-            geom_vline(xintercept = 365*(years+1), lty = 2)
-            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
-            #                   labels = c(-1:years),
-            #                   limits = c(0, (365*(years+1)+10)))
+            geom_vline(xintercept = 365*(years+1), lty = 2) +
+            scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                               labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
   
   w.vol.nomig
   
@@ -1352,7 +1345,7 @@ snail.mda.vol.nomig = sim.mda.vol.nomig %>% dplyr::select(time, S.t, E.t, I.t, N
     ggplot(aes(x = time, y = W, col = Intervention)) + 
       geom_line(size = 1.25) + 
       theme_bw() +
-    theme(legend.position = c(0.8, 0.8),
+    theme(legend.position = c(0.35, 0.8),
           axis.text = element_text(size = 12),  #increase axis label size
           axis.title = element_text(size = 14), #increase axis title size
           axis.title.x=element_blank(),         #Suppress x axis
@@ -1366,7 +1359,10 @@ snail.mda.vol.nomig = sim.mda.vol.nomig %>% dplyr::select(time, S.t, E.t, I.t, N
             scale_y_continuous(breaks = seq(0,80,10),
                                labels = paste("  ", seq(0,80,10)),
                                limits = c(0, 85)) +
-    geom_vline(xintercept = 365*(years+1), lty = 2)
+    geom_vline(xintercept = 365*(years+1), lty = 2) +
+            scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                               labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
+
 
 # worm burden over time for MDA only, prawn only, and mda+prawn interventions no migration#########
   w.mda2.nomig <- sim.mda.nomig %>% mutate(Intervention = "MDA Only") %>% dplyr::select(time, W, Intervention)
@@ -1391,7 +1387,10 @@ snail.mda.vol.nomig = sim.mda.vol.nomig %>% dplyr::select(time, S.t, E.t, I.t, N
             scale_y_continuous(breaks = seq(0,80,10),
                                labels = paste("  ", seq(0,80,10)),
                                limits = c(0, 85)) +
-    geom_vline(xintercept = 365*(years+1), lty = 2)
+    geom_vline(xintercept = 365*(years+1), lty = 2) +
+            scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                               labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
+
   
 ```
 
@@ -1419,3 +1418,171 @@ snail.mda.vol.nomig = sim.mda.vol.nomig %>% dplyr::select(time, S.t, E.t, I.t, N
 ```
 
 # Sensitivity analysis  
+Check monotinicity of response variables to relevant parameters then quantify influence with PRCC 
+
+## Prawn aquaculture model  
+```{r prawn_monotinicity, echo=FALSE, fig.height=10.5, fig.width=8}
+#Use simulations over parameter sets from above
+eum_sims_ros %>% filter(P_nought == 2500) %>% 
+  gather("parameter", "value", a.p:delta) %>% 
+  ggplot(aes(x = value, y = cum_profits)) + 
+    theme_bw() + labs(y = "Ten-year Cumulative profit (USD)") +
+    geom_point(size = 0.5) +
+    facet_wrap( ~ parameter, scales = "free_x", nrow = 6) +
+    stat_smooth()
+```
+
+```{r prawn_prcc, echo = FALSE, fig.height=5, fig.width=8}
+# cumulative profit sensitivity  
+profit.pcc = pcc(X = lhcpars.aqua,
+                 y = as.data.frame(eum_sims_ros %>% filter(P_nought == 2500) %>% pull(cum_profits)/1000),
+                 rank = TRUE)
+
+profit.pcc.df = profit.pcc$PRCC %>% 
+  mutate(cor = cor(lhcpars.aqua, eum_sims_ros %>% filter(P_nought == 2500) %>% pull(cum_profits)/1000)[,1],
+         var = c(colnames(lhcpars.aqua))) %>% 
+  filter(var != "k")
+
+ggplot(profit.pcc.df, aes(x = cor, y = original, label = var)) + 
+  geom_point(pch = 16) + theme_bw() +
+  geom_text(aes(label = var), hjust = -0.5, vjust = -0.5)
+
+profit.lhsprcc = ggplot(profit.pcc.df, aes(x = var, y = original)) +
+  theme_bw()+
+  theme(axis.text = element_text(size = 12),  #increase axis label size
+        axis.title = element_text(size = 15), #increase axis title size
+        axis.title.x = element_blank()) + 
+  scale_y_continuous(limits = c(-0.85,0.85), breaks = seq(-0.8, 0.8, 0.2))+
+  scale_x_discrete(labels = c("a.p" = expression(italic(a[P])),
+                              "b.p" = expression(italic(b[P])),
+                              "c" = expression(italic(c)),
+                              "d" = expression(italic(d)),
+                              "eta" = expression(italic(zeta)),
+                              "gam" = expression(italic(gamma)),
+                              "k.ros" = expression(italic(k)),
+                              "linf" = expression(italic(L[infinity])),
+                              "muP" = expression(italic(mu[P])),
+                              "om" = expression(italic(omega)),
+                              "p" = expression(italic(p)))) +
+  geom_bar(fill = 'darkgreen', stat = 'identity', width = 0.25)+
+  geom_hline(yintercept = 0, lty = 2)+
+  annotate('text', x = 1.2, y = 0.8, label = 'A)', size = 8) +
+  labs(x = 'Parameter', 
+       y = "Ten-year Cumulative profit PRCC")
+
+profit.lhsprcc
+
+```
+
+
+## Snail epi model  
+```{r snail_epi_sens_sims, echo = FALSE, cache = TRUE}
+source("../R/Epi_Model/snail_epi_sim.R")
+
+# Get epi parameters from LHC
+  lhcpars.epi = lhcpars[,which(colnames(lhcpars) %in% c(names(par.snails.imm)))]
+  
+#Augment function to continue over errors
+  possibly_sim_epi_mod <- possibly(sim_epi_mod, 
+                                   otherwise = data.frame(W = NA, S.t = NA, E.t = NA, I.t = NA, N.t = NA), 
+                                   quiet = TRUE)
+  
+  epi_sens_sims <- lhcpars.epi %>% 
+    mutate(iota = 0) %>% 
+    rowwise %>% do(pars = unlist(.)) %>% 
+    bind_cols(pmap_df(., possibly_sim_epi_mod)) %>% select(-pars) %>% 
+    bind_cols(., lhcpars.epi)
+  
+  summary(epi_sens_sims$W)
+  summary(epi_sens_sims$N.t)
+
+```
+
+```{r epi_monotinicity, echo=FALSE, fig.height=10.5, fig.width=8}
+#Use simulations over parameter sets from above
+epi_sens_sims %>% select(-c(A, H, iota:siteI3, psi1:psi3, nfr)) %>% 
+  gather("parameter", "value", f:muH) %>% 
+  ggplot(aes(x = value, y = W)) + 
+    theme_bw() + labs(y = "Mean Worm Burden (W)") +
+    geom_point(size = 0.5) +
+    facet_wrap( ~ parameter, scales = "free_x", nrow = 6) +
+    stat_smooth()
+
+epi_sens_sims %>% select(-c(A, H, iota:siteI3, psi1:psi3, nfr)) %>% 
+  gather("parameter", "value", f:muH) %>% 
+  ggplot(aes(x = value, y = N.t)) + 
+    theme_bw() + labs(y = "Total snail density (N)") +
+    geom_point(size = 0.5) +
+    facet_wrap( ~ parameter, scales = "free_x", nrow = 6) +
+    stat_smooth()
+
+```
+
+```{r epi_prcc, echo = FALSE, fig.height=5, fig.width=8}
+# Epi worm burden sensitivity   #############
+epi.W.pcc = pcc(X = lhcpars.epi %>% select(-c(A, H, iota:siteI3, psi1:psi3, nfr)),
+                y = as.data.frame(epi_sens_sims %>% pull(W)),
+                rank = TRUE)
+
+epi.W.pcc.df = epi.W.pcc$PRCC %>% 
+  mutate(cor = cor(lhcpars.epi %>% select(-c(A, H, iota:siteI3, psi1:psi3, nfr)), 
+                   epi_sens_sims %>% pull(W))[,1],
+         var = colnames(lhcpars.epi %>% select(-c(A, H, iota:siteI3, psi1:psi3, nfr))),
+         outcome = "W")
+
+# Epi snail density sensitivity   #############
+epi.N.pcc = pcc(X = lhcpars.epi %>% select(-c(A, H, iota:siteI3, psi1:psi3, nfr)),
+                y = as.data.frame(epi_sens_sims %>% pull(N.t)),
+                rank = TRUE)
+
+epi.N.pcc.df = epi.N.pcc$PRCC %>% 
+  mutate(cor = cor(lhcpars.epi %>% select(-c(A, H, iota:siteI3, psi1:psi3, nfr)), 
+                   epi_sens_sims %>% pull(N.t))[,1],
+         var = colnames(lhcpars.epi %>% select(-c(A, H, iota:siteI3, psi1:psi3, nfr))),
+         outcome = "N")
+
+# Correlation plots #######
+ggplot(epi.W.pcc.df, aes(x = cor, y = original, label = var)) + 
+  geom_point(pch = 16) + theme_bw() +
+  geom_text(aes(label = var), hjust = -0.5, vjust = -0.5)
+
+ggplot(epi.N.pcc.df, aes(x = cor, y = original, label = var)) + 
+  geom_point(pch = 16) + theme_bw() +
+  geom_text(aes(label = var), hjust = -0.5, vjust = -0.5)
+
+# PRCC plot #######
+epi.lhsprcc <- epi.W.pcc.df %>% bind_rows(., epi.N.pcc.df) %>% 
+  ggplot(aes(x = var, y = original, fill = outcome)) +
+    theme_bw() + 
+    theme(axis.text = element_text(size = 12),  #increase axis label size
+          axis.title = element_text(size = 15), #increase axis title size
+          axis.title.x = element_blank()) + 
+    scale_y_continuous(limits = c(-0.85,0.85), breaks = seq(-0.8, 0.8, 0.2))+
+    scale_x_discrete(labels = c("beta" = expression(italic(beta)),
+                                "f" = expression(italic(f)),
+                                "g1" = expression(g[1]),
+                                "g2" = expression(italic(g[2])),
+                                "Kn" = expression(italic(K)),
+                                "lambda" = expression(italic(lambda)),
+                                "m" = expression(italic(m)),
+                                "muH" = expression(italic(mu[H])),
+                                "muI" = expression(italic(mu[I])),
+                                "muN1" = expression(italic(mu[N1])),
+                                "muN2" = expression(italic(mu[N2])),
+                                "muN3" = expression(italic(mu[N3])),
+                                "muW" = expression(italic(mu[W])),
+                                "phi" = expression(italic(Phi)),
+                                "sigma" = expression(italic(sigma)),
+                                "theta1" = expression(italic(theta[1])),
+                                "theta2" = expression(italic(theta[2])),
+                                "z" = expression(italic(z)))) +
+    geom_bar(stat = 'identity', width = 0.75, position = position_dodge()) +
+    annotate('text', x = 1.2, y = 0.8, label = "B)", size = 8)  +
+    geom_hline(yintercept = 0, lty = 2)+
+    labs(x = 'Parameter', y = 'Total Snail Density (N) PRCC')
+
+epi.lhsprcc
+
+```
+
+## Integrated model with interventions  
