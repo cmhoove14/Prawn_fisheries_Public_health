@@ -38,9 +38,9 @@ par.all = c(par.aqua,
 
   # Fill epi-relevant parameter ranges
     paranges$f = seq(0.06, 0.26, length.out = nsims)
-    paranges$Kn = seq(25, 100, length.out = nsims)
+    paranges$Kn = seq(25*area, 100*area, length.out = nsims)
     paranges$z = seq(0.25, 1, length.out = nsims)
-    paranges$iota = seq(0.1/365, 0.5/365, length.out = nsims)
+    paranges$iota = seq(0, 0.5/365, length.out = nsims)
     paranges$muN1 = seq(1/25, 1/100, length.out = nsims)
     paranges$muN2 = seq(1/50, 1/125, length.out = nsims)
     paranges$muN3 = seq(1/75, 1/150, length.out = nsims)
@@ -48,16 +48,28 @@ par.all = c(par.aqua,
     paranges$nfr = seq(1.1, 4, length.out = nsims)
     paranges$g1 = seq(1/20, 1/60, length.out = nsims)
     paranges$g2 = seq(1/40, 1/100, length.out = nsims)
-    paranges$beta = seq(4e-8, 4e-6, length.out = nsims)
+    paranges$beta = seq(1e-7, 1e-6, length.out = nsims)
     paranges$m = seq(0.2, 1.5, length.out = nsims)
     paranges$sigma = seq(1/80, 1/20, length.out = nsims)
-    paranges$lambda = seq(7.5e-7, 7.5e-5, length.out = nsims)
+    paranges$lambda = seq(1e-7, 1e-5, length.out = nsims)
     paranges$theta1 = seq(1, 5, length.out = nsims)
     paranges$theta2 = seq(2, 10, length.out = nsims)
     paranges$phi = seq(0.01, 0.3, length.out = nsims)
     paranges$muW = seq(1/(2*365), 1/(5*365), length.out = nsims)
     paranges$muH = seq(1/(50*365), 1/(70*365), length.out = nsims)
-  
+    paranges$psi1 = 0
+    paranges$psi2 = 0
+    paranges$psi3 = 0
+    paranges$siteS1 = 0
+    paranges$siteS2 = 0
+    paranges$siteS3 = 0
+    paranges$siteE1 = 0
+    paranges$siteE2 = 0
+    paranges$siteE3 = 0
+    paranges$siteI1 = 0
+    paranges$siteI2 = 0
+    paranges$siteI3 = 0
+    
   #Fill combined model parameter ranges
     paranges$eps = seq(1, 100, length.out = nsims)
     paranges$a.s = seq(0.1, 0.3, length.out = nsims)
