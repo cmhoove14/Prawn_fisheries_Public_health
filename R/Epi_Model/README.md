@@ -7,5 +7,8 @@ Epidemiological model simulating infection and growth dynamics across three infe
 ## `snail_epi_life_expectancy`  
 Simulations and tweaks to snail mortality parameters to get life expectancy and size/infection dynamics right  
 
+## `snail_spi_sim`  
+Function to run model to euqilibrium given parameter set and starting conditions and return worm burden and density of each snail infection class  
+
 ## `Archive`  
 Older versions of the model and other scripts for simulation and plotting
