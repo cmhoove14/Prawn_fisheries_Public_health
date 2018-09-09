@@ -12,6 +12,7 @@ require(deSolve)
 require(sensitivity)
 require(parallel)
 require(kableExtra)
+require(broom)
 require(tidyverse)
 
 multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
@@ -58,6 +59,23 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   
 ```
 
+```{r debug, eval=FALSE, include=FALSE}
+require(qwraps2)
+
+qwraps2::lazyload_cache_dir("Full_Analysis_cache/latex")
+
+source("../R/Epi_Model/snail_epi_mod_no_diag_immigration.R")
+source("../Data/snail_epi_parameters.R")
+
+source("../R/Prawn_aquaculture/prawn_aquaculture_mod.R")
+source("../Data/aquaculture_parameters.R")
+
+source("../R/Combined_Model/epi_no_diag_prawn_immigration_mod.R")
+source("../Data/combined_parameters.R")
+
+source("../R/Sensitivity_Analysis/sensitivity_prep.R")
+```
+
 # Numeric estimation of max profit  
 For each prawn species, shows trajectories of length, density, harvestable biomass, and profit over time over a range of stocking densities
 
@@ -71,7 +89,7 @@ source("../Data/Ranjeet_Kurup_06_data.R")
 
 #Simulation for eumetric curve for M. volenhovenii #####
 #Starting length of 40 mm corresponds to juveniles of ~0.35 grams
-opt.df = expand.grid.df(data.frame(t(par.aqua), c = cost, p = price, delta = delta), 
+opt.df = expand.grid.df(data.frame(t(par.aqua), c = cost, fc = 0, p = price, delta = delta), 
                         data.frame(L_nought = 40, P_nought = seq(500, 7500, 100))) 
 
 #Get mgmt strategy that maximizes cumulative ten year profits
@@ -255,8 +273,9 @@ source("../R/Sensitivity_Analysis/sensitivity_prep.R")
 par.all = c(par.aqua, par.snails.imm, par.epi_prawn)
 
 # Get aquaculture parameters from LHC
-  lhcpars.aqua = lhcpars[,which(colnames(lhcpars) %in% c(names(par.aqua), 'k.ros', 'c', 'p', 'delta'))]
-  
+  lhcpars.aqua = lhcpars[,which(colnames(lhcpars) %in% c(names(par.aqua), 'k.ros', 'c', 'fc', 'p', 'delta'))]
+    lhcpars.aqua$fc <- 0  #No consideration of fixed costs in default model
+    
 # Get the stocking densities and starting length again
   test_starts <- expand.grid(L_nought = 40, P_nought = seq(500, 7500, 100))
   
@@ -1354,7 +1373,7 @@ snail.mda.vol.nomig = sim.mda.vol.nomig %>% dplyr::select(time, S.t, E.t, I.t, N
     scale_color_manual(values = c("MDA Only"="purple", 
                                   "Prawns Only"="blue", 
                                   "MDA + Prawns"="gold")) +
-    annotate('text', x = 365, y = 60, label = 'A)', size = 8) +
+    annotate('text', x = 365, y = 83, label = 'A)', size = 8) +
     labs(x = 'time (years)', y = expression(italic('W'))) +
             scale_y_continuous(breaks = seq(0,80,10),
                                labels = paste("  ", seq(0,80,10)),
@@ -1421,26 +1440,28 @@ snail.mda.vol.nomig = sim.mda.vol.nomig %>% dplyr::select(time, S.t, E.t, I.t, N
 Check monotinicity of response variables to relevant parameters then quantify influence with PRCC 
 
 ## Prawn aquaculture model  
+### Parametric uncertainty  
 ```{r prawn_monotinicity, echo=FALSE, fig.height=10.5, fig.width=8}
 #Use simulations over parameter sets from above
-eum_sims_ros %>% filter(P_nought == 2500) %>% 
+eum_sims_ros %>% filter(P_nought == 2500) %>% select(-fc) %>% 
   gather("parameter", "value", a.p:delta) %>% 
   ggplot(aes(x = value, y = cum_profits)) + 
     theme_bw() + labs(y = "Ten-year Cumulative profit (USD)") +
     geom_point(size = 0.5) +
     facet_wrap( ~ parameter, scales = "free_x", nrow = 6) +
-    stat_smooth()
+    stat_smooth(method = "loess")
 ```
 
 ```{r prawn_prcc, echo = FALSE, fig.height=5, fig.width=8}
 # cumulative profit sensitivity  
-profit.pcc = pcc(X = lhcpars.aqua,
+profit.pcc = pcc(X = lhcpars.aqua %>% select(-fc),
                  y = as.data.frame(eum_sims_ros %>% filter(P_nought == 2500) %>% pull(cum_profits)/1000),
                  rank = TRUE)
 
 profit.pcc.df = profit.pcc$PRCC %>% 
-  mutate(cor = cor(lhcpars.aqua, eum_sims_ros %>% filter(P_nought == 2500) %>% pull(cum_profits)/1000)[,1],
-         var = c(colnames(lhcpars.aqua))) %>% 
+  mutate(cor = cor(lhcpars.aqua %>% select(-fc), 
+                   eum_sims_ros %>% filter(P_nought == 2500) %>% pull(cum_profits)/1000)[,1],
+         var = c(colnames(lhcpars.aqua %>% select(-fc)))) %>% 
   filter(var != "k")
 
 ggplot(profit.pcc.df, aes(x = cor, y = original, label = var)) + 
@@ -1457,6 +1478,7 @@ profit.lhsprcc = ggplot(profit.pcc.df, aes(x = var, y = original)) +
                               "b.p" = expression(italic(b[P])),
                               "c" = expression(italic(c)),
                               "d" = expression(italic(d)),
+                              "delta" = expression(italic(delta)),
                               "eta" = expression(italic(zeta)),
                               "gam" = expression(italic(gamma)),
                               "k.ros" = expression(italic(k)),
@@ -1466,7 +1488,7 @@ profit.lhsprcc = ggplot(profit.pcc.df, aes(x = var, y = original)) +
                               "p" = expression(italic(p)))) +
   geom_bar(fill = 'darkgreen', stat = 'identity', width = 0.25)+
   geom_hline(yintercept = 0, lty = 2)+
-  annotate('text', x = 1.2, y = 0.8, label = 'A)', size = 8) +
+  annotate('text', x = 1, y = 0.8, label = 'A)', size = 8) +
   labs(x = 'Parameter', 
        y = "Ten-year Cumulative profit PRCC")
 
@@ -1474,6 +1496,114 @@ profit.lhsprcc
 
 ```
 
+### Influence of fixed costs  
+```{r prawn_cost_sens, include = FALSE, cache = TRUE}
+# Simulate over a range of fixed costs and stocking densities to find threshold of fixed cost necessary for profitability 
+  par.aqua.fc <- par.aqua
+    par.aqua.fc["c"] = cost
+    par.aqua.fc["fc"] = 0
+    par.aqua.fc["p"] = price
+    par.aqua.fc["delta"] = delta
+    
+  cost_sim <- expand.grid.df(as.data.frame(t(par.aqua.fc)) %>% 
+                               slice(rep(1:n(), each = 101)) %>% 
+                               mutate(fc = seq(0,1000,10)), 
+                             test_starts) #test starts contains test stocking densities
+  
+  cost_sims_vol <- cost_sim %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. vollenhovenii"))
+  cost_sims_ros <- cost_sim %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. rosenbergii"))
+  
+```
+
+```{r prawn_cost_plot, echo = FALSE, fig.height=10, fig.width=8}
+cost_sims_vol %>% bind_rows(., cost_sims_ros) %>% 
+  ggplot(aes(x = P_nought, y = fc, fill = cum_profits)) + 
+    geom_tile() +
+    scale_fill_distiller(palette = "Spectral", direction = 1) +
+    scale_x_continuous(limits = range(cost_sim$P_nought)) +
+    scale_y_continuous(limits = range(cost_sim$fc)) +
+    labs(y = "Fixed costs (USD)",
+         x = expression(paste('Stocking density, ', P[0],' (', Pm^-2, ")", sep = ""))) +
+    facet_wrap( ~ Species, nrow = 2) +
+    theme_bw() + 
+    theme(axis.ticks=element_blank(), 
+          axis.text=element_text(size=12), 
+          axis.title=element_text(size=14),
+          legend.title=element_text(size=15), 
+          legend.text=element_text(size=12)) +
+    guides(fill=guide_legend(title="Cumulative \nProfits"))
+
+
+```
+
+```{r prawn_cost_plot2, echo = FALSE, fig.height=10, fig.width=8}
+cost_sims_vol %>% bind_rows(., cost_sims_ros) %>% 
+  ggplot(aes(x = P_nought, y = cum_profits, col = as.factor(fc))) + geom_line(size = 1.2) +
+    theme_bw() + facet_wrap( ~ Species, nrow = 2) +
+    theme(axis.text = element_text(size = 12),  #increase axis label size
+          axis.title = element_text(size = 14),
+          strip.text = element_text(size = 14)) + 
+    labs(x = expression(paste('Stocking density, ', P[0],' (', Pm^-2, ")", sep = "")),
+         y = '10-Year Profits (USD)') +
+    #scale_color_gradient(low = "darkolivegreen1", high = "darkgreen") +
+    guides(color=guide_legend(title="Fixed \nCosts"))
+
+```
+
+### Influence of mortality rate  
+```{r prawn_mort_sens, include = FALSE, cache = TRUE}
+# Simulate over a range of mortality rates and stocking densities to find threshold of fixed cost necessary for profitability 
+  par.aqua.muP <- par.aqua
+    par.aqua.muP["c"] = cost
+    par.aqua.muP["fc"] = 0
+    par.aqua.muP["p"] = price
+    par.aqua.muP["delta"] = delta
+    
+  mort_sim <- expand.grid.df(as.data.frame(t(par.aqua.fc)) %>% 
+                               slice(rep(1:n(), each = 100)) %>% 
+                               mutate(muP = seq(par.aqua["muP"], par.aqua["muP"]*10,length.out = 100)), 
+                             test_starts) #test starts contains test stocking densities
+  
+  mort_sims_vol <- mort_sim %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. vollenhovenii"))
+  mort_sims_ros <- mort_sim %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. rosenbergii"))
+  
+```
+
+```{r prawn_mort_plot, echo = FALSE, fig.height=10, fig.width=8}
+mort_sims_vol %>% bind_rows(., mort_sims_ros) %>%   
+  ggplot(aes(x = P_nought, y = muP, fill = cum_profits)) + 
+    geom_tile() + #coord_equal() + 
+    scale_fill_distiller(palette = "Spectral", direction = 1) +
+    scale_x_continuous(limits = range(mort_sim$P_nought)) +
+    scale_y_continuous(limits = range(mort_sim$muP)) +
+    labs(y = expression(paste("Mortality rate, ", mu[P], sep = "")),
+         x = expression(paste('Stocking density, ', P[0],' (', Pm^-2, ")", sep = ""))) +
+    facet_wrap( ~ Species, nrow = 2) +
+    theme_bw() + 
+    theme(axis.ticks=element_blank(), 
+          axis.text=element_text(size=12), 
+          axis.title=element_text(size=14),
+          legend.title=element_text(size=15), 
+          legend.text=element_text(size=12)) +
+    guides(fill=guide_legend(title="Cumulative \nProfits"))
+
+```
+
+```{r prawn_mort_plot2, echo = FALSE, fig.height=10, fig.width=8}
+mort_sims_vol %>% bind_rows(., mort_sims_ros) %>% 
+  ggplot(aes(x = P_nought, y = cum_profits, col = as.factor(round(muP, 4)))) + geom_line(size = 1.2) +
+    theme_bw() + facet_wrap( ~ Species, nrow = 2) +
+    theme(axis.text = element_text(size = 12),  #increase axis label size
+          axis.title = element_text(size = 14),
+          strip.text = element_text(size = 14)) + 
+    labs(x = expression(paste('Stocking density, ', P[0],' (', Pm^-2, ")", sep = "")),
+         y = '10-Year Profits (USD)') +
+    ylim(c(-5000, 10000)) +
+    #scale_color_gradient(low = "bisque", high = "darkred") +
+    guides(color=guide_legend(title="Mortality \nRate"))
+
+
+```
 
 ## Snail epi model  
 ```{r snail_epi_sens_sims, echo = FALSE, cache = TRUE}
@@ -1506,7 +1636,7 @@ epi_sens_sims %>% select(-c(A, H, iota:siteI3, psi1:psi3, nfr)) %>%
     theme_bw() + labs(y = "Mean Worm Burden (W)") +
     geom_point(size = 0.5) +
     facet_wrap( ~ parameter, scales = "free_x", nrow = 6) +
-    stat_smooth()
+    stat_smooth(method = "loess")
 
 epi_sens_sims %>% select(-c(A, H, iota:siteI3, psi1:psi3, nfr)) %>% 
   gather("parameter", "value", f:muH) %>% 
@@ -1514,7 +1644,7 @@ epi_sens_sims %>% select(-c(A, H, iota:siteI3, psi1:psi3, nfr)) %>%
     theme_bw() + labs(y = "Total snail density (N)") +
     geom_point(size = 0.5) +
     facet_wrap( ~ parameter, scales = "free_x", nrow = 6) +
-    stat_smooth()
+    stat_smooth(method = "loess")
 
 ```
 
@@ -1526,7 +1656,7 @@ epi.W.pcc = pcc(X = lhcpars.epi %>% select(-c(A, H, iota:siteI3, psi1:psi3, nfr)
 
 epi.W.pcc.df = epi.W.pcc$PRCC %>% 
   mutate(cor = cor(lhcpars.epi %>% select(-c(A, H, iota:siteI3, psi1:psi3, nfr)), 
-                   epi_sens_sims %>% pull(W))[,1],
+                   epi_sens_sims %>% pull(W)),
          var = colnames(lhcpars.epi %>% select(-c(A, H, iota:siteI3, psi1:psi3, nfr))),
          outcome = "W")
 
@@ -1556,7 +1686,8 @@ epi.lhsprcc <- epi.W.pcc.df %>% bind_rows(., epi.N.pcc.df) %>%
     theme_bw() + 
     theme(axis.text = element_text(size = 12),  #increase axis label size
           axis.title = element_text(size = 15), #increase axis title size
-          axis.title.x = element_blank()) + 
+          axis.title.x = element_blank(),
+          legend.position = c(0.7,0.9)) + 
     scale_y_continuous(limits = c(-0.85,0.85), breaks = seq(-0.8, 0.8, 0.2))+
     scale_x_discrete(labels = c("beta" = expression(italic(beta)),
                                 "f" = expression(italic(f)),
@@ -1576,13 +1707,165 @@ epi.lhsprcc <- epi.W.pcc.df %>% bind_rows(., epi.N.pcc.df) %>%
                                 "theta1" = expression(italic(theta[1])),
                                 "theta2" = expression(italic(theta[2])),
                                 "z" = expression(italic(z)))) +
-    geom_bar(stat = 'identity', width = 0.75, position = position_dodge()) +
-    annotate('text', x = 1.2, y = 0.8, label = "B)", size = 8)  +
-    geom_hline(yintercept = 0, lty = 2)+
-    labs(x = 'Parameter', y = 'Total Snail Density (N) PRCC')
+    geom_bar(stat = 'identity', width = 0.5, position = position_dodge()) +
+    scale_fill_manual(values = c("N" = "black", "W" = "purple")) +
+    annotate('text', x = 2, y = 0.8, label = "B)", size = 8)  +
+    geom_hline(yintercept = 0, lty = 2) +
+    labs(x = 'Parameter', y = 'Epi Model Outcomes PRCC')
 
 epi.lhsprcc
 
 ```
 
 ## Integrated model with interventions  
+```{r combined_sens_sims, echo = FALSE, cache = TRUE}
+source("../R/Combined_Model/epi_no_diag_prawn_sim.R")
+prawn_start = c("P" = opt.ros$P_nought,
+                "L" = 40)
+
+#Augment function to continue over errors
+  possibly_integrated_mod <- possibly(prawn_intervention_sim, 
+                                      otherwise = data.frame(W = NA, N.t = NA, I.t = NA), 
+                                      quiet = TRUE)
+
+  com_sens_sims <- lhcpars %>% 
+    rowwise %>% do(pars = unlist(.)) %>% 
+    bind_cols(pmap_df(., possibly_integrated_mod)) %>% select(-pars) %>% 
+    bind_cols(., lhcpars)
+  
+  summary(com_sens_sims$W)
+  summary(com_sens_sims$N.t)
+
+```
+
+```{r combined_monotinicity, echo=FALSE, warning = FALSE, fig.height=10.5, fig.width=8}
+#Use simulations over parameter sets from above
+com_sens_sims %>% select(-c(A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)) %>% 
+  gather("parameter", "value", a.p:th) %>% 
+  ggplot(aes(x = value, y = W)) + 
+    theme_bw() + labs(y = "Mean Worm Burden (W)") +
+    geom_point(size = 0.5) +
+    facet_wrap( ~ parameter, scales = "free_x", nrow = 7) +
+    stat_smooth(method = "loess")
+
+com_sens_sims %>% select(-c(A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)) %>% 
+  gather("parameter", "value", a.p:th) %>% 
+  ggplot(aes(x = value, y = N.t)) + 
+    theme_bw() + labs(y = "Total snail density (N)") +
+    geom_point(size = 0.5) +
+    facet_wrap( ~ parameter, scales = "free_x", nrow = 7) +
+    stat_smooth(method = "loess")
+
+```
+
+Some parameter sets cause the model to error out which returns `NA` uisng the `possibly` function. Want to check what causes these model runs to crash
+
+```{r combined_NA_analyze, echo = FALSE}
+com_sens_sims %>% select(-c(A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)) %>% 
+  mutate(run_na = as.numeric(is.na(W))) %>% gather("parameter", "value", a.p:th) %>%
+  ggplot(aes(x = value, y = run_na)) + geom_point(size = 0.5) +
+    facet_wrap( ~ parameter, scales = "free_x", nrow = 6)
+  # glm(run_na ~ ., family = "binomial", data = .) %>% tidy()
+```
+
+
+```{r combined_prcc, warning = FALSE, echo = FALSE, fig.height=5, fig.width=8}
+# Combined model worm burden sensitivity   #############
+com.W.pcc = pcc(X = com_sens_sims %>% 
+                      filter(!is.na(W)) %>% 
+                      select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)),
+                y = as.data.frame(com_sens_sims %>% filter(!is.na(W)) %>% pull(W)),
+                rank = TRUE)
+
+com.W.pcc.df = com.W.pcc$PRCC %>% 
+  mutate(cor = cor(com_sens_sims %>% 
+                     filter(!is.na(W)) %>% 
+                     select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)), 
+                   com_sens_sims %>% filter(!is.na(W)) %>% pull(W)),
+         var = colnames(com_sens_sims %>% select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta))),
+         outcome = "W")
+
+# Combined model snail density sensitivity   #############
+com.N.pcc = pcc(com_sens_sims %>% 
+                      filter(!is.na(N.t)) %>% 
+                      select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)),
+                y = as.data.frame(com_sens_sims %>% filter(!is.na(N.t)) %>% pull(N.t)),
+                rank = TRUE)
+
+com.N.pcc.df = com.N.pcc$PRCC %>% 
+  mutate(cor = cor(com_sens_sims %>% 
+                      filter(!is.na(N.t)) %>% 
+                      select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)), 
+                   com_sens_sims %>% filter(!is.na(N.t)) %>% pull(N.t)),
+         var = colnames(com_sens_sims %>% select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta))),
+         outcome = "N")
+
+# Correlation plots #######
+ggplot(com.W.pcc.df, aes(x = cor, y = original, label = var)) + 
+  geom_point(pch = 16) + theme_bw() +
+  geom_text(aes(label = var), hjust = -0.5, vjust = -0.5)
+
+ggplot(com.N.pcc.df, aes(x = cor, y = original, label = var)) + 
+  geom_point(pch = 16) + theme_bw() +
+  geom_text(aes(label = var), hjust = -0.5, vjust = -0.5)
+
+# PRCC plot #######
+com.lhsprcc <- com.W.pcc.df %>% bind_rows(., com.N.pcc.df) %>% 
+  ggplot(aes(x = var, y = original, fill = outcome)) +
+    theme_bw() + 
+    theme(axis.text = element_text(size = 12),  #increase axis label size
+          axis.title = element_text(size = 15), #increase axis title size
+          axis.title.x = element_blank(),
+          legend.position = "none") + 
+    scale_y_continuous(limits = c(-0.85,0.85), breaks = seq(-0.8, 0.8, 0.2))+
+    scale_x_discrete(labels = c("a.p" = expression(italic(a[P])),
+                                "a.s" = expression(italic(a[N])),
+                                "ar.slp" = expression(italic(alpha[m])),
+                                "b.p" = expression(italic(b[P])),
+                                "b.s" = expression(italic(b[N])),
+                                "beta" = expression(italic(beta)),
+                                "d" = expression(italic(d)),
+                                "eps" = expression(italic(epsilon)),
+                                "f" = expression(italic(f)),
+                                "g1" = expression(g[1]),
+                                "g2" = expression(italic(g[2])),
+                                "gam" = expression(italic(beta)),
+                                "iota" = expression(italic(xi)),
+                                "k.ros" = expression(italic(k)),
+                                "Kn" = expression(italic(K)),
+                                "lambda" = expression(italic(lambda)),
+                                "linf" = expression(italic(L[infinity])),
+                                "m" = expression(italic(m)),
+                                "muH" = expression(italic(mu[H])),
+                                "muI" = expression(italic(mu[I])),
+                                "muN1" = expression(italic(mu[N1])),
+                                "muN2" = expression(italic(mu[N2])),
+                                "muN3" = expression(italic(mu[N3])),
+                                "muP" = expression(italic(mu[P])),
+                                "muW" = expression(italic(mu[W])),
+                                "nfr" = expression(italic(n)),
+                                "om" = expression(italic(omega)),
+                                "phi" = expression(italic(Phi)),
+                                "sigma" = expression(italic(sigma)),
+                                "th" = expression(italic(T[h[m]])),
+                                "theta1" = expression(italic(theta[1])),
+                                "theta2" = expression(italic(theta[2])),
+                                "z" = expression(italic(z)))) +
+    geom_bar(stat = 'identity', width = 0.5, position = position_dodge()) +
+    scale_fill_manual(breaks = c("N", "W"),
+                       values = c("black", "purple")) +
+    annotate('text', x = 2, y = 0.8, label = "C)", size = 8)  +
+    geom_hline(yintercept = 0, lty = 2) +
+    labs(x = 'Parameter', y = 'Combined Model Outcomes PRCC')
+
+com.lhsprcc
+
+```
+
+```{r prcc_combined_plot, echo = FALSE, fig.height=10.5, fig.width=8}
+prcc_layout = matrix(c(1,2,3,3), ncol = 2, byrow = T)
+
+  multiplot(profit.lhsprcc, epi.lhsprcc, com.lhsprcc, layout = prcc_layout)
+
+```
+
