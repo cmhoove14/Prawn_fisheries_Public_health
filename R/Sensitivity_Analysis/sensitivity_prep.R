@@ -6,6 +6,7 @@
 #get all parameters in the same vector ###########
 par.all = c(par.aqua, 
             c = cost, 
+            fc = fixed_cost,
             p = price, 
             eta = as.numeric(predict(eta.lm, newdata = data.frame(dens = 2.6/area))), 
             delta = -log(1-0.03)/365,
@@ -29,6 +30,7 @@ par.all = c(par.aqua,
     paranges$linf = seq(184, 234, length.out = nsims)
     paranges$k.ros = seq(0.235/30, 0.371/30, length.out = nsims)
     paranges$c = seq(0.045, 0.12, length.out = nsims)
+    paranges$fc = seq(0, 1000, length.out = nsims)
     paranges$p = seq(11, 22, length.out = nsims)
     paranges$eta = seq(0.24, 0.58, length.out = nsims)
     paranges$delta = seq(-log(1-0.01)/365, -log(1-0.05)/365, length.out = nsims)
