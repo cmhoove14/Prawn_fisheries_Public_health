@@ -167,7 +167,7 @@ opt.ros.time <- sim_aqua_time(opt.ros$P_nought, species = "M. rosenbergii")
         facet_wrap( ~ Variable, scales = "free_y", nrow = 2) +
         labs(x = "Time (days)") +
         theme_bw() + 
-        theme(legend.position = c(0.3, 0.2),
+        theme(legend.position = c(0.3, 0.8),
               axis.text = element_text(size = 12),  #increase axis label size
               axis.title = element_text(size = 18), #increase axis title size
               legend.title = element_blank(), #increase axis title size
@@ -413,6 +413,7 @@ par.all = c(par.aqua, par.snails.imm, par.epi_prawn)
                          breaks = c(0, 2, 4, 6, 8))  
 
   multiplot(eum_crv2, prf_crv2, eum_harvests2, layout = eum.layout)
+  
 ```
 
 # Optimal management table  
@@ -500,16 +501,16 @@ allvh.eqbm.run.imm0 = as.data.frame(ode(nstart.sn,
   allvh.eqbm.imm0 = allvh.eqbm.run.imm0[dim(allvh.eqbm.run.imm0)[1],]
 
 #Add immigration parameters based on immigration-free eqbm, add immigration parameter  
-  par.snails.imm["iota"] <- 0.2/365  # 20% per year as in Head et al snail migration paper
-  par.snails.imm["siteS1"] <- allvh.eqbm.imm0$S1 
-  par.snails.imm["siteS2"] <- allvh.eqbm.imm0$S2 
-  par.snails.imm["siteS3"] <- allvh.eqbm.imm0$S3 
-  par.snails.imm["siteE1"] <- allvh.eqbm.imm0$E1 
-  par.snails.imm["siteE2"] <- allvh.eqbm.imm0$E2 
-  par.snails.imm["siteE3"] <- allvh.eqbm.imm0$E3 
-  par.snails.imm["siteI1"] <- allvh.eqbm.imm0$I1 
-  par.snails.imm["siteI2"] <- allvh.eqbm.imm0$I2 
-  par.snails.imm["siteI3"] <- allvh.eqbm.imm0$I3 
+  par.snails.imm["iota"] <- par.all["iota"] <-  0.2/365  # 20% per year as in Head et al snail migration paper
+  par.snails.imm["siteS1"] <- par.all["siteS1"] <- allvh.eqbm.imm0$S1 
+  par.snails.imm["siteS2"] <- par.all["siteS2"] <- allvh.eqbm.imm0$S2 
+  par.snails.imm["siteS3"] <- par.all["siteS3"] <- allvh.eqbm.imm0$S3 
+  par.snails.imm["siteE1"] <- par.all["siteE1"] <- allvh.eqbm.imm0$E1 
+  par.snails.imm["siteE2"] <- par.all["siteE2"] <- allvh.eqbm.imm0$E2 
+  par.snails.imm["siteE3"] <- par.all["siteE3"] <- allvh.eqbm.imm0$E3 
+  par.snails.imm["siteI1"] <- par.all["siteI1"] <- allvh.eqbm.imm0$I1 
+  par.snails.imm["siteI2"] <- par.all["siteI2"] <- allvh.eqbm.imm0$I2 
+  par.snails.imm["siteI3"] <- par.all["siteI3"] <- allvh.eqbm.imm0$I3 
 
 #Rerun to eqbm with immigration
 allvh.eqbm.run.imm = as.data.frame(ode(setNames(as.numeric(allvh.eqbm.imm0[-1]), names(allvh.eqbm.imm0)[-1]),
@@ -613,7 +614,7 @@ yr1.nomig = as.data.frame(ode(nstart,t.yr1,snail_epi_allvh_imm,par.snails.nomig)
 
 ## MDA Intervention  
 ### With migration  
-```{r mda_sim, echo=FALSE, fig.height=5, fig.width=8}
+```{r mda_sim, echo=FALSE, fig.height=5, fig.width=8, cache = TRUE}
 #Simulate annual MDA for n years ########
   
   sim.mda = as.data.frame(ode(nstart,
@@ -696,7 +697,7 @@ snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
 ```
 
 ### No migration  
-```{r mda_sim_nomig, echo=FALSE, fig.height=5, fig.width=8}
+```{r mda_sim_nomig, echo=FALSE, fig.height=5, fig.width=8, cache = TRUE}
 #Simulate annual MDA for n years with no migration ########
 sim.mda.nomig = as.data.frame(ode(nstart,
                                   t.all,
@@ -780,7 +781,7 @@ snail.mda.nomig = sim.mda.nomig %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
 ## Prawn-only Intervention  
 ### M. rosenbergii  
 #### With migration  
-```{r ros_sim, echo=FALSE, fig.height=5, fig.width=8}
+```{r ros_sim, echo=FALSE, fig.height=5, fig.width=8, cache = TRUE}
 source("../R/Combined_Model/epi_no_diag_prawn_immigration_mod.R")
 source("../R/Combined_Model/epi_no_diag_prawn_sim.R")
 
@@ -851,7 +852,7 @@ snail.ros = sim.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
 ```
 
 #### No migration  
-```{r ros_sim_nomig, echo=FALSE, fig.height=5, fig.width=8}
+```{r ros_sim_nomig, echo=FALSE, fig.height=5, fig.width=8, cache = TRUE}
 # Simulate M. rosenbergii stocking for n years ########
 sim.ros.nomig = prawn_sim(t.runup = c(1:366), 
                           t.intervene = c(366:((years+1)*365)), 
@@ -919,7 +920,7 @@ snail.ros.nomig
 
 ### M. vollenhovenii  
 #### With migration  
-```{r vol_sim, echo=FALSE, fig.height=5, fig.width=8}
+```{r vol_sim, echo=FALSE, fig.height=5, fig.width=8, cache = TRUE}
 # Simulate M. vollenhovenii stocking for n years ########
   sim.vol = prawn_sim(t.runup = c(1:366), 
                       t.intervene = c(366:((years+1)*365)), 
@@ -989,7 +990,7 @@ snail.vol = sim.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
 ```
 
 #### No migration  
-```{r vol_sim_nomig, echo=FALSE, fig.height=5, fig.width=8}
+```{r vol_sim_nomig, echo=FALSE, fig.height=5, fig.width=8, cache = TRUE}
 #Simulate M. volenhovenii stocking for n years ########
 sim.vol.nomig = prawn_sim(t.runup = c(1:366), 
                           t.intervene = c(366:((years+1)*365)), 
@@ -1059,7 +1060,7 @@ snail.vol.nomig
 ## Combined Intervention  
 ### M. rosenbergii  
 #### With migration  
-```{r ros_mda_sim, echo=FALSE, fig.height=5, fig.width=8}
+```{r ros_mda_sim, echo=FALSE, fig.height=5, fig.width=8, cache = TRUE}
 #Simulate annual mda along with rosenbergii stocking #############
   sim.mda.ros = prawn_sim(t.runup = c(1:366), 
                           t.intervene = c(366:((years+1)*365)), 
@@ -1131,7 +1132,7 @@ snail.mda.ros = sim.mda.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
 ```
 
 #### No migration  
-```{r ros_mda_sim_nomig, echo=FALSE, fig.height=5, fig.width=8}
+```{r ros_mda_sim_nomig, echo=FALSE, fig.height=5, fig.width=8, cache = TRUE}
 #Simulate annual mda along with rosenbergii stocking #############
   sim.mda.ros.nomig = prawn_sim(t.runup = c(1:366), 
                                 t.intervene = c(366:((years+1)*365)), 
@@ -1202,10 +1203,159 @@ snail.mda.ros.nomig = sim.mda.ros.nomig %>% dplyr::select(time, S.t, E.t, I.t, N
   
 ```
 
+#### No migration and Holling's 2 functional response  
+```{r ros_mda_sim_nomig_hollings2, echo=FALSE, fig.height=5, fig.width=8, cache = TRUE}
+#Simulate annual mda along with rosenbergii stocking  and holling's type 2 functional response #############
+par.all.ros.nomig.h2 <- par.all.ros.nomig
+  par.all.ros.nomig.h2["nfr"] <- 1
+
+  sim.mda.ros.nomig.h2 = prawn_sim(t.runup = c(1:366), 
+                                    t.intervene = c(366:((years+1)*365)), 
+                                    t.post = c(((years+1)*365):((years*2+1)*365)),
+                                    nstart = nstart,
+                                    parameters = par.all.ros.nomig.h2, 
+                                    stock.events = mda.ros)
+
+# Plot worm burden over time with rosenbergii stocking events and mda events #######
+w.mda.ros.nomig.h2 = sim.mda.ros.nomig.h2 %>% dplyr::select(time, W, Wt, Wu) %>% 
+    gather("pop", "burden", W:Wu) %>% 
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
+            theme_bw() +
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 15), #increase axis title size
+                  axis.title.x=element_blank(),         #Suppress x axis
+                  axis.text.x=element_blank(),          #Suppress x axis
+                  title = element_text(size = 15)) +    #increase title size
+            geom_line(col = 'purple') +
+            labs(x = 'time (years)', y = expression(italic('W'))) +
+            annotate('text', x = 365, y = 60, label = 'E)', size = 8) +
+            scale_y_continuous(breaks = seq(0,80,10),
+                               labels = paste("  ", seq(0,80,10)),
+                               limits = c(0, 85)) +
+            geom_vline(xintercept = 365*(years+1), lty = 2)
+            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+            #                   labels = c(-1:years),
+            #                   limits = c(0, (365*(years+1)+10)))
+  
+  w.mda.ros.nomig.h2
+  
+# snail infection dynamics over time with rosenbergii stocking events and mda events #####
+snail.mda.ros.nomig.h2 = sim.mda.ros.nomig.h2 %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
+  gather("class", "density", S.t:N.t) %>% 
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    axis.title.x=element_blank(),         #Suppress x axis
+                    axis.text.x=element_blank(),          #Suppress x axis
+                    title = element_text(size = 15))  +   #increase title size
+              geom_line(size = 1.25) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'F)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = seq(0,50,10),
+                                 limits = c(-0.1, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2)
+             # scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+             #                   labels = c(-1:years),
+             #                   limits = c(0, (365*(years+1)+10))) 
+  
+  snail.mda.ros.nomig.h2
+  
+```
+
+#### Migration and Holling's 2 functional response  
+```{r ros_mda_sim_hollings2, echo=FALSE, fig.height=5, fig.width=8, cache = TRUE}
+#Simulate annual mda along with rosenbergii stocking  and holling's type 2 functional response #############
+par.all.ros.h2 <- par.all.ros
+  par.all.ros.h2["nfr"] <- 1
+
+  sim.mda.ros.h2 = prawn_sim(t.runup = c(1:366), 
+                                    t.intervene = c(366:((years+1)*365)), 
+                                    t.post = c(((years+1)*365):((years*2+1)*365)),
+                                    nstart = nstart,
+                                    parameters = par.all.ros.h2, 
+                                    stock.events = mda.ros)
+
+# Plot worm burden over time with rosenbergii stocking events and mda events #######
+w.mda.ros.h2 = sim.mda.ros.h2 %>% dplyr::select(time, W, Wt, Wu) %>% 
+    gather("pop", "burden", W:Wu) %>% 
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
+            theme_bw() +
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 15), #increase axis title size
+                  axis.title.x=element_blank(),         #Suppress x axis
+                  axis.text.x=element_blank(),          #Suppress x axis
+                  title = element_text(size = 15)) +    #increase title size
+            geom_line(col = 'purple') +
+            labs(x = 'time (years)', y = expression(italic('W'))) +
+            annotate('text', x = 365, y = 60, label = 'E)', size = 8) +
+            scale_y_continuous(breaks = seq(0,80,10),
+                               labels = paste("  ", seq(0,80,10)),
+                               limits = c(0, 85)) +
+            geom_vline(xintercept = 365*(years+1), lty = 2)
+            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+            #                   labels = c(-1:years),
+            #                   limits = c(0, (365*(years+1)+10)))
+  
+  w.mda.ros.h2
+  
+# snail infection dynamics over time with rosenbergii stocking events and mda events #####
+snail.mda.ros.h2 = sim.mda.ros.h2 %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
+  gather("class", "density", S.t:N.t) %>% 
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    axis.title.x=element_blank(),         #Suppress x axis
+                    axis.text.x=element_blank(),          #Suppress x axis
+                    title = element_text(size = 15))  +   #increase title size
+              geom_line(size = 1.25) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'F)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = seq(0,50,10),
+                                 limits = c(-0.1, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2)
+             # scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+             #                   labels = c(-1:years),
+             #                   limits = c(0, (365*(years+1)+10))) 
+  
+  snail.mda.ros.h2
+  
+```
 
 ### M. vollenhovenii  
 #### With migration  
-```{r vol_mda_sim, echo=FALSE, fig.height=5, fig.width=8}
+```{r vol_mda_sim, echo=FALSE, fig.height=5, fig.width=8, cache = TRUE}
 # Simulate annual mda along with volenhovenii stocking #############
   sim.mda.vol = prawn_sim(t.runup = c(1:366), 
                           t.intervene = c(366:((years+1)*365)), 
@@ -1272,7 +1422,7 @@ snail.mda.vol = sim.mda.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
 ```
 
 #### No migration  
-```{r vol_mda_sim_nomig, echo=FALSE, fig.height=5, fig.width=8}
+```{r vol_mda_sim_nomig, echo=FALSE, fig.height=5, fig.width=8, cache = TRUE}
 #Simulate annual mda along with volenhovenii stocking #############
   sim.mda.vol.nomig = prawn_sim(t.runup = c(1:366), 
                                 t.intervene = c(366:((years+1)*365)), 
@@ -1472,8 +1622,9 @@ profit.lhsprcc = ggplot(profit.pcc.df, aes(x = var, y = original)) +
   theme_bw()+
   theme(axis.text = element_text(size = 12),  #increase axis label size
         axis.title = element_text(size = 15), #increase axis title size
+        axis.title.y = element_blank(),
         axis.title.x = element_blank()) + 
-  scale_y_continuous(limits = c(-0.85,0.85), breaks = seq(-0.8, 0.8, 0.2))+
+  scale_y_continuous(limits = c(-0.7,0.7), breaks = seq(-0.7, 0.7, 0.2))+
   scale_x_discrete(labels = c("a.p" = expression(italic(a[P])),
                               "b.p" = expression(italic(b[P])),
                               "c" = expression(italic(c)),
@@ -1488,9 +1639,9 @@ profit.lhsprcc = ggplot(profit.pcc.df, aes(x = var, y = original)) +
                               "p" = expression(italic(p)))) +
   geom_bar(fill = 'darkgreen', stat = 'identity', width = 0.25)+
   geom_hline(yintercept = 0, lty = 2)+
-  annotate('text', x = 1, y = 0.8, label = 'A)', size = 8) +
+  annotate('text', x = 11, y = -0.6, label = 'B)', size = 8) +
   labs(x = 'Parameter', 
-       y = "Ten-year Cumulative profit PRCC")
+       y = "Ten-year Cumulative profit PRCC") + coord_flip()
 
 profit.lhsprcc
 
@@ -1687,8 +1838,9 @@ epi.lhsprcc <- epi.W.pcc.df %>% bind_rows(., epi.N.pcc.df) %>%
     theme(axis.text = element_text(size = 12),  #increase axis label size
           axis.title = element_text(size = 15), #increase axis title size
           axis.title.x = element_blank(),
-          legend.position = c(0.7,0.9)) + 
-    scale_y_continuous(limits = c(-0.85,0.85), breaks = seq(-0.8, 0.8, 0.2))+
+          axis.title.y = element_blank(),
+          legend.position = "none") + 
+    scale_y_continuous(limits = c(-0.7,0.7), breaks = seq(-0.7, 0.7, 0.2))+
     scale_x_discrete(labels = c("beta" = expression(italic(beta)),
                                 "f" = expression(italic(f)),
                                 "g1" = expression(g[1]),
@@ -1709,9 +1861,9 @@ epi.lhsprcc <- epi.W.pcc.df %>% bind_rows(., epi.N.pcc.df) %>%
                                 "z" = expression(italic(z)))) +
     geom_bar(stat = 'identity', width = 0.5, position = position_dodge()) +
     scale_fill_manual(values = c("N" = "black", "W" = "purple")) +
-    annotate('text', x = 2, y = 0.8, label = "B)", size = 8)  +
+    annotate('text', x = 18, y = -0.6, label = "C)", size = 8)  +
     geom_hline(yintercept = 0, lty = 2) +
-    labs(x = 'Parameter', y = 'Epi Model Outcomes PRCC')
+    labs(x = 'Parameter', y = 'Epi Model Outcomes PRCC') + coord_flip()
 
 epi.lhsprcc
 
@@ -1760,7 +1912,7 @@ com_sens_sims %>% select(-c(A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)) %>%
 
 Some parameter sets cause the model to error out which returns `NA` uisng the `possibly` function. Want to check what causes these model runs to crash
 
-```{r combined_NA_analyze, echo = FALSE}
+```{r combined_NA_analyze, eval = FALSE, echo = FALSE}
 com_sens_sims %>% select(-c(A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)) %>% 
   mutate(run_na = as.numeric(is.na(W))) %>% gather("parameter", "value", a.p:th) %>%
   ggplot(aes(x = value, y = run_na)) + geom_point(size = 0.5) +
@@ -1816,8 +1968,8 @@ com.lhsprcc <- com.W.pcc.df %>% bind_rows(., com.N.pcc.df) %>%
     theme(axis.text = element_text(size = 12),  #increase axis label size
           axis.title = element_text(size = 15), #increase axis title size
           axis.title.x = element_blank(),
-          legend.position = "none") + 
-    scale_y_continuous(limits = c(-0.85,0.85), breaks = seq(-0.8, 0.8, 0.2))+
+          legend.position = c(0.25,0.9)) + 
+    scale_y_continuous(limits = c(-0.7,0.7), breaks = seq(-0.7, 0.7, 0.2))+
     scale_x_discrete(labels = c("a.p" = expression(italic(a[P])),
                                 "a.s" = expression(italic(a[N])),
                                 "ar.slp" = expression(italic(alpha[m])),
@@ -1829,7 +1981,7 @@ com.lhsprcc <- com.W.pcc.df %>% bind_rows(., com.N.pcc.df) %>%
                                 "f" = expression(italic(f)),
                                 "g1" = expression(g[1]),
                                 "g2" = expression(italic(g[2])),
-                                "gam" = expression(italic(beta)),
+                                "gam" = expression(italic(gamma)),
                                 "iota" = expression(italic(xi)),
                                 "k.ros" = expression(italic(k)),
                                 "Kn" = expression(italic(K)),
@@ -1854,16 +2006,20 @@ com.lhsprcc <- com.W.pcc.df %>% bind_rows(., com.N.pcc.df) %>%
     geom_bar(stat = 'identity', width = 0.5, position = position_dodge()) +
     scale_fill_manual(breaks = c("N", "W"),
                        values = c("black", "purple")) +
-    annotate('text', x = 2, y = 0.8, label = "C)", size = 8)  +
+    annotate('text', x = 33, y = -0.6, label = "A)", size = 8)  +
     geom_hline(yintercept = 0, lty = 2) +
-    labs(x = 'Parameter', y = 'Combined Model Outcomes PRCC')
+    labs(x = 'Parameter', y = 'Combined Model Outcomes PRCC') + coord_flip()
 
 com.lhsprcc
 
 ```
 
 ```{r prcc_combined_plot, echo = FALSE, fig.height=10.5, fig.width=8}
-prcc_layout = matrix(c(1,2,3,3), ncol = 2, byrow = T)
+prcc_layout = matrix(c(3,1,
+                       3,1,
+                       3,2,
+                       3,2,
+                       3,2), ncol = 2, byrow = T)
 
   multiplot(profit.lhsprcc, epi.lhsprcc, com.lhsprcc, layout = prcc_layout)
 
