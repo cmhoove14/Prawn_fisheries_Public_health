@@ -1,3 +1,8 @@
+#Small function to estimate cumulative discounted profits given number of cycles, profit per cycle, discount rate, and time per cycle
+get_cum_profits <- function(n, Pi, delta, Time){
+  sum(sapply(c(1:n), function(x) Pi*exp(-delta*(x-1)*Time)))
+}
+
 #Function to simulate aquaculture cycle with given parameters and starting conditions and return optimal management conditions 
 sim_aqua_eum <- function(a.p, b.p, gam, muP, d, om, k, linf, k.ros, c, fc, p, delta, L_nought, P_nought, species){
   
@@ -37,7 +42,7 @@ sim_aqua_eum <- function(a.p, b.p, gam, muP, d, om, k, linf, k.ros, c, fc, p, de
              profit = revenue*exp(-delta*time) - cost*P_nought - fixed_cost,
              roi = profit / (cost*P_nought),
              n_harvest = floor((years*365)/time),
-             cum_profits = n_harvest*profit,
+             cum_profits = get_cum_profits(n_harvest, profit, delta, time),
              Species = species) %>% 
       filter(p_mass >= 30)
     
@@ -74,7 +79,7 @@ sim_aqua_time <- function(P_nought, species = "M. vollenhovenii"){
              profit = (revenue*exp(-delta*time)) - (cost*P_nought) - fixed_cost,
              roi = profit / (cost*P_nought),
              n_harvest = floor((years*365)/time),
-             cum_profits = n_harvest*profit,
+             cum_profits = get_cum_profits(n_harvest, profit, delta, time),
              Species = species)
 
   return(as.matrix(sim_df))  
