@@ -38,11 +38,12 @@ sim_aqua_eum <- function(a.p, b.p, gam, muP, d, om, k, linf, k.ros, c, fc, p, de
       mutate(p_mass = 10^(a.p+b.p*log10(L/10)),     
              total_mass = (P*p_mass) /1000,    
              harvest_mass = total_mass * market_frac,
-             revenue = harvest_mass*price,
-             profit = revenue*exp(-delta*time) - cost*P_nought - fixed_cost,
-             roi = profit / (cost*P_nought),
-             n_harvest = floor((years*365)/time),
-             cum_profits = get_cum_profits(n_harvest, profit, delta, time),
+      #If average prawn mass is less than 30 g (marketable size) don't estimate monetary outcomes       
+             revenue = ifelse(p_mass <30, NA, harvest_mass*price),
+             profit = ifelse(p_mass <30, NA, revenue*exp(-delta*time) - cost*P_nought - fixed_cost),
+             roi = ifelse(p_mass <30, NA, profit / (cost*P_nought)),
+             n_harvest = ifelse(p_mass <30, NA, floor((years*365)/time)),
+             cum_profits = ifelse(p_mass <30, NA, get_cum_profits(n_harvest, profit, delta, time)),
              Species = species) %>% 
       filter(p_mass >= 30)
     
@@ -75,11 +76,12 @@ sim_aqua_time <- function(P_nought, species = "M. vollenhovenii"){
              p_mass = 10^(par.aqua["a.p"]+par.aqua["b.p"]*log10(L/10)),     
              total_mass = (P*p_mass) /1000,    
              harvest_mass = total_mass * market_frac,
-             revenue = harvest_mass*price,
-             profit = (revenue*exp(-delta*time)) - (cost*P_nought) - fixed_cost,
-             roi = profit / (cost*P_nought),
-             n_harvest = floor((years*365)/time),
-             cum_profits = get_cum_profits(n_harvest, profit, delta, time),
+      #If average prawn mass is less than 30 g (marketable size) don't estimate monetary outcomes       
+             revenue = ifelse(p_mass <30, NA, harvest_mass*price),
+             profit = ifelse(p_mass <30, NA, revenue*exp(-delta*time) - cost*P_nought - fixed_cost),
+             roi = ifelse(p_mass <30, NA, profit / (cost*P_nought)),
+             n_harvest = ifelse(p_mass <30, NA, floor((years*365)/time)),
+             cum_profits = ifelse(p_mass <30, NA, get_cum_profits(n_harvest, profit, delta, time)),
              Species = species)
 
   return(as.matrix(sim_df))  
