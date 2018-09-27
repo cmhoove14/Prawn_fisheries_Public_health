@@ -402,7 +402,7 @@ par.all = c(par.aqua, par.snails.imm, par.epi_prawn)
             axis.title = element_text(size = 18), #increase axis title size
             legend.text = element_text(size = 12),#increase legend text size
             legend.title = element_blank())  +    #suppress legend title
-      annotate("text", x = 0, y = 30, label = "C)", size = 8) +
+      annotate("text", x = 0, y = 23, label = "C)", size = 8) +
       scale_color_manual(values = c("red", "blue")) +
       labs(x = expression(paste('Stocking density, ', P[0],' (', Pm^-2, ")", sep = "")), 
            y = "Harvests per 10 years")  +
