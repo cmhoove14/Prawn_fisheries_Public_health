@@ -16,7 +16,7 @@ par.aqua=c(
 price = 12                                       # Weighted average market price of prawns, in dollars/kg 
 cost = 0.10                                      # Cost of juveniles, in dollars per
 fixed_cost = 0                                     # Fixed costs associated with harvesting
-delta = -log(1-0.03)/365                         # Discount rate, equivalent to 3%/year
+delta = -log(1-0.07)/365                         # Discount rate, equivalent to 7%/year
 
 #Alternate growth parameters for M. rosenbergii and M. vollenhovenii
   k.ros <- 0.371/30    # From Sampaio and Valenti
