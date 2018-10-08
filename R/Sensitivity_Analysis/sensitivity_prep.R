@@ -39,10 +39,10 @@ par.all = c(par.aqua,
     paranges$A = rep(area, nsims)
 
   # Fill epi-relevant parameter ranges
-    paranges$f = seq(0.06, 0.26, length.out = nsims)
+    paranges$f = seq(0.06, 0.36, length.out = nsims)
     paranges$Kn = seq(25*area, 100*area, length.out = nsims)
     paranges$z = seq(0.25, 1, length.out = nsims)
-    paranges$iota = seq(0, 0.5/365, length.out = nsims)
+    paranges$xi = seq(0, 0.5/365, length.out = nsims)
     paranges$muN1 = seq(1/25, 1/100, length.out = nsims)
     paranges$muN2 = seq(1/50, 1/125, length.out = nsims)
     paranges$muN3 = seq(1/75, 1/150, length.out = nsims)

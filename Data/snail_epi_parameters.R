@@ -22,7 +22,7 @@ par.snails.imm=c(
   z = 0.5,           # Fraction of exposed snails that can reproduce, from Sokolow et al. 2015
   
   ##immigration parameters
-  iota = 0,       # % of snails in each infection class immigrate from other site
+  xi = 0,       # % of snails in each infection class immigrate from other site
   siteS1 = 0,        # Density of snails in each class introduced via immigration
   siteS2 = 0,
   siteS3 = 0,

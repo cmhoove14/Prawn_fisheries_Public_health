@@ -162,23 +162,23 @@ snail_prawn_model_imm = function(t, n, parameters) {
     #print(c(psiS1, psiS2, psiS3, psiE1, psiE2, psiE3, psiI1, psiI2, psiI3)*P)
     
     ## Model equations:
-    dS1dt = iota*siteS1 + f*(1-N/Kn)*(S2+S3+z*(E2+E3)) - muN1*S1 - psiS1*P - g1*S1 - (beta)*M*H*S1 - iota*S1
+    dS1dt = xi*siteS1 + f*(1-N/Kn)*(S2+S3+z*(E2+E3)) - muN1*S1 - psiS1*P - g1*S1 - (beta)*M*H*S1 - xi*S1
     
-    dS2dt = iota*siteS2 + g1*S1 - muN2*S2 - psiS2*P - g2*S2 - (beta)*M*H*S2 - iota*S2
+    dS2dt = xi*siteS2 + g1*S1 - muN2*S2 - psiS2*P - g2*S2 - (beta)*M*H*S2 - xi*S2
     
-    dS3dt = iota*siteS3 + g2*S2 - muN3*S3 - psiS3*P - (beta)*M*H*S3 - iota*S3
+    dS3dt = xi*siteS3 + g2*S2 - muN3*S3 - psiS3*P - (beta)*M*H*S3 - xi*S3
     
-    dE1dt = iota*siteE1 + (beta)*M*H*S1 - muN1*E1 - psiE1*P - sigma*E1 - g1*E1 - iota*E1
+    dE1dt = xi*siteE1 + (beta)*M*H*S1 - muN1*E1 - psiE1*P - sigma*E1 - g1*E1 - xi*E1
     
-    dE2dt = iota*siteE2 + (beta)*M*H*S2 + g1*E1 - muN2*E2 - psiE2*P - sigma*E2 - g2*E2 - iota*E2
+    dE2dt = xi*siteE2 + (beta)*M*H*S2 + g1*E1 - muN2*E2 - psiE2*P - sigma*E2 - g2*E2 - xi*E2
     
-    dE3dt = iota*siteE3 + (beta)*M*H*S3 + g2*E2 - muN3*E3 - psiE3*P - sigma*E3 - iota*E3
+    dE3dt = xi*siteE3 + (beta)*M*H*S3 + g2*E2 - muN3*E3 - psiE3*P - sigma*E3 - xi*E3
     
-    dI1dt = iota*siteI1 + sigma*E1 - (muN1+muI)*I1 - psiI1*P - g1*I1 - iota*I1
+    dI1dt = xi*siteI1 + sigma*E1 - (muN1+muI)*I1 - psiI1*P - g1*I1 - xi*I1
 
-    dI2dt = iota*siteI2 + sigma*E2 + g1*I1 - (muN2+muI)*I2 - psiI2*P - g2*I2 - iota*I2
+    dI2dt = xi*siteI2 + sigma*E2 + g1*I1 - (muN2+muI)*I2 - psiI2*P - g2*I2 - xi*I2
     
-    dI3dt = iota*siteI3 + sigma*E3 + g2*I2 - (muN3+muI)*I3 - psiI3*P - iota*I3
+    dI3dt = xi*siteI3 + sigma*E3 + g2*I2 - (muN3+muI)*I3 - psiI3*P - xi*I3
     
     dWtdt = lambda*I1 + theta1*lambda*I2 + theta2*lambda*I3 - (muW + muH)*Wt
     
