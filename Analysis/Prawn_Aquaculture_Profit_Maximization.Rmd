@@ -1,0 +1,626 @@
+---
+title: "Prawn aquaculture model numeric estimation of max cumulative profit"
+author: "Chris Hoover"
+date: "October 4, 2018"
+output: 
+  pdf_document:
+    toc: TRUE
+    toc_depth: 3
+geometry: margin = 0.5in    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+require(deSolve)
+require(sensitivity)
+require(parallel)
+require(kableExtra)
+require(broom)
+require(directlabels)
+require(tidyverse)
+
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+    library(grid)
+    
+    # Make a list from the ... arguments and plotlist
+    plots <- c(list(...), plotlist)
+    
+    numPlots = length(plots)
+    
+    # If layout is NULL, then use 'cols' to determine layout
+    if (is.null(layout)) {
+      # Make the panel
+      # ncol: Number of columns of plots
+      # nrow: Number of rows needed, calculated from # of cols
+      layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                       ncol = cols, nrow = ceiling(numPlots/cols))
+    }
+    
+    if (numPlots==1) {
+      print(plots[[1]])
+      
+    } else {
+      # Set up the page
+      grid.newpage()
+      pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+      
+      # Make each plot, in the correct location
+      for (i in 1:numPlots) {
+        # Get the i,j matrix positions of the regions that contain this subplot
+        matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+        
+        print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                        layout.pos.col = matchidx$col))
+      }
+    }
+  }
+
+#Function from stack overflow (https://stackoverflow.com/questions/11693599/alternative-to-expand-grid-for-data-frames)  
+  expand.grid.df <- function(...) Reduce(function(...) merge(..., by=NULL), list(...))
+
+# Number of years to simulate
+  years = 10
+
+```
+
+# Numeric estimation of max profit  
+For each prawn species, shows trajectories of length, density, number of harvests, and cumulative profits over time over a range of stocking densities.
+
+## Find management strategy (stocking density and harvest time) that maximizes profit for each species   
+Use function `sim_aqua_eum` to simulate aquaculture cycle with given parameters and starting conditions and return row from the simulation data frame that contains maximum cumulative profits
+
+```{r Opt_stock, cache = TRUE}
+source('../R/Prawn_aquaculture/prawn_aquaculture_mod.R')
+source('../R/Prawn_aquaculture/prawn_aquaculture_sim.R')
+source("../Data/aquaculture_parameters.R")
+source("../Data/Ranjeet_Kurup_06_data.R")
+
+  eta.lm = lm(marketable ~ dens, data = rk06)
+
+#Simulation for eumetric curve for M. volenhovenii #####
+# Create matriz with parameter sets and stocking densities ranging from 0.5-7.5Pm^-2 
+#Starting length of 40 mm corresponds to juveniles of ~0.35 grams
+opt.df = expand.grid.df(data.frame(t(par.aqua), c = cost, fc = 0, p = price, delta = delta), 
+                        data.frame(L_nought = 40, P_nought = seq(500, 7500, 100))) 
+
+#Get mgmt strategy that maximizes cumulative ten year profits
+opt.vol.df <- opt.df %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. vollenhovenii"))
+  opt.vol <- opt.vol.df %>% filter(cum_profits == max(cum_profits))
+  
+opt.ros.df <- opt.df %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. rosenbergii"))
+  opt.ros <- opt.ros.df %>% filter(cum_profits == max(cum_profits))
+
+eum_dat <- rbind(opt.vol.df, opt.ros.df)  
+
+```
+
+## Simulate full aquaculture cycle through time for a variety of stocking densities to show aquaculture dynamics through time and visualization of the numeric procedure for identifying optimal management conditions  
+Use function `sim_aqua_time` which simulates aquaculture cycle through time and returns data frame of the simulation
+
+```{r aqua_sims, warning=FALSE, cache = TRUE}
+test_p0s <- seq(500, 7500, 100)  
+
+aqua_sims_vol <- map_df(test_p0s, sim_aqua_time)
+aqua_sims_ros <- map_df(test_p0s, sim_aqua_time, species = "M. rosenbergii")
+
+aqua_sims <- bind_rows(aqua_sims_vol, aqua_sims_ros) %>% 
+  gather(key = "Variable", value = "Value", P_dens, L, harvest_mass, profit, n_harvest, cum_profits)
+
+```
+
+## Plot showing aquaculture dynamics through time across a variety of stocking densities  
+```{r numeric_plot, fig.height=8.5, fig.width=8}
+  aqua_sims %>% 
+    filter(Variable %in% c("P_dens", "L", "n_harvest", "profit") &
+             P_start %in% c(seq(500,7500, 1000)/1000)) %>% 
+    mutate(Variable = case_when(Variable == "P_dens" ~ "Density (P)",
+                                Variable == "L" ~ "Average Length (mm)",
+                                Variable == "n_harvest" ~ "Number of harvests",
+                                Variable == "profit" ~ "Profit (USD)")) %>% 
+    ggplot(aes(x = time, y = Value, col = as.factor(P_start))) +
+      geom_line(size = 1.25) +
+      scale_color_manual(name = expression(P[0]),
+                         values = c("gray90", "gray80", "red",
+                                    "gray60", "gray50", "gray40",
+                                    "gray30", "gray20")) +
+      facet_grid(Variable ~ Species, scales = "free_y", switch = "y") +
+      theme_bw() + 
+      theme(axis.text = element_text(size = 12),  #increase axis label size
+            axis.title = element_text(size = 18), #increase axis title size
+            legend.title = element_text(size = 18), #increase axis title size
+            legend.text = element_text(size = 15),#increase legend text size
+            strip.text = element_text(size = 14))
+
+```
+
+```{r save_numeric_plot, include = FALSE}
+  aqua_sims %>% 
+    filter(Variable %in% c("P_dens", "L", "n_harvest", "profit") &
+             P_start %in% c(seq(500,7500, 1000)/1000)) %>% 
+    mutate(Variable = case_when(Variable == "P_dens" ~ "Density (P)",
+                                Variable == "L" ~ "Average Length (mm)",
+                                Variable == "n_harvest" ~ "Number of harvests",
+                                Variable == "profit" ~ "Profit (USD)")) %>% 
+    ggplot(aes(x = time, y = Value, col = as.factor(P_start))) +
+      geom_line(size = 1.25) +
+      scale_color_manual(name = expression(P[0]),
+                         values = c("gray90", "gray80", "red",
+                                    "gray60", "gray50", "gray40",
+                                    "gray30", "gray20")) +
+      facet_grid(Variable ~ Species, scales = "free_y", switch = "y") +
+      theme_bw() + 
+      theme(axis.text = element_text(size = 12),  #increase axis label size
+            axis.title = element_text(size = 18), #increase axis title size
+            legend.title = element_text(size = 18), #increase axis title size
+            legend.text = element_text(size = 15),#increase legend text size
+            strip.text = element_text(size = 14))
+
+ggsave("Figures/numeric_estimation_max_profit.png",
+       width = 8, height = 10.5, units = "in")
+
+```
+
+## Heat map showing cumulative profits across parameters representing the two key management decisions: stocking density and when to harvest. Contour lines added to show regions of labeled profits  
+```{r time_p0_cumprof_heatmap, fig.height=8, fig.width=8}
+cumprof_heatmap <- bind_rows(aqua_sims_vol, aqua_sims_ros) %>% 
+  ggplot(aes(y = time, x = P_start, z = cum_profits)) + 
+    geom_tile(aes(fill = cum_profits)) + 
+    geom_contour(breaks = c(seq(0,6000,1500)), col = "black") +
+    geom_dl(aes(label = ..level..), method = "top.pieces",
+            stat = "contour", breaks = c(seq(0,6000,1500))) +
+    scale_fill_gradient2(high = "darkgreen", 
+                         mid = "white",
+                         low = "darkred",
+                         breaks = c(-10000, -5000,
+                                    seq(0,6000,1500))) +
+    facet_wrap(~Species, nrow = 2) +
+    xlab(expression(paste("Stocking density (",P[0],")", sep = ""))) +
+    ylab("Time (days)") +
+    theme_bw() + 
+      theme(axis.text = element_text(size = 12),  #increase axis label size
+            axis.title = element_text(size = 18), #increase axis title size
+            legend.title = element_text(size = 15), #increase axis title size
+            legend.text = element_text(size = 12),#increase legend text size
+            strip.text = element_text(size = 15)) +
+    guides(fill=guide_legend(title="Cumulative \nProfits",
+                             reverse = T))
+
+cumprof_heatmap
+```
+
+```{r save_time_p0_cumprof_heatmap, include=FALSE}
+cumprof_heatmap
+
+ggsave("Figures/time_p0_cumprof_heatmap.png",
+       width = 6, height = 6, units = "in")
+
+```
+
+# Example aquaculture cycle dynamics run through two years  
+Figure showing prawn aquaculture dynamics through time for optimal stocking and harvesting parameters identified from numeric simulation above, vertical dashed lines indicate optimal harvest time for each species  
+
+```{r sim_time_fig, warning = FALSE, fig.height=6, fig.width=8}
+# First get simulation through time starting at optimal stocking density ######
+opt.vol.time <- sim_aqua_time(opt.vol$P_nought)
+opt.ros.time <- sim_aqua_time(opt.ros$P_nought, species = "M. rosenbergii")
+
+  opt.time <- rbind(as.data.frame(opt.vol.time), as.data.frame(opt.ros.time)) %>% 
+    mutate(n_harvest = ifelse(as.numeric(as.character(p_mass)) >= 30, as.numeric(as.character(n_harvest)), NA),
+           cum_profits = as.numeric(as.character(n_harvest)) * as.numeric(as.character(profit))) %>% 
+    gather(key = "Variable", value = "Value", P_dens, L, harvest_mass, profit, n_harvest, cum_profits)
+
+    opt.time %>% mutate(time = as.numeric(time),
+                        Value = as.numeric(Value),
+                        Species = factor(Species, levels = c("M. rosenbergii", "M. vollenhovenii"))) %>% 
+      filter(Variable %in% c("P_dens", "L", "harvest_mass", "cum_profits")) %>% 
+      mutate(Variable = case_when(Variable == "P_dens" ~ "Density, P",
+                                  Variable == "L" ~ "Mean Length, L (mm)",
+                                  Variable == "harvest_mass" ~ "Harvest mass (kg)",
+                                  Variable == "cum_profits" ~ "Ten-year Cumulative profit (USD)")) %>% 
+      ggplot(aes(x = time, y = Value, col = Species)) +
+        geom_line(size = 1.25) +
+        geom_vline(xintercept = opt.vol$time, lty = 2, size = 1.1) +
+        geom_vline(xintercept = opt.ros$time, lty = 3, size = 1.1) +
+        scale_color_manual(values = c("red", "blue")) +
+        facet_wrap( ~ Variable, scales = "free_y", nrow = 2) +
+        labs(x = "Time (days)") +
+        theme_bw() + 
+        theme(legend.position = c(0.3, 0.8),
+              axis.text = element_text(size = 12),  #increase axis label size
+              axis.title = element_text(size = 18), #increase axis title size
+              legend.title = element_blank(), #increase axis title size
+              strip.text = element_text(size = 14))
+
+```
+
+```{r save_sim_time_fig, include = FALSE}
+  opt.time <- rbind(as.data.frame(opt.vol.time), as.data.frame(opt.ros.time)) %>% 
+    mutate(n_harvest = ifelse(as.numeric(as.character(p_mass)) >= 30, as.numeric(as.character(n_harvest)), NA),
+           cum_profits = as.numeric(as.character(n_harvest)) * as.numeric(as.character(profit))) %>% 
+    gather(key = "Variable", value = "Value", P_dens, L, harvest_mass, profit, n_harvest, cum_profits)
+
+    opt.time %>% mutate(time = as.numeric(time),
+                        Value = as.numeric(Value),
+                        Species = factor(Species, levels = c("M. rosenbergii", "M. vollenhovenii"))) %>% 
+      filter(Variable %in% c("P_dens", "L", "harvest_mass", "cum_profits")) %>% 
+      mutate(Variable = case_when(Variable == "P_dens" ~ "Density, P",
+                                  Variable == "L" ~ "Mean Length, L (mm)",
+                                  Variable == "harvest_mass" ~ "Harvest mass (kg)",
+                                  Variable == "cum_profits" ~ "Ten-year Cumulative profit (USD)")) %>% 
+      ggplot(aes(x = time, y = Value, col = Species)) +
+        geom_line(size = 1.25) +
+        geom_vline(xintercept = opt.vol$time, lty = 2, size = 1.1) +
+        geom_vline(xintercept = opt.ros$time, lty = 3, size = 1.1) +
+        scale_color_manual(values = c("red", "blue")) +
+        facet_wrap( ~ Variable, scales = "free_y", nrow = 2) +
+        labs(x = "Time (days)") +
+        theme_bw() + 
+        theme(legend.position = c(0.3, 0.8),
+              legend.text = element_text(size = 12),
+              axis.text = element_text(size = 12),  #increase axis label size
+              axis.title = element_text(size = 18), #increase axis title size
+              legend.title = element_blank(), #increase axis title size
+              strip.text = element_text(size = 14))
+
+    ggsave("Figures/example_aquaculture_simulations.png",
+           height = 8, width = 8, units = "in")
+```
+
+# Eumetric curves   
+Use simulations above across stocking densities that return model parameters at max cumulative profit to plot eumetric curve showing cumulative profits across stocking densities as well as per-harvest profits, harvest time, and number of harvests within `r print(years)` time frame  
+
+## Eumetric curve and associated parameters  
+```{r Fig3, warning = FALSE, fig.height=10.5, fig.width=8}
+  eum_crv = ggplot(eum_dat, aes(x = P_nought/1000)) +
+              theme_bw() +
+              theme(legend.position = c(0.2, 0.1),        #place legend inside plot
+                    axis.text = element_text(size = 15),  #increase axis label size
+                    axis.title = element_text(size = 18), #increase axis title size
+                    legend.text = element_text(size = 12),#increase legend text size
+                    axis.title.x = element_blank(),       #Suppress x axis since it shares it with below plot
+                    axis.text.x = element_blank(),
+                    legend.title = element_blank())  +    #suppress legend title
+              geom_line(aes(y = cum_profits/1000, col = Species), size = 1.25) +
+              scale_color_manual(values = c("red", "blue")) +
+              geom_hline(yintercept = 0, aes(col = grey20)) +
+              annotate("text", x = 0, y = max(eum_dat$cum_profits), label = "A)", size = 8) +
+              labs(y = expression(paste('10-Year Profits, ', CP^sp, ' (1000s USD)', sep = "")))  +
+              scale_y_continuous(limits = c(min(eum_dat$cum_profits), 12500)/1000,
+                                 breaks = seq(-2.500, 12.500, 2.500)) +
+              scale_x_continuous(limits = c(0, 8),
+                                 breaks = c(0, 2, 4, 6, 8))  
+ 
+  prf_crv = ggplot(eum_dat, aes(x = P_nought/1000)) +
+              theme_bw() +
+              theme(legend.position = 'none',        #place legend inside plot
+                    axis.text = element_text(size = 15),  #increase axis label size
+                    axis.title = element_text(size = 18), #increase axis title size
+                    legend.text = element_text(size = 12),#increase legend text size
+                    axis.title.x = element_blank(),       #Suppress x axis since it shares it with below plot
+                    axis.text.x = element_blank(),
+                    legend.title = element_blank())  +    #suppress legend title
+              geom_line(aes(y = profit, col = Species), size = 1.25) +
+              scale_color_manual(values = c("red", "blue")) +
+              geom_hline(yintercept = 0, aes(col = grey20)) +
+              annotate("text", x = 0, y = max(eum_dat$profit), label = "B)", size = 8) +
+              labs(y = expression(paste('Profit per cycle (USD)', sep = "")))  +
+              scale_y_continuous(limits = c(-400, 410),
+                                 breaks = seq(-400, 400, 200)) +
+              scale_x_continuous(limits = c(0, 8),
+                                 breaks = c(0, 2, 4, 6, 8))  
+
+   
+eum_time = ggplot(eum_dat, aes(x = P_nought/1000)) +
+            theme_bw() +
+            theme(legend.position = 'none',        #place legend inside plot
+                  axis.text = element_text(size = 15),  #increase axis label size
+                  axis.title = element_text(size = 18), #increase axis title size
+                  axis.title.x = element_blank(),       #Suppress x axis since it shares it with below plot
+                  axis.text.x = element_blank(),
+                  legend.text = element_text(size = 12),#increase legend text size
+                  legend.title = element_blank())  +    #suppress legend title
+            geom_line(aes(y = time, col = Species), size = 1.25) +
+            annotate("text", x = 0, y = 365, label = "C)", size = 8) +
+            scale_color_manual(values = c("red", "blue")) +
+            labs(y = expression(paste('Harvest time, ', T[opt]^sp, ' (days)', sep = "")))  +
+            scale_y_continuous(limits = c(0, 365),
+                               breaks = c(0,60,120,180,240,300,365)) +
+            scale_x_continuous(limits = c(0, 8),
+                               breaks = c(0, 2, 4, 6, 8))  
+
+eum_harvests = ggplot(eum_dat, aes(x = P_nought/1000)) +
+            theme_bw() +
+            theme(legend.position = 'none',        #place legend inside plot
+                  axis.text = element_text(size = 15),  #increase axis label size
+                  axis.title = element_text(size = 18), #increase axis title size
+                  legend.text = element_text(size = 12),#increase legend text size
+                  legend.title = element_blank())  +    #suppress legend title
+            geom_line(aes(y = n_harvest, col = Species), size = 1.25) +
+            annotate("text", x = 0, y = 25, label = "D)", size = 8) +
+            scale_color_manual(values = c("red", "blue")) +
+            labs(x = expression(paste('Stocking density, ', P[0],' (', Pm^-2, ")", sep = "")), 
+                 y = "Harvests per 10 years")  +
+            scale_y_continuous(limits = c(0, 30),
+                               breaks = c(0,10,20,30),
+                               labels = c("0", "10", "20", "  30")) +
+            scale_x_continuous(limits = c(0, 8),
+                               breaks = c(0, 2, 4, 6, 8))  
+
+
+  
+  eum.layout = matrix(c(1,2,3), ncol = 1, byrow = T)
+
+  multiplot(eum_crv, prf_crv, eum_harvests, layout = eum.layout)
+
+```
+
+## Eumetric curve with uncertainty  
+We want to add estimates of uncertainty to the eumetric curve rather than just the eumetric curve generated from point estimates of all parameters (above). We'll use parameter sets from the latin hypercube generated for the PRCC sensitivity analysis to run the model over all tested stocking densities 
+
+```{r Fig3_sensitivity, cache = TRUE}
+source("../Data/snail_epi_parameters.R")
+source("../Data/combined_parameters.R")
+
+source("../R/Sensitivity_Analysis/sensitivity_prep.R")
+
+par.all = c(par.aqua, par.snails.imm, par.epi_prawn)
+
+# Get aquaculture parameters from LHC
+  lhcpars.aqua = lhcpars[,which(colnames(lhcpars) %in% c(names(par.aqua), 'k.ros', 'c', 'fc', 'p', 'delta'))]
+    lhcpars.aqua$fc <- 0  #No consideration of fixed costs in default model
+    
+# Get the stocking densities and starting length again
+  test_starts <- expand.grid(L_nought = 40, P_nought = seq(500, 7500, 100))
+  
+# Data frame of all parameter sets and all candidate stocking densities  
+  eum_sim <- expand.grid.df(lhcpars.aqua, test_starts)
+  
+#Simulate across all parameter sets and stocking densities  
+  eum_sims_vol <- eum_sim %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. vollenhovenii"))
+  
+    eum_sims_vol_sum <- eum_sims_vol %>%       #Summarise across parameter sets
+      group_by(P_nought) %>%  
+      summarise(Profit_Cycle_Med = median(profit),
+                Profit_Cycle_upq = quantile(profit, 0.75),
+                Profit_Cycle_loq = quantile(profit, 0.25),
+                cum_Profit_Med = median(cum_profits),
+                cum_Profit_min = min(cum_profits),
+                cum_Profit_max = max(cum_profits),
+                cum_Profit_upq = quantile(cum_profits, 0.75),
+                cum_Profit_loq = quantile(cum_profits, 0.25),
+                Harvest_time_med = median(time),
+                Harvest_time_upq = quantile(time, 0.75),
+                Harvest_time_loq = quantile(time, 0.25),
+                n_harvest_med = median(n_harvest),
+                n_harvest_upq = quantile(n_harvest, 0.75),
+                n_harvest_loq = quantile(n_harvest, 0.25),
+                Species = unique(Species),
+                n_par_sets = n())
+    
+  eum_sims_ros <- eum_sim %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. rosenbergii"))
+  
+    eum_sims_ros_sum <- eum_sims_ros %>%       #Summarise across parameter sets
+      group_by(P_nought) %>%  
+      summarise(Profit_Cycle_Med = median(profit),
+                Profit_Cycle_upq = quantile(profit, 0.75),
+                Profit_Cycle_loq = quantile(profit, 0.25),
+                cum_Profit_Med = median(cum_profits),
+                cum_Profit_min = min(cum_profits),
+                cum_Profit_max = max(cum_profits),
+                cum_Profit_upq = quantile(cum_profits, 0.75),
+                cum_Profit_loq = quantile(cum_profits, 0.25),
+                Harvest_time_med = median(time),
+                Harvest_time_upq = quantile(time, 0.75),
+                Harvest_time_loq = quantile(time, 0.25),
+                n_harvest_med = median(n_harvest),
+                n_harvest_upq = quantile(n_harvest, 0.75),
+                n_harvest_loq = quantile(n_harvest, 0.25),
+                Species = unique(Species),
+                n_par_sets = n())
+  
+  eum_sims_all_sum = as.data.frame(rbind(eum_sims_vol_sum, eum_sims_ros_sum)) %>% 
+    mutate(Species = factor(Species, levels = c("M. rosenbergii", "M. vollenhovenii")))
+```
+
+```{r Fig3_with_uncertainty, warning = FALSE, fig.height=10.5, fig.width=8}
+  eum_crv2 = eum_sims_all_sum %>% 
+    ggplot(aes(x = P_nought/1000, y = cum_Profit_Med/1000, col = Species)) + 
+      geom_line(size = 1.25) +
+      geom_ribbon(aes(x = P_nought/1000, ymin = cum_Profit_loq/1000, ymax = cum_Profit_upq/1000, fill = Species), alpha = 0.3, size = 0) +
+      theme_bw() +
+      theme(legend.position = c(0.2, 0.11),        #place legend inside plot
+            legend.background = element_rect(fill = "transparent"),
+            axis.text = element_text(size = 15),  #increase axis label size
+            axis.title = element_text(size = 18), #increase axis title size
+            legend.text = element_text(size = 12),#increase legend text size
+            axis.title.x = element_blank(),       #Suppress x axis since it shares it with below plot
+            axis.text.x = element_blank(),
+            legend.title = element_blank())  +    #suppress legend title
+      scale_color_manual(values = c("red", "blue")) +
+      geom_hline(yintercept = 0, aes(col = grey20)) +
+      annotate("text", x = 0, y = 12.5, label = "A)", size = 8) +
+      labs(y = expression(paste('10-Year Profits', ' (1000s USD)', sep = "")))  +
+      scale_y_continuous(limits = c(-3000, 12750)/1000,
+                         breaks = seq(-2.500, 12.500, 2.500),
+                         labels = paste("", seq(-2.500, 12.500, 2.500))) +
+      scale_x_continuous(limits = c(0, 8),
+                         breaks = c(0, 2, 4, 6, 8))  
+
+  prf_crv2 = eum_sims_all_sum %>% 
+    ggplot(aes(x = P_nought/1000, y = Profit_Cycle_Med, col = Species)) + 
+      geom_line(size = 1.25) +
+      geom_ribbon(aes(x = P_nought/1000, ymin = Profit_Cycle_loq, ymax = Profit_Cycle_upq, fill = Species), alpha = 0.3, size = 0) +
+      theme_bw() +
+      theme(legend.position = "none",        #place legend inside plot
+            axis.text = element_text(size = 15),  #increase axis label size
+            axis.title = element_text(size = 18), #increase axis title size
+            legend.text = element_text(size = 12),#increase legend text size
+            axis.title.x = element_blank(),       #Suppress x axis since it shares it with below plot
+            axis.text.x = element_blank(),
+            legend.title = element_blank())  +    #suppress legend title
+      scale_color_manual(values = c("red", "blue")) +
+      geom_hline(yintercept = 0, aes(col = grey20)) +
+      annotate("text", x = 0, y = 500, label = "B)", size = 8) +
+      labs(y = expression(paste('Profit per cycle (USD)', sep = "")))  +
+      scale_y_continuous(limits = c(-550, 550),
+                         breaks = seq(-500, 500, 250)) +
+      scale_x_continuous(limits = c(0, 8),
+                         breaks = c(0, 2, 4, 6, 8))  
+
+
+  eum_time2 = eum_sims_all_sum %>% 
+    ggplot(aes(x = P_nought/1000, y = Harvest_time_med, col = Species)) +
+      geom_line(size = 1.25) +
+      geom_ribbon(aes(x = P_nought/1000, ymin = Harvest_time_loq, ymax = Harvest_time_upq, fill = Species), alpha = 0.3, size = 0) +
+      theme_bw() +
+      theme(legend.position = 'none',    
+            axis.text = element_text(size = 15),  #increase axis label size
+            axis.title = element_text(size = 18), #increase axis title size
+            axis.title.x = element_blank(),       #Suppress x axis since it shares it with below plot
+            axis.text.x = element_blank(),
+            legend.text = element_text(size = 12),#increase legend text size
+            legend.title = element_blank())  +    #suppress legend title
+      annotate("text", x = 0, y = 365, label = "B)", size = 8) +
+      scale_color_manual(values = c("red", "blue")) +
+      labs(expression(paste('Harvest time, ', T[opt]^sp, ' (days)', sep = "")))  +
+      scale_y_continuous(limits = c(0, 365),
+                         breaks = c(0,60,120,180,240,300,365)) +
+      scale_x_continuous(limits = c(0, 8),
+                         breaks = c(0, 2, 4, 6, 8))  
+
+  eum_harvests2 = eum_sims_all_sum %>% 
+    ggplot(aes(x = P_nought/1000, y = n_harvest_med, col = Species)) +
+      geom_line(size = 1.25) +
+      geom_ribbon(aes(x = P_nought/1000, ymin = n_harvest_loq, ymax = n_harvest_upq, fill = Species), alpha = 0.3, size = 0) +
+      theme_bw() +
+      theme(legend.position = 'none',        #place legend inside plot
+            axis.text = element_text(size = 15),  #increase axis label size
+            axis.title = element_text(size = 18), #increase axis title size
+            legend.text = element_text(size = 12),#increase legend text size
+            legend.title = element_blank())  +    #suppress legend title
+      annotate("text", x = 0, y = 23, label = "C)", size = 8) +
+      scale_color_manual(values = c("red", "blue")) +
+      labs(x = expression(paste('Stocking density, ', P[0],' (', Pm^-2, ")", sep = "")), 
+           y = "Harvests per 10 years")  +
+      scale_y_continuous(limits = c(0, 25),
+                         breaks = seq(0,25,5),
+                         labels = paste("    ", seq(0,25,5))) +
+      scale_x_continuous(limits = c(0, 8),
+                         breaks = c(0, 2, 4, 6, 8))  
+
+  eum_crv2
+  
+  multiplot(eum_crv2, prf_crv2, eum_harvests2, layout = eum.layout)
+  
+```
+
+```{r save_Fig3_with_uncertainty, include = FALSE}
+png("Figures/eum_curve_3panel_uncertainty.png",
+    height = 10, width = 8, units = "in",
+    res = 300)
+
+  multiplot(eum_crv2, prf_crv2, eum_harvests2, layout = eum.layout)
+
+dev.off()  
+```
+
+
+```{r save_eum_crv, include = FALSE}
+eum_sims_all_sum %>% 
+    ggplot(aes(x = P_nought/1000, y = cum_Profit_Med/1000, col = Species)) + 
+      geom_line(size = 1.25) +
+      geom_ribbon(aes(x = P_nought/1000, ymin = cum_Profit_loq/1000, ymax = cum_Profit_upq/1000, fill = Species), alpha = 0.3, size = 0) +
+      theme_bw() +
+      theme(legend.position = c(0.2, 0.10),        #place legend inside plot
+            legend.background = element_rect(fill = "transparent"),
+            axis.text = element_text(size = 15),  #increase axis label size
+            axis.title = element_text(size = 18), #increase axis title size
+            legend.text = element_text(size = 12),#increase legend text size
+            axis.title.x = element_blank(),       #Suppress x axis since it shares it with below plot
+            axis.text.x = element_blank(),
+            legend.title = element_blank())  +    #suppress legend title
+      scale_color_manual(values = c("red", "blue")) +
+      geom_hline(yintercept = 0, aes(col = grey20)) +
+      annotate("text", x = 0, y = 12.5, label = "A)", size = 8) +
+      labs(y = expression(paste('10-Year Profits', ' (1000s USD)', sep = "")))  +
+      scale_y_continuous(limits = c(-3000, 12750)/1000,
+                         breaks = seq(-2.500, 12.500, 2.500),
+                         labels = paste("", seq(-2.500, 12.500, 2.500))) +
+      scale_x_continuous(limits = c(0, 8),
+                         breaks = c(0, 2, 4, 6, 8))
+
+ggsave("Figures/eum_curve_uncertainty.png",
+       height = 4, width = 8, units = "in")
+```
+
+# Optimal management tables  
+
+Also want a table showing set of parameters and outputs from optimal management. Two approaches here: can either consider the peak *median* cumulative profits from simulations across stocking densities and times as optimal management and draw uncertainty from those simulations, or identify optimal management from parameter point estimates, then estimate uncertainty from LHC parameter sets at that stocking density. Estimates from the latter are reported in the manuscript, but there's not a huge difference between the two.
+
+```{r op_mgmt_table, cache = TRUE}
+#Function to return summary of a vector as median (IQR)
+get_sum <- function(vec){
+  paste0(round(median(vec), 2), 
+         " (", round(quantile(vec, 0.25), 2), 
+         " - ", round(quantile(vec, 0.75), 2), ")"  )
+} 
+
+  #Get optimal stocking parameters considering uncertainty for vollenhovenii
+    opt.vol.unc <- eum_sims_vol %>% 
+      group_by(P_nought) %>% 
+      summarise(Cum_profit_med = median(cum_profits),
+                harvest_time_sum = get_sum(time),
+                harvest_mass_sum = get_sum(harvest_mass),
+                harvest_length_sum = get_sum(L),
+                harvest_number_sum = get_sum(P),
+                profit_cycle_sum = get_sum(profit),
+                roi_sum = get_sum(roi),
+                n_harvest_sum = get_sum(n_harvest),
+                cum_profit_sum = get_sum(cum_profits)) %>% 
+      filter(Cum_profit_med == max(Cum_profit_med))
+    
+    knitr::kable(t(opt.vol.unc), caption = "Estimates of M. vollenhovenii optimal management (uncertainty during optimization)")
+
+  #Get optimal stocking parameters considering uncertainty for rosenbergii
+    opt.ros.unc <- eum_sims_ros %>% 
+      group_by(P_nought) %>% 
+      summarise(Cum_profit_med = median(cum_profits),
+                harvest_time_sum = get_sum(time),
+                harvest_mass_sum = get_sum(harvest_mass),
+                harvest_length_sum = get_sum(L),
+                harvest_number_sum = get_sum(P),
+                profit_cycle_sum = get_sum(profit),
+                roi_sum = get_sum(roi),
+                n_harvest_sum = get_sum(n_harvest),
+                cum_profit_sum = get_sum(cum_profits)) %>% 
+      filter(Cum_profit_med == max(Cum_profit_med))
+    
+    knitr::kable(t(opt.ros.unc), caption = "Estimates of M. rosenbergii optimal management (uncertainty during optimization)")
+
+  vol_op_mgmt <- expand.grid.df(lhcpars.aqua, expand.grid(L_nought = opt.vol$L_nought, P_nought = opt.vol$P_nought)) %>% 
+    bind_cols(pmap_df(., sim_aqua_eum, species = "M. vollenhovenii")) %>% group_by(P_nought, L_nought) %>% 
+    summarise(harvest_time_med = get_sum(time),
+              harvest_mass_med = get_sum(harvest_mass),
+              harvest_length_med = get_sum(L),
+              harvest_number_med = get_sum(P),
+              profit_cycle_med = get_sum(profit),
+              roi_med = get_sum(roi),
+              n_harvest_med = get_sum(n_harvest),
+              cum_profit_med = get_sum(cum_profits))
+
+  knitr::kable(t(vol_op_mgmt), caption = "Estimates of M. vollenhovenii optimal management (parametric uncertainty)")
+
+  ros_op_mgmt <- expand.grid.df(lhcpars.aqua, expand.grid(L_nought = opt.ros$L_nought, P_nought = opt.ros$P_nought)) %>% 
+    bind_cols(pmap_df(., sim_aqua_eum, species = "M. rosenbergii")) %>% group_by(P_nought, L_nought) %>% 
+    summarise(harvest_time_med = get_sum(time),
+              harvest_mass_med = get_sum(harvest_mass),
+              harvest_length_med = get_sum(L),
+              harvest_number_med = get_sum(P),
+              profit_cycle_med = get_sum(profit),
+              roi_med = get_sum(roi),
+              n_harvest_med = get_sum(n_harvest),
+              cum_profit_med = get_sum(cum_profits))
+
+  knitr::kable(t(ros_op_mgmt), caption = "Estimates of M. rosenbergii optimal management (parametric uncertainty)")
+```

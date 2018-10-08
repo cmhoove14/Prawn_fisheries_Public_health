@@ -1,0 +1,825 @@
+---
+title: "Sensitivity analyses"
+author: "Chris Hoover"
+date: "October 4, 2018"
+output: 
+  pdf_document:
+    toc: TRUE
+    toc_depth: 3
+geometry: margin = 0.5in    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+require(deSolve)
+require(sensitivity)
+require(parallel)
+require(kableExtra)
+require(broom)
+require(directlabels)
+require(tidyverse)
+
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+    library(grid)
+    
+    # Make a list from the ... arguments and plotlist
+    plots <- c(list(...), plotlist)
+    
+    numPlots = length(plots)
+    
+    # If layout is NULL, then use 'cols' to determine layout
+    if (is.null(layout)) {
+      # Make the panel
+      # ncol: Number of columns of plots
+      # nrow: Number of rows needed, calculated from # of cols
+      layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                       ncol = cols, nrow = ceiling(numPlots/cols))
+    }
+    
+    if (numPlots==1) {
+      print(plots[[1]])
+      
+    } else {
+      # Set up the page
+      grid.newpage()
+      pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+      
+      # Make each plot, in the correct location
+      for (i in 1:numPlots) {
+        # Get the i,j matrix positions of the regions that contain this subplot
+        matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+        
+        print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                        layout.pos.col = matchidx$col))
+      }
+    }
+  }
+
+#Function from stack overflow (https://stackoverflow.com/questions/11693599/alternative-to-expand-grid-for-data-frames)  
+  expand.grid.df <- function(...) Reduce(function(...) merge(..., by=NULL), list(...))
+
+# Number of years to simulate
+  years = 10
+
+```
+
+# Specific analyses  
+## Prawn aquaculture model mortality rate and fixed costs  
+Two key assumptions may affect the results of the prawn aquaculture model: the lack of fixed costs in the profit calculation and the mortality rate of prawns. Efforts to capture prawns after stocking at low densities in ongoing field trials in Senegal failed to recover any of the stocked prawns which could be due to the low densities, chance, higher than expected mortality, or escape from the enclosures. To address concerns with higher mortality (or escape from enclosures which would have the same effect on schisto outcomes) we simulate the model with mortality rates up to ten times higher than those in the base simulations. To address concerns associated with fixed costs that may be incurred due to hatchery costs or fees beyond the cost of purchasing juvenile prawns, transportation costs, labor costs, etc. we simulate the model with a range of fixed costs. The goal of these analyses is to assess thresholds for profitability associated with these key parameters.  
+
+### Influence of fixed costs  
+```{r prawn_cost_sens, include = FALSE, cache = TRUE}
+source('../R/Prawn_aquaculture/prawn_aquaculture_mod.R')
+source('../R/Prawn_aquaculture/prawn_aquaculture_sim.R')
+source("../Data/aquaculture_parameters.R")
+source("../Data/Ranjeet_Kurup_06_data.R")
+
+  eta.lm = lm(marketable ~ dens, data = rk06)
+
+  test_starts <- expand.grid(L_nought = 40, P_nought = seq(500, 7500, 100))
+
+# Simulate over a range of fixed costs and stocking densities to find threshold of fixed cost necessary for profitability 
+  par.aqua.fc <- par.aqua
+    par.aqua.fc["c"] = cost
+    par.aqua.fc["fc"] = 0
+    par.aqua.fc["p"] = price
+    par.aqua.fc["delta"] = delta
+    
+#Data frame with all combinations of base parameter set and fixed costs from 0-1000 and test stocking densities    
+  cost_sim <- expand.grid.df(as.data.frame(t(par.aqua.fc)) %>% 
+                             slice(rep(1:n(), each = 101)) %>% 
+                             mutate(fc = seq(0,1000,10)), 
+                             test_starts) #test starts contains test stocking densities
+  
+  cost_sims_vol <- cost_sim %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. vollenhovenii"))
+  cost_sims_ros <- cost_sim %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. rosenbergii"))
+  
+```
+
+```{r prawn_cost_plot, echo = FALSE, fig.height=10, fig.width=8}
+cost_sims_vol %>% bind_rows(., cost_sims_ros) %>% 
+  ggplot(aes(x = P_nought, y = fc, fill = cum_profits)) + 
+    geom_tile() +
+    scale_fill_distiller(palette = "Spectral", direction = 1) +
+    scale_x_continuous(limits = range(cost_sim$P_nought)) +
+    scale_y_continuous(limits = range(cost_sim$fc)) +
+    labs(y = "Fixed costs (USD)",
+         x = expression(paste('Stocking density, ', P[0],' (', Pm^-2, ")", sep = ""))) +
+    facet_wrap( ~ Species, nrow = 2) +
+    theme_bw() + 
+    theme(axis.ticks=element_blank(), 
+          axis.text=element_text(size=12), 
+          axis.title=element_text(size=14),
+          legend.title=element_text(size=15), 
+          legend.text=element_text(size=12)) +
+    guides(fill=guide_legend(title="Cumulative \nProfits"))
+
+
+```
+
+```{r prawn_cost_plot2, echo = FALSE, fig.height=10, fig.width=8}
+cost_sims_vol %>% bind_rows(., cost_sims_ros) %>% 
+  ggplot(aes(x = P_nought, y = cum_profits, col = as.factor(fc))) + geom_line(size = 1.2) +
+    theme_bw() + facet_wrap( ~ Species, nrow = 2) +
+    theme(axis.text = element_text(size = 12),  #increase axis label size
+          axis.title = element_text(size = 14),
+          strip.text = element_text(size = 14)) + 
+    labs(x = expression(paste('Stocking density, ', P[0],' (', Pm^-2, ")", sep = "")),
+         y = '10-Year Profits (USD)') +
+    #scale_color_gradient(low = "darkolivegreen1", high = "darkgreen") +
+    guides(color=guide_legend(title="Fixed \nCosts"))
+
+```
+
+### Influence of mortality rate  
+```{r prawn_mort_sens, include = FALSE, cache = TRUE}
+# Simulate over a range of mortality rates and stocking densities to find threshold of fixed cost necessary for profitability 
+  par.aqua.muP <- par.aqua
+    par.aqua.muP["c"] = cost
+    par.aqua.muP["fc"] = 0
+    par.aqua.muP["p"] = price
+    par.aqua.muP["delta"] = delta
+    
+  mort_sim <- expand.grid.df(as.data.frame(t(par.aqua.fc)) %>% 
+                             slice(rep(1:n(), each = 100)) %>% 
+                             mutate(muP = seq(par.aqua["muP"], par.aqua["muP"]*10,length.out = 100)), 
+                             test_starts) #test starts contains test stocking densities
+  
+  mort_sims_vol <- mort_sim %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. vollenhovenii"))
+  mort_sims_ros <- mort_sim %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. rosenbergii"))
+  
+```
+
+```{r prawn_mort_plot, echo = FALSE, fig.height=10, fig.width=8}
+mort_sims_vol %>% bind_rows(., mort_sims_ros) %>%   
+  ggplot(aes(x = P_nought, y = muP, fill = cum_profits)) + 
+    geom_tile() + #coord_equal() + 
+    scale_fill_distiller(palette = "Spectral", direction = 1) +
+    scale_x_continuous(limits = range(mort_sim$P_nought)) +
+    scale_y_continuous(limits = range(mort_sim$muP)) +
+    labs(y = expression(paste("Mortality rate, ", mu[P], sep = "")),
+         x = expression(paste('Stocking density, ', P[0],' (', Pm^-2, ")", sep = ""))) +
+    facet_wrap( ~ Species, nrow = 2) +
+    theme_bw() + 
+    theme(axis.ticks=element_blank(), 
+          axis.text=element_text(size=12), 
+          axis.title=element_text(size=14),
+          legend.title=element_text(size=15), 
+          legend.text=element_text(size=12)) +
+    guides(fill=guide_legend(title="Cumulative \nProfits"))
+
+```
+
+```{r prawn_mort_plot2, echo = FALSE, fig.height=10, fig.width=8}
+mort_sims_vol %>% bind_rows(., mort_sims_ros) %>% 
+  ggplot(aes(x = P_nought, y = cum_profits, col = as.factor(round(muP, 4)))) + geom_line(size = 1.2) +
+    theme_bw() + facet_wrap( ~ Species, nrow = 2) +
+    theme(axis.text = element_text(size = 12),  #increase axis label size
+          axis.title = element_text(size = 14),
+          strip.text = element_text(size = 14)) + 
+    labs(x = expression(paste('Stocking density, ', P[0],' (', Pm^-2, ")", sep = "")),
+         y = '10-Year Profits (USD)') +
+    ylim(c(-5000, 10000)) +
+    #scale_color_gradient(low = "bisque", high = "darkred") +
+    guides(color=guide_legend(title="Mortality \nRate"))
+
+
+```
+
+## Snail migration and Holling's functional response  
+Two key structural modeling decisions are the inclusion of snail migration and the Holling's type III functional response which introduces a sigmoid-shaped curve relating snail (prey) density to prawn (predator) per capita predation. This causes the consumption of snails to drop off at low densities which "rescues" the snail population from extinction. Migration from a hypothetical source population that is not affected by local (prawn and MDA) interventions may also prevent snail extinction and will certainly lead to quicker reestablishment of the snail population once an intervention has stopped. Therefore we'll compare 4 model runs using the **M. rosenbergii** intervention:  
++ Holling's type III functional response and snail migration (main results reported in the manuscript)  
++ Holling's type III functional response and no snail migration  
++ Holling's type II functional response and snail migration
++ Holling's type II functional response and no snail migration  
+
+### Holling's III and snail migration  
+```{r load_epi_sims}
+qwraps2::lazyload_cache_labels("snail_prep", path = "Epi_simulations_cache/latex/")
+qwraps2::lazyload_cache_labels("ros_sim", path = "Epi_simulations_cache/latex/")
+```
+
+
+```{r ros_sim_mig, fig.height=4, fig.width=8, echo = FALSE}
+# Plot worm burden over time with rosenbergii stocking events  ###########
+  w.ros = sim.ros %>% dplyr::select(time, W, Wt, Wu) %>% 
+    gather("pop", "burden", W:Wu) %>% 
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
+            theme_bw() +
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 15), #increase axis title size
+                  axis.title.x=element_blank(),         #Suppress x axis
+                  axis.text.x=element_blank(),          #Suppress x axis
+                  title = element_text(size = 15)) +    #increase title size
+            geom_line(col = 'purple') +
+            labs(x = 'time (years)', y = expression(italic('W'))) +
+            annotate('text', x = 365, y = 80, label = 'D)', size = 8) +
+            scale_y_continuous(breaks = seq(0,80,10),
+                               labels = paste("  ", seq(0,80,10)),
+                               limits = c(0, 85)) +
+            geom_vline(xintercept = 365*(years+1), lty = 2) +
+            scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                               labels = seq(365, 365*(years*2+1), 365*5)/365-1) +
+            ggtitle("Mean worm burden over time, prawn intervention",
+                    subtitle = "M. rosenbergii")
+  
+#  Plot snail infection dynamics over time with rosenbergii stocking events  ########
+snail.ros = sim.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
+  gather("class", "density", S.t:N.t) %>% 
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    title = element_text(size = 15))  +   #increase title size
+              geom_line(size = 1.25) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'C)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = seq(0,50,10),
+                                 limits = c(-0.1, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2) +
+              scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                                 labels = seq(365, 365*(years*2+1), 365*5)/365-1)  +
+              ggtitle("Snail infection dynamics over time, prawn intervention",
+                      subtitle = "M. rosenbergii - Holling's III, migration")
+  
+  snail.ros
+```
+
+```{r ros_sim_nomig, fig.height=4, fig.width=8, echo = FALSE, cache = TRUE}
+# Simulate M. rosenbergii stocking for n years ########
+sim.ros.nomig = prawn_sim(t.runup = c(1:366), 
+                          t.intervene = c(366:((years+1)*365)), 
+                          t.post = c(((years+1)*365):((years*2+1)*365)),
+                          nstart = nstart,
+                          parameters = par.all.ros.nomig, 
+                          stock.events = stocks.ros)
+
+# Plot worm burden over time with rosenbergii stocking events  ###########
+  w.ros.nomig = sim.ros.nomig %>% dplyr::select(time, W, Wt, Wu) %>% 
+    gather("pop", "burden", W:Wu) %>% 
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
+            theme_bw() +
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 15), #increase axis title size
+                  axis.title.x=element_blank(),         #Suppress x axis
+                  axis.text.x=element_blank(),          #Suppress x axis
+                  title = element_text(size = 15)) +    #increase title size
+            geom_line(col = 'purple') +
+            labs(x = 'time (years)', y = expression(italic('W'))) +
+            annotate('text', x = 365, y = 60, label = 'D)', size = 8) +
+            scale_y_continuous(breaks = seq(0,80,10),
+                               labels = paste("  ", seq(0,80,10)),
+                               limits = c(0, 85)) +
+            geom_vline(xintercept = 365*(years+1), lty = 2) +
+            scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                               labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
+  
+# Plot snail infection dynamics over time with rosenbergii stocking events and no migration ########
+snail.ros.nomig = sim.ros.nomig %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
+  gather("class", "density", S.t:N.t) %>% 
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    title = element_text(size = 15))  +   #increase title size
+              geom_line(size = 1.25) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'C)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = seq(0,50,10),
+                                 limits = c(-0.1, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2) +
+              scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                                 labels = seq(365, 365*(years*2+1), 365*5)/365-1)   +
+              ggtitle("Snail infection dynamics over time, prawn intervention",
+                      subtitle = "M. rosenbergii - Holling's III, no migration")
+
+snail.ros.nomig    
+```
+
+```{r ros_sim_hollings2, fig.height=4, fig.width=8, echo = FALSE, cache = TRUE}
+par.all.ros.h2 <- par.all.ros
+  par.all.ros.h2["nfr"] <- 1
+
+  sim.ros.h2 = prawn_sim(t.runup = c(1:366), 
+                          t.intervene = c(366:((years+1)*365)), 
+                          t.post = c(((years+1)*365):((years*2+1)*365)),
+                          nstart = nstart,
+                          parameters = par.all.ros.h2, 
+                          stock.events = stocks.ros)
+
+# Plot worm burden over time with rosenbergii stocking events and mda events #######
+w.ros.h2 = sim.ros.h2 %>% dplyr::select(time, W, Wt, Wu) %>% 
+    gather("pop", "burden", W:Wu) %>% 
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
+            theme_bw() +
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 15), #increase axis title size
+                  axis.title.x=element_blank(),         #Suppress x axis
+                  axis.text.x=element_blank(),          #Suppress x axis
+                  title = element_text(size = 15)) +    #increase title size
+            geom_line(col = 'purple') +
+            labs(x = 'time (years)', y = expression(italic('W'))) +
+            annotate('text', x = 365, y = 60, label = 'E)', size = 8) +
+            scale_y_continuous(breaks = seq(0,80,10),
+                               labels = paste("  ", seq(0,80,10)),
+                               limits = c(0, 85)) +
+            geom_vline(xintercept = 365*(years+1), lty = 2)
+            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+            #                   labels = c(-1:years),
+            #                   limits = c(0, (365*(years+1)+10)))
+  
+# snail infection dynamics over time with rosenbergii stocking events and mda events #####
+snail.ros.h2 = sim.ros.h2 %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
+  gather("class", "density", S.t:N.t) %>% 
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    axis.title.x=element_blank(),         #Suppress x axis
+                    axis.text.x=element_blank(),          #Suppress x axis
+                    title = element_text(size = 15))  +   #increase title size
+              geom_line(size = 1.25) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'F)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = seq(0,50,10),
+                                 limits = c(-0.1, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2) +
+              ggtitle("Snail infection dynamics over time, prawn intervention",
+                      subtitle = "M. rosenbergii - Holling's II, migration")
+             # scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+             #                   labels = c(-1:years),
+             #                   limits = c(0, (365*(years+1)+10))) 
+  
+  snail.ros.h2
+  
+```
+
+```{r ros_sim_hollings2_nomig, fig.height=4, fig.width=8, echo = FALSE, cache = TRUE}
+par.all.ros.nomig.h2 <- par.all.ros.nomig
+  par.all.ros.nomig.h2["nfr"] <- 1
+
+  sim.ros.nomig.h2 = prawn_sim(t.runup = c(1:366), 
+                                    t.intervene = c(366:((years+1)*365)), 
+                                    t.post = c(((years+1)*365):((years*2+1)*365)),
+                                    nstart = nstart,
+                                    parameters = par.all.ros.nomig.h2, 
+                                    stock.events = stocks.ros)
+
+# Plot worm burden over time with rosenbergii stocking events and mda events #######
+w.ros.nomig.h2 = sim.ros.nomig.h2 %>% dplyr::select(time, W, Wt, Wu) %>% 
+    gather("pop", "burden", W:Wu) %>% 
+    mutate(Population = case_when(pop == "W" ~ "Mean", 
+                                  pop == "Wt" ~ "Treated", 
+                                  pop == "Wu" ~ "Untreated")) %>% 
+    ggplot(aes(x = time, y = burden, lty = Population)) +
+            theme_bw() +
+            theme(legend.position = "none",
+                  axis.text = element_text(size = 12),  #increase axis label size
+                  axis.title = element_text(size = 15), #increase axis title size
+                  axis.title.x=element_blank(),         #Suppress x axis
+                  axis.text.x=element_blank(),          #Suppress x axis
+                  title = element_text(size = 15)) +    #increase title size
+            geom_line(col = 'purple') +
+            labs(x = 'time (years)', y = expression(italic('W'))) +
+            annotate('text', x = 365, y = 60, label = 'E)', size = 8) +
+            scale_y_continuous(breaks = seq(0,80,10),
+                               labels = paste("  ", seq(0,80,10)),
+                               limits = c(0, 85)) +
+            geom_vline(xintercept = 365*(years+1), lty = 2)
+            #scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+            #                   labels = c(-1:years),
+            #                   limits = c(0, (365*(years+1)+10)))
+  
+# snail infection dynamics over time with rosenbergii stocking events and mda events #####
+snail.ros.nomig.h2 = sim.ros.nomig.h2 %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>% 
+  gather("class", "density", S.t:N.t) %>% 
+  mutate(Infection = case_when(class == "N.t" ~ "Total",
+                               class == "S.t" ~ "Susceptible",
+                               class == "E.t" ~ "Exposed",
+                               class == "I.t" ~ "Infected")) %>% 
+  mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
+  ggplot(aes(x = time, y = density, col = Infection)) +
+              theme_bw() +
+              theme(legend.position = "none",
+                    axis.text = element_text(size = 12),  #increase axis label size
+                    axis.title = element_text(size = 15), #increase axis title size
+                    axis.title.x=element_blank(),         #Suppress x axis
+                    axis.text.x=element_blank(),          #Suppress x axis
+                    title = element_text(size = 15))  +   #increase title size
+              geom_line(size = 1.25) +
+              scale_color_manual(values = c("Total"="black", 
+                                            "Susceptible"="green", 
+                                            "Exposed"="orange", 
+                                            "Infected"="red")) +
+              annotate('text', x = 365, y = 50, label = 'F)', size = 8) +
+              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              scale_y_continuous(breaks = seq(0,50,10),
+                                 labels = seq(0,50,10),
+                                 limits = c(-0.1, 51)) +
+              geom_vline(xintercept = 365*(years+1), lty = 2) +
+              ggtitle("Snail infection dynamics over time, prawn intervention",
+                      subtitle = "M. rosenbergii - Holling's II, no migration")
+             # scale_x_continuous(breaks = seq(0, 365*(years+1), 365),
+             #                   labels = c(-1:years),
+             #                   limits = c(0, (365*(years+1)+10))) 
+  
+  snail.ros.nomig.h2
+  
+
+```
+
+
+# Global sensitivity analysis with Latin Hypercube Sampling and Partial Rank Correlation Coefficients (LHS-PRCC)  
+## Prawn aquaculture model  
+Assess sensitivity of cumulative profits in prawn aquculture model simulations to parametric uncertainty  
+#### Monotinicity of cumulative profits to parameter uncertainty  
+```{r prawn_monotinicity, echo=FALSE, fig.height=10.5, fig.width=8}
+qwraps2::lazyload_cache_labels("Fig3_sensitivity", 
+                               "Prawn_Aquaculture_Profit_Maximization_cache/latex/")
+#Use simulations over parameter sets from above
+eum_sims_ros %>% filter(P_nought == 2500) %>% select(-fc) %>% 
+  gather("parameter", "value", a.p:delta) %>% 
+  ggplot(aes(x = value, y = cum_profits)) + 
+    theme_bw() + labs(y = "Ten-year Cumulative profit (USD)") +
+    geom_point(size = 0.5) +
+    facet_wrap( ~ parameter, scales = "free_x", nrow = 6) +
+    stat_smooth(method = "loess")
+```
+
+#### PRCC plot of cumulative profits to relevant parameters  
+```{r prawn_prcc, echo = FALSE, fig.height=5, fig.width=8}
+# cumulative profit sensitivity  
+profit.pcc = pcc(X = lhcpars.aqua %>% select(-fc),
+                 y = as.data.frame(eum_sims_ros %>% filter(P_nought == 2500) %>% pull(cum_profits)/1000),
+                 rank = TRUE)
+
+profit.pcc.df = profit.pcc$PRCC %>% 
+  mutate(cor = cor(lhcpars.aqua %>% select(-fc), 
+                   eum_sims_ros %>% filter(P_nought == 2500) %>% pull(cum_profits)/1000)[,1],
+         var = c(colnames(lhcpars.aqua %>% select(-fc)))) %>% 
+  filter(var != "k")
+
+ggplot(profit.pcc.df, aes(x = cor, y = original, label = var)) + 
+  geom_point(pch = 16) + theme_bw() +
+  geom_text(aes(label = var), hjust = -0.5, vjust = -0.5) +
+  labs(x = "Correlation coefficient",
+       y = "PRCC",
+       main = "Relationship between correlation coefficient and PRCC")
+
+profit.lhsprcc = ggplot(profit.pcc.df, aes(x = var, y = original)) +
+  theme_bw()+
+  theme(axis.text = element_text(size = 12),  #increase axis label size
+        axis.title = element_text(size = 15), #increase axis title size
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank()) + 
+  scale_y_continuous(limits = c(-0.7,0.7), breaks = seq(-0.7, 0.7, 0.2))+
+  scale_x_discrete(labels = c("a.p" = expression(italic(a[P])),
+                              "b.p" = expression(italic(b[P])),
+                              "c" = expression(italic(c)),
+                              "d" = expression(italic(d)),
+                              "delta" = expression(italic(delta)),
+                              "eta" = expression(italic(zeta)),
+                              "gam" = expression(italic(gamma)),
+                              "k.ros" = expression(italic(k)),
+                              "linf" = expression(italic(L[infinity])),
+                              "muP" = expression(italic(mu[P])),
+                              "om" = expression(italic(omega)),
+                              "p" = expression(italic(p)))) +
+  geom_bar(fill = 'darkgreen', stat = 'identity', width = 0.25)+
+  geom_hline(yintercept = 0, lty = 2)+
+  annotate('text', x = 11, y = -0.6, label = 'B)', size = 8) +
+  labs(x = 'Parameter', 
+       y = "Ten-year Cumulative profit PRCC") + coord_flip()
+
+profit.lhsprcc
+
+```
+
+## Snail epi model  
+Assess sensitivity of cumulative sum of worm burden and cumulative infected snail density in schisto epi model simulations to parametric uncertainty  
+```{r snail_epi_sens_sims, echo = FALSE, cache = TRUE}
+source("../R/Epi_Model/snail_epi_sim.R")
+
+# Get epi parameters from LHC
+  lhcpars.epi = lhcpars[,which(colnames(lhcpars) %in% c(names(par.snails.imm)))]
+  
+#Augment function to continue over errors
+  possibly_sim_epi_mod <- possibly(sim_epi_mod, 
+                                   otherwise = data.frame(W = NA, S.t = NA, E.t = NA, I.t = NA, N.t = NA), 
+                                   quiet = TRUE)
+  
+  epi_sens_sims <- lhcpars.epi %>% 
+    mutate(xi = 0) %>% 
+    rowwise %>% do(pars = unlist(.)) %>% 
+    bind_cols(pmap_df(., possibly_sim_epi_mod)) %>% select(-pars) %>% 
+    bind_cols(., lhcpars.epi)
+  
+#  summary(epi_sens_sims$W)
+#  summary(epi_sens_sims$N.t)
+
+```
+
+#### Monotinicity of cumulative worm burden and infected snail density to parameter uncertainty  
+```{r epi_monotinicity, echo=FALSE, fig.height=10.5, fig.width=8}  
+#Use simulations over parameter sets from above
+epi_sens_sims %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr)) %>% 
+  gather("parameter", "value", f:muH) %>% 
+  ggplot(aes(x = value, y = W)) + 
+    theme_bw() + labs(y = "Mean Worm Burden (W)") +
+    geom_point(size = 0.5) +
+    facet_wrap( ~ parameter, scales = "free_x", nrow = 6) +
+    stat_smooth(method = "loess") +
+    ggtitle("Scatter plots of cumulative mean worm burden to key parameters")
+
+epi_sens_sims %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr)) %>% 
+  gather("parameter", "value", f:muH) %>% 
+  ggplot(aes(x = value, y = N.t)) + 
+    theme_bw() + labs(y = "Total snail density (N)") +
+    geom_point(size = 0.5) +
+    facet_wrap( ~ parameter, scales = "free_x", nrow = 6) +
+    stat_smooth(method = "loess") +
+    ggtitle("Scatter plots of cumulative infected snail density to key parameters")
+
+
+```
+
+#### PRCC plot of cumulative worm burden and infected snail density to relevant parameters  
+```{r epi_prcc, echo = FALSE, fig.height=5, fig.width=8}
+# Epi worm burden sensitivity   #############
+epi.W.pcc = pcc(X = lhcpars.epi %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr)),
+                y = as.data.frame(epi_sens_sims %>% pull(W)),
+                rank = TRUE)
+
+epi.W.pcc.df = epi.W.pcc$PRCC %>% 
+  mutate(cor = cor(lhcpars.epi %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr)), 
+                   epi_sens_sims %>% pull(W)),
+         var = colnames(lhcpars.epi %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr))),
+         outcome = "W")
+
+# Epi snail density sensitivity   #############
+epi.N.pcc = pcc(X = lhcpars.epi %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr)),
+                y = as.data.frame(epi_sens_sims %>% pull(N.t)),
+                rank = TRUE)
+
+epi.N.pcc.df = epi.N.pcc$PRCC %>% 
+  mutate(cor = cor(lhcpars.epi %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr)), 
+                   epi_sens_sims %>% pull(N.t))[,1],
+         var = colnames(lhcpars.epi %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr))),
+         outcome = "N")
+
+# Correlation plots #######
+ggplot(epi.W.pcc.df, aes(x = cor, y = original, label = var)) + 
+  geom_point(pch = 16) + theme_bw() +
+  geom_text(aes(label = var), hjust = -0.5, vjust = -0.5) +
+  labs(x = "Correlation coefficient",
+       y = "PRCC",
+       main = "Relationship between worm burden correlation coefficient and PRCC")
+
+
+ggplot(epi.N.pcc.df, aes(x = cor, y = original, label = var)) + 
+  geom_point(pch = 16) + theme_bw() +
+  geom_text(aes(label = var), hjust = -0.5, vjust = -0.5) +
+  labs(x = "Correlation coefficient",
+       y = "PRCC",
+       main = "Relationship between infected snail density correlation coefficient and PRCC")
+
+
+# PRCC plot #######
+epi.lhsprcc <- epi.W.pcc.df %>% bind_rows(., epi.N.pcc.df) %>% 
+  ggplot(aes(x = var, y = original, fill = outcome)) +
+    theme_bw() + 
+    theme(axis.text = element_text(size = 12),  #increase axis label size
+          axis.title = element_text(size = 15), #increase axis title size
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank(),
+          legend.position = "none") + 
+    scale_y_continuous(limits = c(-0.7,0.7), breaks = seq(-0.7, 0.7, 0.2))+
+    scale_x_discrete(labels = c("beta" = expression(italic(beta)),
+                                "f" = expression(italic(f)),
+                                "g1" = expression(g[1]),
+                                "g2" = expression(italic(g[2])),
+                                "Kn" = expression(italic(K)),
+                                "lambda" = expression(italic(lambda)),
+                                "m" = expression(italic(m)),
+                                "muH" = expression(italic(mu[H])),
+                                "muI" = expression(italic(mu[I])),
+                                "muN1" = expression(italic(mu[N1])),
+                                "muN2" = expression(italic(mu[N2])),
+                                "muN3" = expression(italic(mu[N3])),
+                                "muW" = expression(italic(mu[W])),
+                                "phi" = expression(italic(Phi)),
+                                "sigma" = expression(italic(sigma)),
+                                "theta1" = expression(italic(theta[1])),
+                                "theta2" = expression(italic(theta[2])),
+                                "z" = expression(italic(z)))) +
+    geom_bar(stat = 'identity', width = 0.5, position = position_dodge()) +
+    scale_fill_manual(values = c("N" = "black", "W" = "purple")) +
+    annotate('text', x = 18, y = -0.6, label = "C)", size = 8)  +
+    geom_hline(yintercept = 0, lty = 2) +
+    labs(x = 'Parameter', y = 'Epi Model Outcomes PRCC') + coord_flip()
+
+epi.lhsprcc
+
+```
+
+
+## Integrated model with interventions  
+Assess sensitivity of cumulative sum of worm burden and cumulative infected snail density in integrated aquaculture-epi model simulations to parametric uncertainty  
+
+```{r combined_sens_sims, echo = FALSE, cache = TRUE}
+source("../R/Combined_Model/epi_no_diag_prawn_sim.R")
+prawn_start = c("P" = opt.ros$P_nought,
+                "L" = 40)
+
+#Augment function to continue over errors
+  possibly_integrated_mod <- possibly(prawn_intervention_sim, 
+                                      otherwise = data.frame(W = NA, N.t = NA, I.t = NA), 
+                                      quiet = TRUE)
+
+  com_sens_sims <- lhcpars %>% 
+    rowwise %>% do(pars = unlist(.)) %>% 
+    bind_cols(pmap_df(., possibly_integrated_mod)) %>% select(-pars) %>% 
+    bind_cols(., lhcpars)
+  
+#  summary(com_sens_sims$W)
+#  summary(com_sens_sims$N.t)
+
+```
+
+#### Monotinicity of cumulative worm burden and infected snail density to parameter uncertainty  
+```{r combined_monotinicity, echo=FALSE, warning = FALSE, fig.height=10.5, fig.width=8}
+#Use simulations over parameter sets from above
+com_sens_sims %>% select(-c(A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)) %>% 
+  gather("parameter", "value", a.p:th) %>% 
+  ggplot(aes(x = value, y = W)) + 
+    theme_bw() + labs(y = "Mean Worm Burden (W)") +
+    geom_point(size = 0.5) +
+    facet_wrap( ~ parameter, scales = "free_x", nrow = 7) +
+    stat_smooth(method = "loess")
+
+com_sens_sims %>% select(-c(A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)) %>% 
+  gather("parameter", "value", a.p:th) %>% 
+  ggplot(aes(x = value, y = N.t)) + 
+    theme_bw() + labs(y = "Total snail density (N)") +
+    geom_point(size = 0.5) +
+    facet_wrap( ~ parameter, scales = "free_x", nrow = 7) +
+    stat_smooth(method = "loess")
+
+```
+
+```{r combined_prcc, warning = FALSE, echo = FALSE, fig.height=5, fig.width=8}
+# Combined model worm burden sensitivity   #############
+com.W.pcc = pcc(X = com_sens_sims %>% 
+                      filter(!is.na(W)) %>% 
+                      select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)),
+                y = as.data.frame(com_sens_sims %>% filter(!is.na(W)) %>% pull(W)),
+                rank = TRUE)
+
+com.W.pcc.df = com.W.pcc$PRCC %>% 
+  mutate(cor = cor(com_sens_sims %>% 
+                     filter(!is.na(W)) %>% 
+                     select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)), 
+                   com_sens_sims %>% filter(!is.na(W)) %>% pull(W)),
+         var = colnames(com_sens_sims %>% select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta))),
+         outcome = "W")
+
+# Combined model snail density sensitivity   #############
+com.N.pcc = pcc(com_sens_sims %>% 
+                      filter(!is.na(N.t)) %>% 
+                      select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)),
+                y = as.data.frame(com_sens_sims %>% filter(!is.na(N.t)) %>% pull(N.t)),
+                rank = TRUE)
+
+com.N.pcc.df = com.N.pcc$PRCC %>% 
+  mutate(cor = cor(com_sens_sims %>% 
+                      filter(!is.na(N.t)) %>% 
+                      select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)), 
+                   com_sens_sims %>% filter(!is.na(N.t)) %>% pull(N.t)),
+         var = colnames(com_sens_sims %>% select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta))),
+         outcome = "N")
+
+# Correlation plots #######
+ggplot(com.W.pcc.df, aes(x = cor, y = original, label = var)) + 
+  geom_point(pch = 16) + theme_bw() +
+  geom_text(aes(label = var), hjust = -0.5, vjust = -0.5) +
+  labs(x = "Correlation coefficient",
+       y = "PRCC",
+       main = "Relationship between worm burden correlation coefficient and PRCC")
+
+ggplot(com.N.pcc.df, aes(x = cor, y = original, label = var)) + 
+  geom_point(pch = 16) + theme_bw() +
+  geom_text(aes(label = var), hjust = -0.5, vjust = -0.5) +
+  labs(x = "Correlation coefficient",
+       y = "PRCC",
+       main = "Relationship between infected snail density correlation coefficient and PRCC")
+
+# PRCC plot #######
+com.lhsprcc <- com.W.pcc.df %>% bind_rows(., com.N.pcc.df) %>% 
+  ggplot(aes(x = var, y = original, fill = outcome)) +
+    theme_bw() + 
+    theme(axis.text = element_text(size = 12),  #increase axis label size
+          axis.title = element_text(size = 15), #increase axis title size
+          axis.title.x = element_blank(),
+          legend.position = c(0.25,0.9)) + 
+    scale_y_continuous(limits = c(-0.7,0.7), breaks = seq(-0.7, 0.7, 0.2))+
+    scale_x_discrete(labels = c("a.p" = expression(italic(a[P])),
+                                "a.s" = expression(italic(a[N])),
+                                "ar.slp" = expression(italic(alpha[m])),
+                                "b.p" = expression(italic(b[P])),
+                                "b.s" = expression(italic(b[N])),
+                                "beta" = expression(italic(beta)),
+                                "d" = expression(italic(d)),
+                                "eps" = expression(italic(epsilon)),
+                                "f" = expression(italic(f)),
+                                "g1" = expression(g[1]),
+                                "g2" = expression(italic(g[2])),
+                                "gam" = expression(italic(gamma)),
+                                "xi" = expression(italic(xi)),
+                                "k.ros" = expression(italic(k)),
+                                "Kn" = expression(italic(K)),
+                                "lambda" = expression(italic(lambda)),
+                                "linf" = expression(italic(L[infinity])),
+                                "m" = expression(italic(m)),
+                                "muH" = expression(italic(mu[H])),
+                                "muI" = expression(italic(mu[I])),
+                                "muN1" = expression(italic(mu[N1])),
+                                "muN2" = expression(italic(mu[N2])),
+                                "muN3" = expression(italic(mu[N3])),
+                                "muP" = expression(italic(mu[P])),
+                                "muW" = expression(italic(mu[W])),
+                                "nfr" = expression(italic(n)),
+                                "om" = expression(italic(omega)),
+                                "phi" = expression(italic(Phi)),
+                                "sigma" = expression(italic(sigma)),
+                                "th" = expression(italic(T[h[m]])),
+                                "theta1" = expression(italic(theta[1])),
+                                "theta2" = expression(italic(theta[2])),
+                                "z" = expression(italic(z)))) +
+    geom_bar(stat = 'identity', width = 0.5, position = position_dodge()) +
+    scale_fill_manual(breaks = c("N", "W"),
+                       values = c("black", "purple")) +
+    annotate('text', x = 33, y = -0.6, label = "A)", size = 8)  +
+    geom_hline(yintercept = 0, lty = 2) +
+    labs(x = 'Parameter', y = 'Combined Model Outcomes PRCC') + coord_flip()
+
+com.lhsprcc
+
+```
+
+## Final sensitivity figure  
+```{r prcc_combined_plot, echo = FALSE, fig.height=10.5, fig.width=8}
+prcc_layout = matrix(c(3,1,
+                       3,1,
+                       3,2,
+                       3,2,
+                       3,2), ncol = 2, byrow = T)
+
+  multiplot(profit.lhsprcc, epi.lhsprcc, com.lhsprcc, layout = prcc_layout)
+
+```
