@@ -1,6 +1,14 @@
 #Small function to estimate cumulative discounted profits given number of cycles, profit per cycle, discount rate, and time per cycle
 get_cum_profits <- function(n, Pi, delta, Time){
-  sum(sapply(c(1:n), function(x) Pi*exp(-delta*(x-1)*Time)))
+  if(is.na(Pi)){
+    
+    return(NA)
+    
+  } else {
+    
+    return(sum(sapply(c(1:n), function(x) Pi*exp(-delta*(x-1)*Time))))
+    
+  }
 }
 
 #Function to simulate aquaculture cycle with given parameters and starting conditions and return optimal management conditions 
@@ -43,11 +51,13 @@ sim_aqua_eum <- function(a.p, b.p, gam, muP, d, om, k, linf, k.ros, c, fc, p, de
              profit = ifelse(p_mass <30, NA, revenue*exp(-delta*time) - cost*P_nought - fixed_cost),
              roi = ifelse(p_mass <30, NA, profit / (cost*P_nought)),
              n_harvest = ifelse(p_mass <30, NA, floor((years*365)/time)),
-             cum_profits = ifelse(p_mass <30, NA, get_cum_profits(n_harvest, profit, delta, time)),
-             Species = species) %>% 
-      filter(p_mass >= 30)
+             cum_profits = pmap_dbl(list(n = n_harvest, 
+                                         Pi = profit, 
+                                         delta = delta, 
+                                         Time = time), get_cum_profits),
+             Species = species)
     
-    op_mgmt <- sim_df %>% filter(cum_profits == max(cum_profits))
+    op_mgmt <- sim_df %>% filter(cum_profits == max(cum_profits, na.rm = T))
     
   return(op_mgmt) 
 
@@ -81,10 +91,13 @@ sim_aqua_time <- function(P_nought, species = "M. vollenhovenii"){
              profit = ifelse(p_mass <30, NA, revenue*exp(-delta*time) - cost*P_nought - fixed_cost),
              roi = ifelse(p_mass <30, NA, profit / (cost*P_nought)),
              n_harvest = ifelse(p_mass <30, NA, floor((years*365)/time)),
-             cum_profits = ifelse(p_mass <30, NA, get_cum_profits(n_harvest, profit, delta, time)),
+             cum_profits = pmap_dbl(list(n = n_harvest, 
+                                         Pi = profit, 
+                                         delta = delta, 
+                                         Time = time), get_cum_profits),
              Species = species)
 
-  return(as.matrix(sim_df))  
+  return(sim_df)  
 
 }
 
