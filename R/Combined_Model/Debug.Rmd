@@ -1,0 +1,217 @@
+---
+title: "Model debug"
+author: "Chris Hoover"
+date: "October 11, 2018"
+output: pdf_document
+---
+
+Some model runs encounter an error when estimating the mating probability that causes an error in the integrate function. Need to look into this more as just skipping over parameter sets that cause this error may intriduce bias 
+
+First need to reproduce the error
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+require(deSolve)
+require(sensitivity)
+require(parallel)
+require(kableExtra)
+require(broom)
+require(directlabels)
+require(tidyverse)
+
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+    library(grid)
+    
+    # Make a list from the ... arguments and plotlist
+    plots <- c(list(...), plotlist)
+    
+    numPlots = length(plots)
+    
+    # If layout is NULL, then use 'cols' to determine layout
+    if (is.null(layout)) {
+      # Make the panel
+      # ncol: Number of columns of plots
+      # nrow: Number of rows needed, calculated from # of cols
+      layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                       ncol = cols, nrow = ceiling(numPlots/cols))
+    }
+    
+    if (numPlots==1) {
+      print(plots[[1]])
+      
+    } else {
+      # Set up the page
+      grid.newpage()
+      pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+      
+      # Make each plot, in the correct location
+      for (i in 1:numPlots) {
+        # Get the i,j matrix positions of the regions that contain this subplot
+        matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+        
+        print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                        layout.pos.col = matchidx$col))
+      }
+    }
+  }
+
+#Function from stack overflow (https://stackoverflow.com/questions/11693599/alternative-to-expand-grid-for-data-frames)  
+  expand.grid.df <- function(...) Reduce(function(...) merge(..., by=NULL), list(...))
+
+# Number of years to simulate
+  years = 10
+
+```
+
+```{r snail_prep, warnings=FALSE, cache = TRUE}
+#Load all necessary functions, models, and parameter sets
+source('../../R/Prawn_aquaculture/prawn_aquaculture_mod.R')
+source('../R/Prawn_aquaculture/prawn_aquaculture_sim.R')
+source("../R/Epi_Model/snail_epi_mod_no_diag_immigration.R")
+source("../R/Combined_Model/epi_no_diag_prawn_immigration_mod.R")
+source("../R/Combined_Model/epi_no_diag_prawn_sim.R")
+source("../Data/snail_epi_parameters.R")
+source("../Data/combined_parameters.R")
+source("../Data/aquaculture_parameters.R")
+source("../Data/Ranjeet_Kurup_06_data.R")
+
+  eta.lm = lm(marketable ~ dens, data = rk06)
+
+source("../R/Sensitivity_Analysis/sensitivity_prep.R")
+
+par.all = c(par.aqua, par.snails.imm, par.epi_prawn)
+
+#Load some parameters from the prawn aquaculture simulations needed here
+qwraps2::lazyload_cache_labels("Opt_stock", 
+                               path = "Prawn_Aquaculture_Profit_Maximization_cache/latex/")
+
+#Run to equilibrium to get eqbm values of state variables
+allvh.eqbm.run.imm0 = as.data.frame(ode(nstart.sn,
+                                        t.sn,
+                                        snail_epi_allvh_imm,
+                                        par.snails.imm))
+
+  allvh.eqbm.imm0 = allvh.eqbm.run.imm0[dim(allvh.eqbm.run.imm0)[1],]
+
+#Add immigration parameters based on immigration-free eqbm, add immigration parameter  
+  par.snails.imm["xi"] <- par.all["xi"] <-  0.2/365  # 20% per year as in Head et al snail migration paper
+  par.snails.imm["siteS1"] <- par.all["siteS1"] <- allvh.eqbm.imm0$S1 
+  par.snails.imm["siteS2"] <- par.all["siteS2"] <- allvh.eqbm.imm0$S2 
+  par.snails.imm["siteS3"] <- par.all["siteS3"] <- allvh.eqbm.imm0$S3 
+  par.snails.imm["siteE1"] <- par.all["siteE1"] <- allvh.eqbm.imm0$E1 
+  par.snails.imm["siteE2"] <- par.all["siteE2"] <- allvh.eqbm.imm0$E2 
+  par.snails.imm["siteE3"] <- par.all["siteE3"] <- allvh.eqbm.imm0$E3 
+  par.snails.imm["siteI1"] <- par.all["siteI1"] <- allvh.eqbm.imm0$I1 
+  par.snails.imm["siteI2"] <- par.all["siteI2"] <- allvh.eqbm.imm0$I2 
+  par.snails.imm["siteI3"] <- par.all["siteI3"] <- allvh.eqbm.imm0$I3 
+
+#Rerun to eqbm with immigration
+allvh.eqbm.run.imm = as.data.frame(ode(setNames(as.numeric(allvh.eqbm.imm0[-1]), names(allvh.eqbm.imm0)[-1]),
+                                       t.sn,
+                                       snail_epi_allvh_imm,
+                                       par.snails.imm))
+
+#Save for eqbm starting values in further simulations
+  allvh.eqbm.imm = allvh.eqbm.run.imm %>% filter(time == max(time)) %>% select(S1:Wu) %>% unlist()
+
+
+## Set initial values and parameters ###########
+t.all = c(1:(365*years*2))+365
+
+#Starting values from model equilibrium
+nstart = allvh.eqbm.imm
+
+#Volenhovenii stocking and harvesting events ###########
+#Create data frame representing stocking and harvesting events for M. vollenhovenii at optimal management
+  harvest.t.vol = opt.vol$time           #Optimal harvest time from volenhovenii optimization
+  n.harvest.vol = floor((years*365)/harvest.t.vol)
+  stocks.vol = data.frame(var = rep(c('P', 'L'), n.harvest.vol+1),
+                          time = rep(366 + harvest.t.vol*c(0:n.harvest.vol), each = 2),
+                          value = rep(c(opt.vol$P_nought, opt.vol$L_nought), n.harvest.vol+1),
+                          method = rep('rep', (n.harvest.vol+1)*2))
+  
+    vol.harvests = stocks.vol[seq(1, nrow(stocks.vol), 2), 2]  
+
+  par.all.vol = par.all  
+    par.all.vol['k'] <- k.vol
+  
+#Rosenbergii stocking and harvesting events ###########
+#Create dataframe represnting stocking and harvesting of M. rosenbergii prawns  
+  harvest.t.ros = opt.ros$time
+  n.harvest.ros = floor((years*365)/harvest.t.ros)
+  stocks.ros = data.frame(var = rep(c('P', 'L'), n.harvest.ros+1),
+                          time = rep(366 + harvest.t.ros*c(0:n.harvest.ros), each = 2),
+                          value = rep(c(opt.ros$P_nought, opt.ros$L_nought), n.harvest.ros+1),
+                          method = rep('rep', (n.harvest.ros+1)*2))
+  
+    ros.harvests = stocks.ros[seq(1, nrow(stocks.ros), 2), 2]
+  
+  par.all.ros = par.all  
+    par.all.ros['k'] = k.ros  # alternate value for M. rosenbergii, from Sampaio & Valenti 1996: 0.0104333333
+  
+#mda events #######
+  mdas = data.frame(var = rep('Wt', years+1),
+                    time = 365*c(0:years+1)+1,
+                    value = rep((1-eff), years+1),
+                    method = rep('multiply', years+1))
+
+#Combined MDA and vollenhovenii stocking events #######
+  mda.vol = rbind(mdas, stocks.vol)
+  mda.vol = mda.vol[order(mda.vol$time),]
+
+#Combined MDA and rosenbergii stocking events #######
+  mda.ros = rbind(mdas, stocks.ros)
+  mda.ros = mda.ros[order(mda.ros$time),]
+  
+#allow for one year run in to display epi model at eqbm ###########
+t.yr1 = c(0:365) 
+
+yr1 = as.data.frame(ode(nstart,
+                        t.yr1,
+                        snail_epi_allvh_imm,
+                        par.snails.imm)) %>% 
+  mutate(P = 0, #Add prawn variable to integrate with prawn stocking sims
+         L = 0, #Add prawn variable to integrate with prawn stocking sims
+         W = cvrg*Wt + (1-cvrg)*Wu,
+         prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
+         S.t = (S1 + S2 + S3) / area,  # density susceptible snails
+         E.t = (E1 + E2 + E3) / area,  # density exposed snails 
+         I.t = (I1 + I2 + I3 ) / area, # density infected snails
+         N.t = (S.t + E.t + I.t), # total density snails
+         t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
+         t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
+         t.3 = (S3 + E3 + I3) / area) # density snails of size class 3  
+
+# Prep parameter sets and first year for sims with no migration #########
+#Simulations with migration to/from external sources absent
+  par.all.vol.nomig  <- par.all.vol
+  par.all.ros.nomig  <- par.all.ros
+  par.snails.nomig <- par.snails.imm
+  
+  par.all.vol.nomig["xi"] <- 0
+  par.all.ros.nomig["xi"] <- 0
+  par.snails.nomig["xi"] <- 0
+  
+#allow for one year run in to display epi model at eqbm
+yr1.nomig = as.data.frame(ode(nstart,
+                              t.yr1,
+                              snail_epi_allvh_imm,
+                              par.snails.nomig))  %>% 
+  mutate(P = 0, #Add prawn variable to integrate with prawn stocking sims
+         L = 0, #Add prawn variable to integrate with prawn stocking sims
+         W = cvrg*Wt + (1-cvrg)*Wu,
+         prev = pnbinom(2, size = par.snails.nomig['phi'], mu = W, lower.tail = FALSE),
+         S.t = (S1 + S2 + S3) / area,  # density susceptible snails
+         E.t = (E1 + E2 + E3) / area,  # density exposed snails 
+         I.t = (I1 + I2 + I3 ) / area, # density infected snails
+         N.t = (S.t + E.t + I.t), # total density snails
+         t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
+         t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
+         t.3 = (S3 + E3 + I3) / area) # density snails of size class 3  
+
+```
+
+```{r reproduce error}
+
+```
+
