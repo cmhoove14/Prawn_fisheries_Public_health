@@ -757,7 +757,7 @@ prawn_start = c("P" = opt.ros$P_nought,
 ```
 
 ```{r comp_ints_boxplot, fig.height=5, fig.width=8}
-comp_ints %>% 
+comp_ints_bp <- comp_ints %>% 
   gather("Intervention", "Cum_W", None:Prawns...MDA) %>% 
   ggplot(aes(x = Intervention, y = log(Cum_W))) +
   geom_boxplot(width = 0.3) + theme_bw() +
@@ -770,18 +770,8 @@ comp_ints %>%
             title = element_text(size = 14))
 ```
 
-```{r save_comp_ints_boxplot, eval = FALSE, include = FALSE}
-comp_ints %>% 
-  gather("Intervention", "Cum_W", None:Prawns...MDA) %>% 
-  ggplot(aes(x = Intervention, y = log(Cum_W))) +
-  geom_boxplot(width = 0.3) + theme_bw() +
-  ggtitle("Comparison of intervention strategies",
-          subtitle = "Based on cumulative mean worm burden") + 
-      theme_bw() +
-      theme(legend.position = c(0.35, 0.8),
-            axis.text = element_text(size = 12),  #increase axis label size
-            axis.title = element_text(size = 14), #increase axis title size
-            title = element_text(size = 14))
+```{r save_comp_ints_boxplot, include = FALSE}
+comp_ints_bp
 
 ggsave("Figures/compare_interventions_with_parameter_uncertainty.png",
        height = 5, width = 4, units = "in")
