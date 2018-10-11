@@ -192,7 +192,7 @@ compare_interventions <- function(pars, years){
 
 # Run epi model to equilibrium  ##############
   epi_sim <- as.data.frame(ode(nstart,
-                               seq(1,365*20,40),
+                               seq(1,365*100,25),
                                snail_epi_allvh_imm,
                                pars))
   
@@ -236,7 +236,7 @@ compare_interventions <- function(pars, years){
   sim.mda = as.data.frame(ode(epi_eqbm %>% select(-time) %>% unlist(),
                               c(1:(years*365)),
                               snail_epi_allvh_imm,
-                              par.snails.imm,
+                              pars,
                               events = list(data = mdas))) %>% 
     mutate(W = cvrg*Wt + (1-cvrg)*Wu,
            prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
@@ -286,9 +286,9 @@ compare_interventions <- function(pars, years){
   
   cmbnd_W <- sum(cmbnd_sim %>% pull(W))
   
-  return(data.frame("None" = nothing_W, 
-                    "MDA" = mda_W, 
-                    "Prawns" = prawn_W, 
-                    "Prawns & MDA" = cmbnd_W))
+  return(data.frame("None" = nothing_W - nothing_W, 
+                    "MDA" = mda_W - nothing_W, 
+                    "Prawns" = prawn_W - nothing_W, 
+                    "Prawns & MDA" = cmbnd_W - nothing_W))
   
 }
