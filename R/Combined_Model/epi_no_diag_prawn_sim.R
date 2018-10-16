@@ -32,7 +32,8 @@ prawn_sim <- function(t.runup, t.intervene, t.post,
                                  t.intervene,
                                  model.intervene,
                                  parameters,
-                                 events = list(data = stock.events))) %>% 
+                                 events = list(data = stock.events),
+                                 atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
     mutate(W = cvrg*Wt + (1-cvrg)*Wu,
            prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
@@ -129,7 +130,8 @@ prawn_intervention_sim <- function(pars){
                                         c(1:(years*365)),
                                         snail_prawn_model_imm,
                                         pars,
-                                        events = list(data = stocks))) %>% 
+                                        events = list(data = stocks),
+                                        atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
     mutate(W = cvrg*Wt + (1-cvrg)*Wu,
            prev = pnbinom(2, size = pars['phi'], mu = W, lower.tail = FALSE),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
@@ -237,7 +239,8 @@ compare_interventions <- function(pars, years){
                               c(1:(years*365)),
                               snail_epi_allvh_imm,
                               pars,
-                              events = list(data = mdas))) %>% 
+                              events = list(data = mdas),
+                              atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
     mutate(W = cvrg*Wt + (1-cvrg)*Wu,
            prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
@@ -255,7 +258,8 @@ compare_interventions <- function(pars, years){
                                  c(1:(years*365)),
                                  snail_prawn_model_imm,
                                  pars,
-                                 events = list(data = stocks))) %>% 
+                                 events = list(data = stocks),
+                                 atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
     mutate(W = cvrg*Wt + (1-cvrg)*Wu,
            prev = pnbinom(2, size = pars['phi'], mu = W, lower.tail = FALSE),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
@@ -273,7 +277,8 @@ compare_interventions <- function(pars, years){
                                  c(1:(years*365)),
                                  snail_prawn_model_imm,
                                  pars,
-                                 events = list(data = mda.prawn))) %>% 
+                                 events = list(data = mda.prawn),
+                                 atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
     mutate(W = cvrg*Wt + (1-cvrg)*Wu,
            prev = pnbinom(2, size = pars['phi'], mu = W, lower.tail = FALSE),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
