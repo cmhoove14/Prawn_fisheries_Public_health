@@ -14,7 +14,7 @@ prawn_sim <- function(t.runup, t.intervene, t.post,
     mutate(P = 0,
            L = 0,
            W = cvrg*Wt + (1-cvrg)*Wu,
-           prev = get_prev(par.snails.imm["phi"], W),
+           prev = get_prev(pars["phi"], W),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
            I.t = (I1 + I2 + I3 ) / area, # density infected snails
@@ -35,7 +35,7 @@ prawn_sim <- function(t.runup, t.intervene, t.post,
                                  events = list(data = stock.events),
                                  atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
     mutate(W = cvrg*Wt + (1-cvrg)*Wu,
-           prev = get_prev(par.snails.imm["phi"], W),
+           prev = get_prev(pars["phi"], W),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
            I.t = (I1 + I2 + I3 ) / area, # density infected snails
@@ -54,7 +54,12 @@ prawn_sim <- function(t.runup, t.intervene, t.post,
     mutate(P = 0,
            L = 0,
            W = cvrg*Wt + (1-cvrg)*Wu,
-           prev = get_prev(par.snails.imm["phi"], W),
+           prev = get_prev(pars["phi"], W),
+           DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
+                             pars["phi"], Wt, pars["H"], daily = TRUE),
+           DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
+                             pars["phi"], Wu, pars["H"], daily = TRUE),
+           DALYs_W = DALYs_Wt + DALYs_Wu,
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
            I.t = (I1 + I2 + I3 ) / area, # density infected snails
@@ -82,7 +87,7 @@ prawn_intervention_sim <- function(pars){
              total_mass = (P*p_mass) /1000,    
              harvest_mass = total_mass * as.numeric(pars["eta"]),
       #If average prawn mass is less than 30 g (marketable size) don't estimate monetary outcomes       
-             revenue = ifelse(p_mass <30, NA, harvest_mass*price),
+             revenue = ifelse(p_mass <30, NA, harvest_mass*pars["p"]),
              profit = ifelse(p_mass <30, NA, revenue*exp(-pars["delta"]*time) - pars["c"]*prawn_start["P"] - pars["fc"]),
              n_harvest = ifelse(p_mass <30, NA, floor((years*365)/time)),
              cum_profits = pmap_dbl(list(n = n_harvest, 
@@ -97,7 +102,7 @@ prawn_intervention_sim <- function(pars){
   n.harvest = opt_harvest$n_harvest
   stocks = data.frame(var = rep(c('P', 'L'), n.harvest),
                           time = rep(harvest_time*c(0:(n.harvest-1))+1, each = 2),
-                          value = rep(c(opt.ros$P_nought, opt.ros$L_nought), n.harvest),
+                          value = rep(c(prawn_start["P"], prawn_start["L"]), n.harvest),
                           method = rep('rep', (n.harvest)*2))
   
     harvests = stocks[seq(1, nrow(stocks), 2), 2]  
@@ -112,8 +117,8 @@ prawn_intervention_sim <- function(pars){
     full_eqbm <- epi_eqbm %>% select(-time) %>% unlist() 
     
 #Add in prawn info and migration info to starting conditions/parameter set    
-  full_eqbm["P"] <- opt.ros$P_nought 
-  full_eqbm["L"] <- opt.ros$L_nought
+  full_eqbm["P"] <- prawn_start["P"]
+  full_eqbm["L"] <- prawn_start["L"] 
     
   pars["siteS1"] <- epi_eqbm %>% pull(S1)
   pars["siteE1"] <- epi_eqbm %>% pull(E1)
@@ -132,8 +137,13 @@ prawn_intervention_sim <- function(pars){
                                         pars,
                                         events = list(data = stocks),
                                         atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
-    mutate(W = cvrg*Wt + (1-cvrg)*Wu,
-           prev = get_prev(par.snails.imm["phi"], W),
+    mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
+           prev = get_prev(pars["phi"], W),
+           DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
+                             pars["phi"], Wt, pars["H"], daily = TRUE),
+           DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
+                             pars["phi"], Wu, pars["H"], daily = TRUE),
+           DALYs_W = DALYs_Wt + DALYs_Wu,
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
            I.t = (I1 + I2 + I3 ) / area, # density infected snails
@@ -143,8 +153,8 @@ prawn_intervention_sim <- function(pars){
            t.3 = (S3 + E3 + I3) / area)
   
   return(intervention_sim %>% 
-           select(W, N.t, I.t) %>% 
-           rbind(c(sum(.$W), sum(.$N.t), sum(.$I.t))) %>% 
+           select(W, DALYs_W, N.t, I.t) %>% 
+           rbind(c(sum(.$W), sum(.$DALYs_W), sum(.$N.t), sum(.$I.t))) %>% 
            slice(max(c(1:(years*365))+1)))
     
 }
@@ -162,7 +172,7 @@ compare_interventions <- function(pars, years){
              total_mass = (P*p_mass) /1000,    
              harvest_mass = total_mass * as.numeric(pars["eta"]),
       #If average prawn mass is less than 30 g (marketable size) don't estimate monetary outcomes       
-             revenue = ifelse(p_mass <30, NA, harvest_mass*price),
+             revenue = ifelse(p_mass <30, NA, harvest_mass*pars["p"]),
              profit = ifelse(p_mass <30, NA, revenue*exp(-pars["delta"]*time) - pars["c"]*prawn_start["P"] - pars["fc"]),
              n_harvest = ifelse(p_mass <30, NA, floor((years*365)/time)),
              cum_profits = pmap_dbl(list(n = n_harvest, 
@@ -177,7 +187,7 @@ compare_interventions <- function(pars, years){
   n.harvest = opt_harvest$n_harvest
   stocks = data.frame(var = rep(c('P', 'L'), n.harvest),
                           time = rep(harvest_time*c(0:(n.harvest-1))+1, each = 2),
-                          value = rep(c(opt.ros$P_nought, opt.ros$L_nought), n.harvest),
+                          value = rep(c(prawn_start["P"], prawn_start["L"]), n.harvest),
                           method = rep('rep', (n.harvest)*2))
   
     harvests = stocks[seq(1, nrow(stocks), 2), 2] 
@@ -185,7 +195,7 @@ compare_interventions <- function(pars, years){
 #mda events #######
   mdas = data.frame(var = rep('Wt', years),
                     time = 365*c(0:(years-1))+1,
-                    value = rep((1-eff), years),
+                    value = rep((1-pars["eff"]), years),
                     method = rep('multiply', years))
   
 #Combined prawn stocking and mda events ################
@@ -203,8 +213,8 @@ compare_interventions <- function(pars, years){
   
       
 #Add in prawn info and migration info to starting conditions/parameter set    
-  full_eqbm["P"] <- opt.ros$P_nought 
-  full_eqbm["L"] <- opt.ros$L_nought
+  full_eqbm["P"] <- prawn_start["P"] 
+  full_eqbm["L"] <- prawn_start["L"]
     
   pars["siteS1"] <- epi_eqbm %>% pull(S1)
   pars["siteE1"] <- epi_eqbm %>% pull(E1)
@@ -222,8 +232,13 @@ compare_interventions <- function(pars, years){
                                     c(1:(years*365)),
                                     snail_epi_allvh_imm,
                                     pars)) %>% 
-    mutate(W = cvrg*Wt + (1-cvrg)*Wu,
-           prev = get_prev(par.snails.imm["phi"], W),
+    mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
+           prev = get_prev(pars["phi"], W),
+           DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
+                             pars["phi"], Wt, pars["H"], daily = TRUE),
+           DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
+                             pars["phi"], Wu, pars["H"], daily = TRUE),
+           DALYs_W = DALYs_Wt + DALYs_Wu,
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
            I.t = (I1 + I2 + I3 ) / area, # density infected snails
@@ -232,7 +247,7 @@ compare_interventions <- function(pars, years){
            t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
            t.3 = (S3 + E3 + I3) / area) # density snails of size class 3  
 
-    nothing_W <- sum(sim.nothing %>% pull(W))
+    nothing_DALYs <- sum(sim.nothing %>% pull(DALYs_W))
 
 #Simulate annual MDA for n years ########
   sim.mda = as.data.frame(ode(epi_eqbm %>% select(-time) %>% unlist(),
@@ -241,8 +256,13 @@ compare_interventions <- function(pars, years){
                               pars,
                               events = list(data = mdas),
                               atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
-    mutate(W = cvrg*Wt + (1-cvrg)*Wu,
-           prev = get_prev(par.snails.imm["phi"], W),
+    mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
+           prev = get_prev(pars["phi"], W),
+           DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
+                             pars["phi"], Wt, pars["H"], daily = TRUE),
+           DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
+                             pars["phi"], Wu, pars["H"], daily = TRUE),
+           DALYs_W = DALYs_Wt + DALYs_Wu,
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
            I.t = (I1 + I2 + I3 ) / area, # density infected snails
@@ -251,7 +271,7 @@ compare_interventions <- function(pars, years){
            t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
            t.3 = (S3 + E3 + I3) / area) # density snails of size class 3  
     
-    mda_W <- sum(sim.mda %>% pull(W))
+    mda_DALYs <- sum(sim.mda %>% pull(DALYs_W))
 
 #Simulate prawn intervention under optimal management for n years    
   prawn_sim <- as.data.frame(ode(full_eqbm,
@@ -260,8 +280,13 @@ compare_interventions <- function(pars, years){
                                  pars,
                                  events = list(data = stocks),
                                  atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
-    mutate(W = cvrg*Wt + (1-cvrg)*Wu,
-           prev = get_prev(par.snails.imm["phi"], W),
+    mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
+           prev = get_prev(pars["phi"], W),
+           DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
+                             pars["phi"], Wt, pars["H"], daily = TRUE),
+           DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
+                             pars["phi"], Wu, pars["H"], daily = TRUE),
+           DALYs_W = DALYs_Wt + DALYs_Wu,
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
            I.t = (I1 + I2 + I3 ) / area, # density infected snails
@@ -270,7 +295,7 @@ compare_interventions <- function(pars, years){
            t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
            t.3 = (S3 + E3 + I3) / area)
   
-  prawn_W <- sum(prawn_sim %>% pull(W))
+  prawn_DALYs <- sum(prawn_sim %>% pull(DALYs_W))
 
 #Simulate combined intervention under optimal management and annual MDA for n years    
   cmbnd_sim <- as.data.frame(ode(full_eqbm,
@@ -279,8 +304,13 @@ compare_interventions <- function(pars, years){
                                  pars,
                                  events = list(data = mda.prawn),
                                  atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
-    mutate(W = cvrg*Wt + (1-cvrg)*Wu,
-           prev = get_prev(par.snails.imm["phi"], W),
+    mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
+           prev = get_prev(pars["phi"], W),
+           DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
+                             pars["phi"], Wt, pars["H"], daily = TRUE),
+           DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
+                             pars["phi"], Wu, pars["H"], daily = TRUE),
+           DALYs_W = DALYs_Wt + DALYs_Wu,
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
            I.t = (I1 + I2 + I3 ) / area, # density infected snails
@@ -289,11 +319,11 @@ compare_interventions <- function(pars, years){
            t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
            t.3 = (S3 + E3 + I3) / area)
   
-  cmbnd_W <- sum(cmbnd_sim %>% pull(W))
+  cmbnd_DALYs <- sum(cmbnd_sim %>% pull(DALYs_W))
   
-  return(data.frame("None" = nothing_W - nothing_W, 
-                    "MDA" = mda_W - nothing_W, 
-                    "Prawns" = prawn_W - nothing_W, 
-                    "Prawns & MDA" = cmbnd_W - nothing_W))
+  return(data.frame("None" = nothing_DALYs - nothing_DALYs, 
+                    "MDA" = mda_DALYs - nothing_DALYs, 
+                    "Prawns" = prawn_DALYs - nothing_DALYs, 
+                    "Prawns & MDA" = cmbnd_DALYs - nothing_DALYs))
   
 }
