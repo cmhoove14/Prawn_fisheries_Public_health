@@ -9,6 +9,8 @@ nstart.sn = c(S1 = 5*area, S2 = 5*area, S3 = 5*area,
 t.sn = seq(0,365*300,10)
 cvrg = 0.75  #MDA coverage
 eff = 0.85 #MDA efficacy 
+weight_lo <- 0.0014 # disability weight for light infection, defined as <50 eggs/mL
+weight_hi <- 0.05   # disability weight for heavy infection, defined as >=50 eggs/mL
 
 # Parameters used in the epidemiological model 
 par.snails.imm=c(
