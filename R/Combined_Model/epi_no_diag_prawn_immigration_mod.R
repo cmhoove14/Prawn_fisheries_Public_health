@@ -1,15 +1,3 @@
-
-fx<-function(x, mean.worm, clump){
-  alpha<-(mean.worm)/(clump+mean.worm)
-  (1-cos(x)) / ( (1+(alpha*cos(x)))^(1+clump) )
-}
-
-phi_Wk<-function(W, phi){
-  alpha<-W/(W+phi)
-  1-( (1-alpha)^(phi+1) * (integrate(fx, 0, 2*pi, W, phi, stop.on.error = F)$value) /(2*pi)  )
-}
-
-
 snail_prawn_model_imm = function(t, n, parameters) {  
   with(as.list(parameters),{
     
