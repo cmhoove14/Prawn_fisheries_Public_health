@@ -9,9 +9,14 @@ par.all = c(par.aqua,
             fc = fixed_cost,
             p = price, 
             eta = as.numeric(predict(eta.lm, newdata = data.frame(dens = 2.6/area))), 
-            delta = -log(1-0.03)/365,
+            delta = -log(1-0.07)/365,
             par.snails.imm, 
-            par.epi_prawn)
+            par.epi_prawn,
+            weight_hi = 0.05,
+            weight_lo = 0.014,
+            cvrg = 0.75,
+            eff = 0.85,
+            epmL = 3.6)
 
 #generate parameter ranges to sample over ################# 
   nsims = 1000
@@ -33,7 +38,7 @@ par.all = c(par.aqua,
     paranges$fc = seq(0, 1000, length.out = nsims)
     paranges$p = seq(11, 22, length.out = nsims)
     paranges$eta = seq(0.24, 0.58, length.out = nsims)
-    paranges$delta = seq(-log(1-0.01)/365, -log(1-0.05)/365, length.out = nsims)
+    paranges$delta = seq(-log(1-0.03)/365, -log(1-0.20)/365, length.out = nsims)
     
     paranges$H = rep(1.5*area, nsims)     #don't vary these. They're only included as parameters for modeling convenience, but we know what they are
     paranges$A = rep(area, nsims)
@@ -78,6 +83,13 @@ par.all = c(par.aqua,
     paranges$b.s = seq(2, 3, length.out = nsims)
     paranges$ar.slp = seq(0.5, 1.5, length.out = nsims)
     paranges$th = seq(0.2, 0.5, length.out = nsims)
+    
+  #fill treatement/outcomes related parameters
+    paranges$weight_hi = seq(0.03, 0.15, length.out = nsims)
+    paranges$weight_lo = seq(0.003,0.03, length.out = nsims)
+    paranges$cvreg = seq(0.5, 0.95, length.out = nsims)
+    paranges$eff = seq(0.75, 0.95, length.out = nsims)
+    paranges$epmL = seq(2, 5, length.out = nsims)
     
 #Augment latin hypercube to sample from ###########
   #create a matrix of indices for the LHC where nrow=number of sims and ncol=number of variables
