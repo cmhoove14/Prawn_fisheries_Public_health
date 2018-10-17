@@ -87,7 +87,7 @@ par.all = c(par.aqua,
   #fill treatement/outcomes related parameters
     paranges$weight_hi = seq(0.03, 0.15, length.out = nsims)
     paranges$weight_lo = seq(0.003,0.03, length.out = nsims)
-    paranges$cvreg = seq(0.5, 0.95, length.out = nsims)
+    paranges$cvrg = seq(0.5, 0.95, length.out = nsims)
     paranges$eff = seq(0.75, 0.95, length.out = nsims)
     paranges$epmL = seq(2, 5, length.out = nsims)
     
