@@ -27,8 +27,8 @@ par.all = c(par.aqua,
   # Fill aquaculture-relevant parameter ranges
     paranges$a.p = seq(-2.7180, -2.5076, length.out = nsims)
     paranges$b.p = seq(3.4617, 3.6386, length.out = nsims)
-    paranges$gam = seq(6.5e-6, 3.53e-6, length.out = nsims)
-    paranges$muP = seq(0.0054, 0.0122, length.out = nsims)
+    paranges$gam = seq(6.5e-6, 3.5e-6, length.out = nsims)
+    paranges$muP = seq(2/365, 3/365, length.out = nsims)
     paranges$d = seq(-0.461, -0.289, length.out = nsims)
     paranges$om = seq(7.5e-9, 3.5e-9, length.out = nsims)
     paranges$k = seq(1.24/365, 3.19/365, length.out = nsims)
