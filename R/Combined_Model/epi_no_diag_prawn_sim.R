@@ -78,38 +78,29 @@ prawn_sim <- function(t.runup, t.intervene, t.post,
 # Used in global sensitivity analysis
 prawn_intervention_sim <- function(pars){
   
-#Run prawn model through two years to identify optimal harvest time
-   sim_prawns <- as.data.frame(ode(prawn_start,
-                                  c(1:(365*2)),
-                                  prawn_biomass,
-                                  pars)) %>% 
-      mutate(p_mass = 10^(pars["a.p"]+pars["b.p"]*log10(L/10)),     
-             total_mass = (P*p_mass) /1000,    
-             harvest_mass = total_mass * as.numeric(pars["eta"]),
-      #If average prawn mass is less than 30 g (marketable size) don't estimate monetary outcomes       
-             revenue = ifelse(p_mass <30, NA, harvest_mass*pars["p"]),
-             profit = ifelse(p_mass <30, NA, revenue*exp(-pars["delta"]*time) - pars["c"]*prawn_start["P"] - pars["fc"]),
-             n_harvest = ifelse(p_mass <30, NA, floor((years*365)/time)),
-             cum_profits = pmap_dbl(list(n = n_harvest, 
-                                         Pi = profit, 
-                                         delta = delta, 
-                                         Time = time), get_cum_profits))
+  opt_df = expand.grid.df(data.frame(pars[c("a.p", "b.p", "gam", "muP", "d", "om", 
+                                            "k", "linf", "k.ros",
+                                            "c", "fc", "p", "eta", "delta")]), 
+                          data.frame(L_nought = 40, P_nought = seq(500, 7500, 100))) 
 
-    opt_harvest <- sim_prawns %>% filter(cum_profits == max(cum_profits, na.rm = TRUE))
-    
+#Get mgmt strategy that maximizes cumulative ten year profits
+opt_stock <- opt_df %>% 
+  bind_cols(pmap_df(., sim_aqua_eum, species = "M. rosenbergii")) %>% 
+  filter(cum_profits == max(cum_profits))
+
 # Generate data fram of stocking/harvesting events
-  harvest_time <- opt_harvest$time
-  n.harvest = opt_harvest$n_harvest
+  harvest_time <- opt_stock$time
+  n.harvest = opt_stock$n_harvest
   stocks = data.frame(var = rep(c('P', 'L'), n.harvest),
                           time = rep(harvest_time*c(0:(n.harvest-1))+1, each = 2),
-                          value = rep(c(prawn_start["P"], prawn_start["L"]), n.harvest),
+                          value = rep(c(opt_stock$P, opt_stock$L), n.harvest),
                           method = rep('rep', (n.harvest)*2))
   
     harvests = stocks[seq(1, nrow(stocks), 2), 2]  
 
 # Run epi model to equilibrium 
   epi_sim <- as.data.frame(ode(nstart,
-                               seq(1,365*20,40),
+                               seq(1,365*100,50),
                                snail_epi_allvh_imm,
                                pars))
   
@@ -117,8 +108,8 @@ prawn_intervention_sim <- function(pars){
     full_eqbm <- epi_eqbm %>% select(-time) %>% unlist() 
     
 #Add in prawn info and migration info to starting conditions/parameter set    
-  full_eqbm["P"] <- prawn_start["P"]
-  full_eqbm["L"] <- prawn_start["L"] 
+  full_eqbm["P"] <- opt_stock$P
+  full_eqbm["L"] <- opt_stock$L 
     
   pars["siteS1"] <- epi_eqbm %>% pull(S1)
   pars["siteE1"] <- epi_eqbm %>% pull(E1)
@@ -140,9 +131,9 @@ prawn_intervention_sim <- function(pars){
     mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
            prev = get_prev(pars["phi"], W),
            DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wt, pars["H"], daily = TRUE),
+                             pars["phi"], Wt, pars["H"] * pars["cvrg"], daily = TRUE),
            DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wu, pars["H"], daily = TRUE),
+                             pars["phi"], Wu, pars["H"] *(1-pars["cvrg"]), daily = TRUE),
            DALYs_W = DALYs_Wt + DALYs_Wu,
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
@@ -163,31 +154,22 @@ prawn_intervention_sim <- function(pars){
 # used for boxplot comparing cumulative impact of each intervention 
 compare_interventions <- function(pars, years){
   
-#Run prawn model through two years to identify optimal harvest time ################
-   sim_prawns <- as.data.frame(ode(prawn_start,
-                                  c(1:(365*2)),
-                                  prawn_biomass,
-                                  pars)) %>% 
-      mutate(p_mass = 10^(pars["a.p"]+pars["b.p"]*log10(L/10)),     
-             total_mass = (P*p_mass) /1000,    
-             harvest_mass = total_mass * as.numeric(pars["eta"]),
-      #If average prawn mass is less than 30 g (marketable size) don't estimate monetary outcomes       
-             revenue = ifelse(p_mass <30, NA, harvest_mass*pars["p"]),
-             profit = ifelse(p_mass <30, NA, revenue*exp(-pars["delta"]*time) - pars["c"]*prawn_start["P"] - pars["fc"]),
-             n_harvest = ifelse(p_mass <30, NA, floor((years*365)/time)),
-             cum_profits = pmap_dbl(list(n = n_harvest, 
-                                         Pi = profit, 
-                                         delta = delta, 
-                                         Time = time), get_cum_profits))
+  opt_df = expand.grid.df(data.frame(pars[c("a.p", "b.p", "gam", "muP", "d", "om", 
+                                            "k", "linf", "k.ros",
+                                            "c", "fc", "p", "eta", "delta")]), 
+                          data.frame(L_nought = 40, P_nought = seq(500, 7500, 100))) 
 
-    opt_harvest <- sim_prawns %>% filter(cum_profits == max(cum_profits, na.rm = TRUE))
-    
-# Generate data frame of stocking/harvesting events ###############
-  harvest_time <- opt_harvest$time
-  n.harvest = opt_harvest$n_harvest
+#Get mgmt strategy that maximizes cumulative ten year profits
+opt_stock <- opt_df %>% 
+  bind_cols(pmap_df(., sim_aqua_eum, species = "M. rosenbergii")) %>% 
+  filter(cum_profits == max(cum_profits))
+
+# Generate data fram of stocking/harvesting events
+  harvest_time <- opt_stock$time
+  n.harvest = opt_stock$n_harvest
   stocks = data.frame(var = rep(c('P', 'L'), n.harvest),
                           time = rep(harvest_time*c(0:(n.harvest-1))+1, each = 2),
-                          value = rep(c(prawn_start["P"], prawn_start["L"]), n.harvest),
+                          value = rep(c(opt_stock$P, opt_stock$L), n.harvest),
                           method = rep('rep', (n.harvest)*2))
   
     harvests = stocks[seq(1, nrow(stocks), 2), 2] 
@@ -213,8 +195,8 @@ compare_interventions <- function(pars, years){
   
       
 #Add in prawn info and migration info to starting conditions/parameter set    
-  full_eqbm["P"] <- prawn_start["P"] 
-  full_eqbm["L"] <- prawn_start["L"]
+  full_eqbm["P"] <- opt_stock$P
+  full_eqbm["L"] <- opt_stock$L 
     
   pars["siteS1"] <- epi_eqbm %>% pull(S1)
   pars["siteE1"] <- epi_eqbm %>% pull(E1)
@@ -235,9 +217,9 @@ compare_interventions <- function(pars, years){
     mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
            prev = get_prev(pars["phi"], W),
            DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wt, pars["H"], daily = TRUE),
+                             pars["phi"], Wt, pars["H"] * pars["cvrg"], daily = TRUE),
            DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wu, pars["H"], daily = TRUE),
+                             pars["phi"], Wu, pars["H"] *(1-pars["cvrg"]), daily = TRUE),
            DALYs_W = DALYs_Wt + DALYs_Wu,
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
@@ -259,9 +241,9 @@ compare_interventions <- function(pars, years){
     mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
            prev = get_prev(pars["phi"], W),
            DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wt, pars["H"], daily = TRUE),
+                             pars["phi"], Wt, pars["H"] * pars["cvrg"], daily = TRUE),
            DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wu, pars["H"], daily = TRUE),
+                             pars["phi"], Wu, pars["H"] *(1-pars["cvrg"]), daily = TRUE),
            DALYs_W = DALYs_Wt + DALYs_Wu,
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
@@ -283,9 +265,9 @@ compare_interventions <- function(pars, years){
     mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
            prev = get_prev(pars["phi"], W),
            DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wt, pars["H"], daily = TRUE),
+                             pars["phi"], Wt, pars["H"] * pars["cvrg"], daily = TRUE),
            DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wu, pars["H"], daily = TRUE),
+                             pars["phi"], Wu, pars["H"] *(1-pars["cvrg"]), daily = TRUE),
            DALYs_W = DALYs_Wt + DALYs_Wu,
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
@@ -307,9 +289,9 @@ compare_interventions <- function(pars, years){
     mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
            prev = get_prev(pars["phi"], W),
            DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wt, pars["H"], daily = TRUE),
+                             pars["phi"], Wt, pars["H"] * pars["cvrg"], daily = TRUE),
            DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wu, pars["H"], daily = TRUE),
+                             pars["phi"], Wu, pars["H"] *(1-pars["cvrg"]), daily = TRUE),
            DALYs_W = DALYs_Wt + DALYs_Wu,
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
