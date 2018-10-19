@@ -1,18 +1,3 @@
-## Epidemiological model including snail size classes and immigration of snails; no predation
-
-require(deSolve)
-
-#mating function
-fx<-function(x, mean.worm, clump){
-  alpha<-(mean.worm)/(clump+mean.worm)
-  (1-cos(x)) / ( (1+(alpha*cos(x)))^(1+clump) )
-}
-
-phi_Wk<-function(W, phi){
-  alpha<-W/(W+phi)
-  1-( (1-alpha)^(phi+1) * (integrate(fx, 0, 2*pi, W, phi, stop.on.error = F)$value) /(2*pi)  )
-}
-
 #Model with no diagonal transitions, all horizontal and vertical transitions #####
 snail_epi_allvh_imm = function(t, n, parameters) { 
   with(as.list(parameters),{
@@ -37,8 +22,7 @@ snail_epi_allvh_imm = function(t, n, parameters) {
     I = I1+I2+I3       # Total infected snails
     N = S+E+I       # Total number of snails
     M = m*0.5*W*mate # Miracidial density per person as a function of mean worm burden (W), miracidial shedding rate (m), and mating probability
-    # rho = g2/sigma  # Fraction of E2 snails that transition directly to I3
-    
+
     dS1dt = xi*siteS1 + f*(1-N/Kn)*(S2+S3+z*(E2+E3)) - muN1*S1 - psi1*S1 - g1*S1 - (beta)*M*H*S1 - xi*S1
     
     dS2dt = xi*siteS2 + g1*S1 - muN2*S2 - psi2*S2 - g2*S2 - (beta)*M*H*S2 - xi*S2
@@ -57,9 +41,9 @@ snail_epi_allvh_imm = function(t, n, parameters) {
     
     dI3dt = xi*siteI3 + sigma*E3 + g2*I2 - (muN3+muI)*I3 - psi3*I3 - xi*I3
     
-    dWtdt = lambda*I1 + theta1*lambda*I2 + theta2*lambda*I3 - (muW + muH)*Wt
+    dWtdt = lambda*(I1 + theta1*I2 + theta2*I3) - (muW + muH)*Wt
     
-    dWudt = lambda*I1 + theta1*lambda*I2 + theta2*lambda*I3 - (muW + muH)*Wu
+    dWudt = lambda*(I1 + theta1*I2 + theta2*I3) - (muW + muH)*Wu
     
     return(list(c(dS1dt, dS2dt, dS3dt, dE1dt, dE2dt, dE3dt, dI1dt, dI2dt, dI3dt, dWtdt, dWudt)))
   }) 
