@@ -14,7 +14,6 @@ par.all = c(par.aqua,
             par.epi_prawn,
             weight_hi = 0.05,
             weight_lo = 0.014,
-            cvrg = 0.75,
             eff = 0.85,
             epmL = 3.6)
 
@@ -35,7 +34,7 @@ par.all = c(par.aqua,
     paranges$linf = seq(184, 234, length.out = nsims)
     paranges$k.ros = seq(0.235/30, 0.371/30, length.out = nsims)
     paranges$c = seq(0.045, 0.12, length.out = nsims)
-    paranges$fc = seq(0, 1000, length.out = nsims)
+    paranges$fc = 0 # seq(0, 1000, length.out = nsims) influence of fixed cost explored in separate analysis
     paranges$p = seq(11, 22, length.out = nsims)
     paranges$eta = seq(0.24, 0.58, length.out = nsims)
     paranges$delta = seq(-log(1-0.03)/365, -log(1-0.20)/365, length.out = nsims)
@@ -58,7 +57,7 @@ par.all = c(par.aqua,
     paranges$beta = seq(1e-7, 1e-6, length.out = nsims)
     paranges$m = seq(0.2, 1.5, length.out = nsims)
     paranges$sigma = seq(1/80, 1/20, length.out = nsims)
-    paranges$lambda = seq(1e-7, 1e-5, length.out = nsims)
+    paranges$lambda = seq(1e-6, 1e-5, length.out = nsims)
     paranges$theta1 = seq(1, 5, length.out = nsims)
     paranges$theta2 = seq(2, 10, length.out = nsims)
     paranges$phi = seq(0.01, 0.3, length.out = nsims)
