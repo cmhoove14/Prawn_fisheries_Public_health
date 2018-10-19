@@ -18,6 +18,7 @@ require(parallel)
 require(kableExtra)
 require(broom)
 require(directlabels)
+require(furrr)
 require(tidyverse)
 
 multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
@@ -99,7 +100,7 @@ eum_dat <- rbind(opt.vol.df, opt.ros.df)
 Use function `sim_aqua_time` which simulates aquaculture cycle through time and returns data frame of the simulation
 
 ```{r aqua_sims, warning=FALSE, cache = TRUE}
-test_p0s <- seq(500, 7500, 100)  
+test_p0s <- seq(500, 7500, 50)  
 
 aqua_sims_vol <- map_df(test_p0s, sim_aqua_time)
 aqua_sims_ros <- map_df(test_p0s, sim_aqua_time, species = "M. rosenbergii")
@@ -169,11 +170,8 @@ cumprof_heatmap <- bind_rows(aqua_sims_vol, aqua_sims_ros) %>%
     geom_contour(breaks = c(seq(0,6000,1500)), col = "black") +
     geom_dl(aes(label = ..level..), method = "top.pieces",
             stat = "contour", breaks = c(seq(0,6000,1500))) +
-    scale_fill_gradient2(high = "darkgreen", 
-                         mid = "white",
-                         low = "darkred",
-                         breaks = c(-10000, -5000,
-                                    seq(0,6000,1500))) +
+    scale_fill_distiller(palette = "Spectral", direction = 1) +
+    #scale_fill_gradient2(high = "blue", mid = "bisque",low = "red", breaks = c(-10000, -5000, seq(0,6000,1500))) +
     facet_wrap(~Species, nrow = 2) +
     xlab(expression(paste("Stocking density (",P[0],")", sep = ""))) +
     ylab("Time (days)") +
@@ -367,7 +365,8 @@ source("../R/Sensitivity_Analysis/sensitivity_prep.R")
 par.all = c(par.aqua, par.snails.imm, par.epi_prawn)
 
 # Get aquaculture parameters from LHC
-  lhcpars.aqua = lhcpars[,which(colnames(lhcpars) %in% c(names(par.aqua), 'k.ros', 'c', 'fc', 'p', 'delta'))]
+  lhcpars.aqua = lhcpars[,which(colnames(lhcpars) %in% 
+                                  c(names(par.aqua), 'k.ros', 'c', 'fc', 'p', 'delta'))]
     lhcpars.aqua$fc <- 0  #No consideration of fixed costs in default model
     
 # Get the stocking densities and starting length again
@@ -377,7 +376,9 @@ par.all = c(par.aqua, par.snails.imm, par.epi_prawn)
   eum_sim <- expand.grid.df(lhcpars.aqua, test_starts)
   
 #Simulate across all parameter sets and stocking densities  
-  eum_sims_vol <- eum_sim %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. vollenhovenii"))
+  plan(multiprocess)
+  eum_sims_vol <- eum_sim %>% 
+    bind_cols(future_pmap_dfr(., sim_aqua_eum, species = "M. vollenhovenii"))
   
     eum_sims_vol_sum <- eum_sims_vol %>%       #Summarise across parameter sets
       group_by(P_nought) %>%  
@@ -559,13 +560,6 @@ ggsave("Figures/eum_curve_uncertainty.png",
 Also want a table showing set of parameters and outputs from optimal management. Two approaches here: can either consider the peak *median* cumulative profits from simulations across stocking densities and times as optimal management and draw uncertainty from those simulations, or identify optimal management from parameter point estimates, then estimate uncertainty from LHC parameter sets at that stocking density. Estimates from the latter are reported in the manuscript, but there's not a huge difference between the two.
 
 ```{r op_mgmt_table, cache = TRUE}
-#Function to return summary of a vector as median (IQR)
-get_sum <- function(vec){
-  paste0(round(median(vec), 2), 
-         " (", round(quantile(vec, 0.25), 2), 
-         " - ", round(quantile(vec, 0.75), 2), ")"  )
-} 
-
   #Get optimal stocking parameters considering uncertainty for vollenhovenii
     opt.vol.unc <- eum_sims_vol %>% 
       group_by(P_nought) %>% 
