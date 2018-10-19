@@ -13,8 +13,8 @@ prawn_sim <- function(t.runup, t.intervene, t.post,
                              parameters)) %>% 
     mutate(P = 0,
            L = 0,
-           W = cvrg*Wt + (1-cvrg)*Wu,
-           prev = get_prev(pars["phi"], W),
+           W = parameters["cvrg"]*Wt + (1-parameters["cvrg"])*Wu,
+           prev = get_prev(parameters["phi"], W),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
            I.t = (I1 + I2 + I3 ) / area, # density infected snails
@@ -34,8 +34,8 @@ prawn_sim <- function(t.runup, t.intervene, t.post,
                                  parameters,
                                  events = list(data = stock.events),
                                  atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
-    mutate(W = cvrg*Wt + (1-cvrg)*Wu,
-           prev = get_prev(pars["phi"], W),
+    mutate(W = parameters["cvrg"]*Wt + (1-parameters["cvrg"])*Wu,
+           prev = get_prev(parameters["phi"], W),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
            I.t = (I1 + I2 + I3 ) / area, # density infected snails
@@ -53,13 +53,8 @@ prawn_sim <- function(t.runup, t.intervene, t.post,
                             parameters)) %>% 
     mutate(P = 0,
            L = 0,
-           W = cvrg*Wt + (1-cvrg)*Wu,
-           prev = get_prev(pars["phi"], W),
-           DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wt, pars["H"], daily = TRUE),
-           DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wu, pars["H"], daily = TRUE),
-           DALYs_W = DALYs_Wt + DALYs_Wu,
+           W = parameters["cvrg"]*Wt + (1-parameters["cvrg"])*Wu,
+           prev = get_prev(parameters["phi"], W),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
            I.t = (I1 + I2 + I3 ) / area, # density infected snails
@@ -93,11 +88,9 @@ opt_stock <- opt_df %>%
   n.harvest = opt_stock$n_harvest
   stocks = data.frame(var = rep(c('P', 'L'), n.harvest),
                           time = rep(harvest_time*c(0:(n.harvest-1))+1, each = 2),
-                          value = rep(c(opt_stock$P, opt_stock$L), n.harvest),
+                          value = rep(c(opt_stock$P, opt_df$L_nought[1]), n.harvest),
                           method = rep('rep', (n.harvest)*2))
   
-    harvests = stocks[seq(1, nrow(stocks), 2), 2]  
-
 # Run epi model to equilibrium 
   epi_sim <- as.data.frame(ode(nstart,
                                seq(1,365*100,50),
@@ -109,7 +102,7 @@ opt_stock <- opt_df %>%
     
 #Add in prawn info and migration info to starting conditions/parameter set    
   full_eqbm["P"] <- opt_stock$P
-  full_eqbm["L"] <- opt_stock$L 
+  full_eqbm["L"] <- opt_df$L_nought[1] 
     
   pars["siteS1"] <- epi_eqbm %>% pull(S1)
   pars["siteE1"] <- epi_eqbm %>% pull(E1)
@@ -130,10 +123,12 @@ opt_stock <- opt_df %>%
                                         atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
     mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
            prev = get_prev(pars["phi"], W),
-           DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wt, pars["H"] * pars["cvrg"], daily = TRUE),
-           DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wu, pars["H"] *(1-pars["cvrg"]), daily = TRUE),
+           DALYs_Wt = map_dbl(Wt, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * pars["cvrg"])),
+           DALYs_Wu = map_dbl(Wu, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * (1-pars["cvrg"]))),
            DALYs_W = DALYs_Wt + DALYs_Wu,
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
@@ -154,9 +149,9 @@ opt_stock <- opt_df %>%
 # used for boxplot comparing cumulative impact of each intervention 
 compare_interventions <- function(pars, years){
   
-  opt_df = expand.grid.df(data.frame(pars[c("a.p", "b.p", "gam", "muP", "d", "om", 
+  opt_df = expand.grid.df(data.frame(t(pars[c("a.p", "b.p", "gam", "muP", "d", "om", 
                                             "k", "linf", "k.ros",
-                                            "c", "fc", "p", "eta", "delta")]), 
+                                            "c", "fc", "p", "delta")])), 
                           data.frame(L_nought = 40, P_nought = seq(500, 7500, 100))) 
 
 #Get mgmt strategy that maximizes cumulative ten year profits
@@ -169,11 +164,9 @@ opt_stock <- opt_df %>%
   n.harvest = opt_stock$n_harvest
   stocks = data.frame(var = rep(c('P', 'L'), n.harvest),
                           time = rep(harvest_time*c(0:(n.harvest-1))+1, each = 2),
-                          value = rep(c(opt_stock$P, opt_stock$L), n.harvest),
+                          value = rep(c(opt_stock$P, opt_df$L_nought[1]), n.harvest),
                           method = rep('rep', (n.harvest)*2))
-  
-    harvests = stocks[seq(1, nrow(stocks), 2), 2] 
-    
+
 #mda events #######
   mdas = data.frame(var = rep('Wt', years),
                     time = 365*c(0:(years-1))+1,
@@ -186,7 +179,7 @@ opt_stock <- opt_df %>%
 
 # Run epi model to equilibrium  ##############
   epi_sim <- as.data.frame(ode(nstart,
-                               seq(1,365*100,25),
+                               seq(1,365*100,50),
                                snail_epi_allvh_imm,
                                pars))
   
@@ -196,7 +189,7 @@ opt_stock <- opt_df %>%
       
 #Add in prawn info and migration info to starting conditions/parameter set    
   full_eqbm["P"] <- opt_stock$P
-  full_eqbm["L"] <- opt_stock$L 
+  full_eqbm["L"] <- opt_df$L_nought[1] 
     
   pars["siteS1"] <- epi_eqbm %>% pull(S1)
   pars["siteE1"] <- epi_eqbm %>% pull(E1)
@@ -216,19 +209,21 @@ opt_stock <- opt_df %>%
                                     pars)) %>% 
     mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
            prev = get_prev(pars["phi"], W),
-           DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wt, pars["H"] * pars["cvrg"], daily = TRUE),
-           DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wu, pars["H"] *(1-pars["cvrg"]), daily = TRUE),
-           DALYs_W = DALYs_Wt + DALYs_Wu,
-           S.t = (S1 + S2 + S3) / area,  # density susceptible snails
-           E.t = (E1 + E2 + E3) / area,  # density exposed snails 
-           I.t = (I1 + I2 + I3 ) / area, # density infected snails
-           N.t = (S.t + E.t + I.t), # total density snails
-           t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
-           t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
-           t.3 = (S3 + E3 + I3) / area) # density snails of size class 3  
-
+           DALYs_Wt = map_dbl(Wt, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * pars["cvrg"])),
+           DALYs_Wu = map_dbl(Wu, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * (1-pars["cvrg"]))),
+           DALYs_W = DALYs_Wt + DALYs_Wu)#,
+           #S.t = (S1 + S2 + S3) / area,  # density susceptible snails
+           #E.t = (E1 + E2 + E3) / area,  # density exposed snails 
+           #I.t = (I1 + I2 + I3 ) / area, # density infected snails
+           #N.t = (S.t + E.t + I.t), # total density snails
+           #t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
+           #t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
+           #t.3 = (S3 + E3 + I3) / area)
+  
     nothing_DALYs <- sum(sim.nothing %>% pull(DALYs_W))
 
 #Simulate annual MDA for n years ########
@@ -240,18 +235,20 @@ opt_stock <- opt_df %>%
                               atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
     mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
            prev = get_prev(pars["phi"], W),
-           DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wt, pars["H"] * pars["cvrg"], daily = TRUE),
-           DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wu, pars["H"] *(1-pars["cvrg"]), daily = TRUE),
-           DALYs_W = DALYs_Wt + DALYs_Wu,
-           S.t = (S1 + S2 + S3) / area,  # density susceptible snails
-           E.t = (E1 + E2 + E3) / area,  # density exposed snails 
-           I.t = (I1 + I2 + I3 ) / area, # density infected snails
-           N.t = (S.t + E.t + I.t), # total density snails
-           t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
-           t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
-           t.3 = (S3 + E3 + I3) / area) # density snails of size class 3  
+           DALYs_Wt = map_dbl(Wt, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * pars["cvrg"])),
+           DALYs_Wu = map_dbl(Wu, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * (1-pars["cvrg"]))),
+           DALYs_W = DALYs_Wt + DALYs_Wu)#,
+           #S.t = (S1 + S2 + S3) / area,  # density susceptible snails
+           #E.t = (E1 + E2 + E3) / area,  # density exposed snails 
+           #I.t = (I1 + I2 + I3 ) / area, # density infected snails
+           #N.t = (S.t + E.t + I.t), # total density snails
+           #t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
+           #t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
+           #t.3 = (S3 + E3 + I3) / area)
     
     mda_DALYs <- sum(sim.mda %>% pull(DALYs_W))
 
@@ -264,18 +261,20 @@ opt_stock <- opt_df %>%
                                  atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
     mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
            prev = get_prev(pars["phi"], W),
-           DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wt, pars["H"] * pars["cvrg"], daily = TRUE),
-           DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wu, pars["H"] *(1-pars["cvrg"]), daily = TRUE),
-           DALYs_W = DALYs_Wt + DALYs_Wu,
-           S.t = (S1 + S2 + S3) / area,  # density susceptible snails
-           E.t = (E1 + E2 + E3) / area,  # density exposed snails 
-           I.t = (I1 + I2 + I3 ) / area, # density infected snails
-           N.t = (S.t + E.t + I.t), # total density snails
-           t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
-           t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
-           t.3 = (S3 + E3 + I3) / area)
+           DALYs_Wt = map_dbl(Wt, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * pars["cvrg"])),
+           DALYs_Wu = map_dbl(Wu, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * (1-pars["cvrg"]))),
+           DALYs_W = DALYs_Wt + DALYs_Wu)#,
+           #S.t = (S1 + S2 + S3) / area,  # density susceptible snails
+           #E.t = (E1 + E2 + E3) / area,  # density exposed snails 
+           #I.t = (I1 + I2 + I3 ) / area, # density infected snails
+           #N.t = (S.t + E.t + I.t), # total density snails
+           #t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
+           #t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
+           #t.3 = (S3 + E3 + I3) / area)
   
   prawn_DALYs <- sum(prawn_sim %>% pull(DALYs_W))
 
@@ -288,24 +287,26 @@ opt_stock <- opt_df %>%
                                  atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
     mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
            prev = get_prev(pars["phi"], W),
-           DALYs_Wt = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wt, pars["H"] * pars["cvrg"], daily = TRUE),
-           DALYs_Wu = est_dalys(pars["weight_lo"], pars["weight_hi"], pars["epmL"],
-                             pars["phi"], Wu, pars["H"] *(1-pars["cvrg"]), daily = TRUE),
-           DALYs_W = DALYs_Wt + DALYs_Wu,
-           S.t = (S1 + S2 + S3) / area,  # density susceptible snails
-           E.t = (E1 + E2 + E3) / area,  # density exposed snails 
-           I.t = (I1 + I2 + I3 ) / area, # density infected snails
-           N.t = (S.t + E.t + I.t), # total density snails
-           t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
-           t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
-           t.3 = (S3 + E3 + I3) / area)
+           DALYs_Wt = map_dbl(Wt, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * pars["cvrg"])),
+           DALYs_Wu = map_dbl(Wu, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * (1-pars["cvrg"]))),
+           DALYs_W = DALYs_Wt + DALYs_Wu)#,
+           #S.t = (S1 + S2 + S3) / area,  # density susceptible snails
+           #E.t = (E1 + E2 + E3) / area,  # density exposed snails 
+           #I.t = (I1 + I2 + I3 ) / area, # density infected snails
+           #N.t = (S.t + E.t + I.t), # total density snails
+           #t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
+           #t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
+           #t.3 = (S3 + E3 + I3) / area)
   
   cmbnd_DALYs <- sum(cmbnd_sim %>% pull(DALYs_W))
   
-  return(data.frame("None" = nothing_DALYs - nothing_DALYs, 
-                    "MDA" = mda_DALYs - nothing_DALYs, 
-                    "Prawns" = prawn_DALYs - nothing_DALYs, 
-                    "Prawns & MDA" = cmbnd_DALYs - nothing_DALYs))
+  return(data.frame("None" = nothing_DALYs, 
+                    "MDA" = mda_DALYs, 
+                    "Prawns" = prawn_DALYs, 
+                    "Prawns & MDA" = cmbnd_DALYs))
   
 }
