@@ -18,11 +18,12 @@ get_prev <- function(clump,
   pnbinom(1, size = clump, mu = burden, lower.tail = FALSE)
 }
 
-est_dalys <- function(weights_lo, # disability weight for low infection intensity 
+#Function estimate schisto DALYs
+est_dalys <- function(burden,     # mean worm burden of NB
+                      clump,      # clumping parameter of NB
+                      weights_lo, # disability weight for low infection intensity 
                       weights_hi, # disability weight for high infection intensity >=50 eggs/10mL
                       epmL,       # estimate of eggs/10mL per mated female worm
-                      clump,      # clumping parameter of NB
-                      burden,     # mean worm burden of NB
                       pop,        # human population
                       daily = TRUE){  # estimating DALYs on a daily basis?
   eggs_mL <- rnbinom(pop, size = clump, mu = burden) * phi_Wk(burden, clump) * 0.5 * epmL # estimate of egg burden converted from worm burden
@@ -30,7 +31,7 @@ est_dalys <- function(weights_lo, # disability weight for low infection intensit
   n_lo <- length(eggs_mL[eggs_mL > 0 & eggs_mL < 50])
   n_hi <- length(eggs_mL[eggs_mL >= 50])
   
-  if(daily == TRUE){
+  if(daily){
     
     dalys_lo <- n_lo * weights_lo/365
     dalys_hi <- n_hi * weights_hi/365
@@ -44,3 +45,10 @@ est_dalys <- function(weights_lo, # disability weight for low infection intensit
   
   return(dalys_hi + dalys_lo)
 }
+
+#Function to return summary of a vector as median (IQR)
+get_sum <- function(vec){
+  paste0(round(median(vec, na.rm = T), 2), 
+         " (", round(quantile(vec, 0.25, na.rm = T), 2), 
+         " - ", round(quantile(vec, 0.75, na.rm = T), 2), ")"  )
+} 
