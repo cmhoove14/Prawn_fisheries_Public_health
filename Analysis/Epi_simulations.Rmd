@@ -18,6 +18,7 @@ require(parallel)
 require(kableExtra)
 require(broom)
 require(directlabels)
+require(furrr)
 require(tidyverse)
 
 multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
@@ -61,6 +62,7 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 
 # Number of years to simulate
   years = 10
+  set.seed(43018)
 
 ```
 
@@ -69,6 +71,7 @@ Load all functions, models, parameter sets and so some initial runs to get equil
 
 ```{r snail_prep, warnings=FALSE, cache = TRUE}
 #Load all necessary functions, models, and parameter sets
+source("../R/helper_fxs.R")
 source('../R/Prawn_aquaculture/prawn_aquaculture_mod.R')
 source('../R/Prawn_aquaculture/prawn_aquaculture_sim.R')
 source("../R/Epi_Model/snail_epi_mod_no_diag_immigration.R")
@@ -176,8 +179,8 @@ yr1 = as.data.frame(ode(nstart,
                         par.snails.imm)) %>% 
   mutate(P = 0, #Add prawn variable to integrate with prawn stocking sims
          L = 0, #Add prawn variable to integrate with prawn stocking sims
-         W = cvrg*Wt + (1-cvrg)*Wu,
-         prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
+         W = par.snails.imm["cvrg"]*Wt + (1-par.snails.imm["cvrg"])*Wu,
+         prev = get_prev(par.snails.imm["phi"], W),
          S.t = (S1 + S2 + S3) / area,  # density susceptible snails
          E.t = (E1 + E2 + E3) / area,  # density exposed snails 
          I.t = (I1 + I2 + I3 ) / area, # density infected snails
@@ -203,8 +206,8 @@ yr1.nomig = as.data.frame(ode(nstart,
                               par.snails.nomig))  %>% 
   mutate(P = 0, #Add prawn variable to integrate with prawn stocking sims
          L = 0, #Add prawn variable to integrate with prawn stocking sims
-         W = cvrg*Wt + (1-cvrg)*Wu,
-         prev = pnbinom(2, size = par.snails.nomig['phi'], mu = W, lower.tail = FALSE),
+         W = par.snails.imm["cvrg"]*Wt + (1-par.snails.imm["cvrg"])*Wu,
+         prev = get_prev(par.snails.imm["phi"], W),
          S.t = (S1 + S2 + S3) / area,  # density susceptible snails
          E.t = (E1 + E2 + E3) / area,  # density exposed snails 
          I.t = (I1 + I2 + I3 ) / area, # density infected snails
@@ -226,8 +229,8 @@ Simulations through `r print(years)` years for reference to compare effect of in
                                   par.snails.imm)) %>% 
     mutate(P = 0, #Add prawn variable to integrate with prawn stocking sims
            L = 0, #Add prawn variable to integrate with prawn stocking sims
-           W = cvrg*Wt + (1-cvrg)*Wu,
-           prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
+           W = par.snails.imm["cvrg"]*Wt + (1-par.snails.imm["cvrg"])*Wu,
+           prev = get_prev(par.snails.imm["phi"], W),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
            I.t = (I1 + I2 + I3 ) / area, # density infected snails
@@ -301,7 +304,7 @@ snail.nothing = sim.nothing %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
 
 
 ## MDA intervention   
-Simulate annual MDA for `r print(years)` years assuming `r paste0(eff, "%")` drug efficacy and `r paste0((1-cvrg), "%")` systematic non-compliance, then run for an additional `r print(years)` to show how rebound might occur 
+Simulate annual MDA for `r print(years)` years assuming `r paste0(eff, "%")` drug efficacy and `r paste0((1-par.snails.imm["cvrg"]), "%")` systematic non-compliance, then run for an additional `r print(years)` to show how rebound might occur 
 ```{r mda_sim, fig.height=3, fig.width=8, cache = TRUE}
 #Simulate annual MDA for n years ########
   sim.mda = as.data.frame(ode(nstart,
@@ -311,8 +314,8 @@ Simulate annual MDA for `r print(years)` years assuming `r paste0(eff, "%")` dru
                               events = list(data = mdas))) %>% 
     mutate(P = 0, #Add prawn variable to integrate with prawn stocking sims
            L = 0, #Add prawn variable to integrate with prawn stocking sims
-           W = cvrg*Wt + (1-cvrg)*Wu,
-           prev = pnbinom(2, size = par.snails.imm['phi'], mu = W, lower.tail = FALSE),
+           W = par.snails.imm["cvrg"]*Wt + (1-par.snails.imm["cvrg"])*Wu,
+           prev = get_prev(par.snails.imm["phi"], W),
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
            I.t = (I1 + I2 + I3 ) / area, # density infected snails
@@ -736,38 +739,48 @@ dev.off()
 ```
 
 # Compare interventions with uncertainty   
-To compare each intervention strategy across parametric uncertainty, the model is simulated across all LHC parameter sets under each intervention. The cumulative sum of mean worm burden over time for each intervention and each parameter set is recorded as measure of overall burden associated with each intervention and plotted here as a boxplot to compare the distribution of burdens associated with each intervention
+To compare each intervention strategy across parametric uncertainty, the model is simulated across all LHC parameter sets under each intervention. Total DALYs for each intervention and each parameter set is recorded as measure of overall burden associated with each intervention and plotted here as a boxplot to compare the distribution of burdens associated with each intervention
 ```{r compare_interventions, cache = TRUE}
-prawn_start = c("P" = opt.ros$P_nought,
-                "L" = 40)
+plan(multiprocess)
 
-# Augment function to continue over errors
-  possibly_comp_ints <- possibly(compare_interventions, 
-                                      otherwise = data.frame("None" = NA, 
-                                                             "MDA" = NA, 
-                                                             "Prawns" = NA, 
-                                                             "Prawns & MDA" = NA), 
-                                      quiet = FALSE)
+poss_comp_ints <- possibly(compare_interventions,
+                           data.frame("None" = NA, 
+                                      "MDA" = NA, 
+                                      "Prawns" = NA, 
+                                      "Prawns & MDA" = NA),
+                           quiet = FALSE)
 
   comp_ints <- lhcpars %>%
     rowwise %>% do(pars = unlist(.)) %>% 
-    bind_cols(pmap_df(., possibly_comp_ints, years = years)) %>% select(-pars) %>% 
-    bind_cols(., lhcpars)
+    bind_cols(future_pmap_dfr(., poss_comp_ints, years = years)) %>% 
+    select(-pars) %>% bind_cols(., lhcpars)
 
 ```
 
 ```{r comp_ints_boxplot, fig.height=5, fig.width=8}
-comp_ints_bp <- comp_ints %>% 
-  gather("Intervention", "Cum_W", None:Prawns...MDA) %>% 
-  ggplot(aes(x = Intervention, y = log(Cum_W))) +
+comp_ints_bp <- comp_ints %>% filter(None > 1) %>% 
+  mutate(MDA_Averted = None - MDA,
+         Prawns_Averted = None - Prawns,
+         Both_Averted = None - Prawns...MDA) %>% 
+  gather("Intervention", "DALYs", MDA_Averted:Both_Averted) %>% 
+  ggplot(aes(x = Intervention, y = DALYs)) +
   geom_boxplot(width = 0.3) + theme_bw() +
-  ggtitle("Comparison of intervention strategies",
-          subtitle = "Based on cumulative mean worm burden") + 
+  ylab("DALYs Averted") +
+  ggtitle("Comparison of intervention strategies") + 
       theme_bw() +
       theme(legend.position = c(0.35, 0.8),
             axis.text = element_text(size = 12),  #increase axis label size
             axis.title = element_text(size = 14), #increase axis title size
             title = element_text(size = 14))
+
+comp_ints_bp
+
+cbind(None_sum = get_sum(comp_ints$None),
+      MDA_sum = get_sum(comp_ints$MDA),
+      Prawns_sum = get_sum(comp_ints$Prawns),
+      Both_sum = get_sum(comp_ints$Prawns...MDA)) %>% 
+  knitr::kable(caption = "Summary of 10-year cumulated DALYs associated with each intervention")
+
 ```
 
 ```{r save_comp_ints_boxplot, include = FALSE}
