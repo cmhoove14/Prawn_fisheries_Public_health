@@ -18,6 +18,7 @@ require(parallel)
 require(kableExtra)
 require(broom)
 require(directlabels)
+require(furrr)
 require(tidyverse)
 
 multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
@@ -98,9 +99,10 @@ source("../Data/Ranjeet_Kurup_06_data.R")
 ```
 
 ```{r prawn_cost_plot, echo = FALSE, fig.height=10, fig.width=8}
-cost_sims_vol %>% bind_rows(., cost_sims_ros) %>% 
-  ggplot(aes(x = P_nought, y = fc, fill = cum_profits)) + 
+prawn_cost_plot <- cost_sims_vol %>% bind_rows(., cost_sims_ros) %>% 
+  ggplot(aes(x = P_nought, y = fc, fill = cum_profits, z = cum_profits)) + 
     geom_tile() +
+    geom_contour(breaks = c(0), col = "black") +
     scale_fill_distiller(palette = "Spectral", direction = 1) +
     scale_x_continuous(limits = range(cost_sim$P_nought)) +
     scale_y_continuous(limits = range(cost_sim$fc)) +
@@ -115,10 +117,17 @@ cost_sims_vol %>% bind_rows(., cost_sims_ros) %>%
           legend.text=element_text(size=12)) +
     guides(fill=guide_legend(title="Cumulative \nProfits"))
 
+```
+
+```{r save_prawn_cost_plot, include = FALSE, echo = FALSE}
+prawn_cost_plot
+
+ggsave("Figures/prawn_fixed_cost_sensitivity.png",
+       height = 5, width = 4, units = "in")
 
 ```
 
-```{r prawn_cost_plot2, echo = FALSE, fig.height=10, fig.width=8}
+```{r prawn_cost_plot2, echo = FALSE, include = FALSE, fig.height=10, fig.width=8}
 cost_sims_vol %>% bind_rows(., cost_sims_ros) %>% 
   ggplot(aes(x = P_nought, y = cum_profits, col = as.factor(fc))) + geom_line(size = 1.2) +
     theme_bw() + facet_wrap( ~ Species, nrow = 2) +
@@ -152,9 +161,10 @@ cost_sims_vol %>% bind_rows(., cost_sims_ros) %>%
 ```
 
 ```{r prawn_mort_plot, echo = FALSE, fig.height=10, fig.width=8}
-mort_sims_vol %>% bind_rows(., mort_sims_ros) %>%   
-  ggplot(aes(x = P_nought, y = muP, fill = cum_profits)) + 
+prawn_mort_plot <- mort_sims_vol %>% bind_rows(., mort_sims_ros) %>%   
+  ggplot(aes(x = P_nought, y = muP, fill = cum_profits, z = cum_profits)) + 
     geom_tile() + #coord_equal() + 
+    geom_contour(breaks = c(0), col = "black") +
     scale_fill_distiller(palette = "Spectral", direction = 1) +
     scale_x_continuous(limits = range(mort_sim$P_nought)) +
     scale_y_continuous(limits = range(mort_sim$muP)) +
@@ -169,9 +179,18 @@ mort_sims_vol %>% bind_rows(., mort_sims_ros) %>%
           legend.text=element_text(size=12)) +
     guides(fill=guide_legend(title="Cumulative \nProfits"))
 
+prawn_mort_plot
 ```
 
-```{r prawn_mort_plot2, echo = FALSE, fig.height=10, fig.width=8}
+```{r save_prawn_mort_plot, include = FALSE, echo = FALSE}
+prawn_mort_plot
+
+ggsave("Figures/prawn_mortality_sensitivity.png",
+       height = 5, width = 4, units = "in")
+
+```
+
+```{r prawn_mort_plot2, echo = FALSE, include = FALSE, fig.height=10, fig.width=8}
 mort_sims_vol %>% bind_rows(., mort_sims_ros) %>% 
   ggplot(aes(x = P_nought, y = cum_profits, col = as.factor(round(muP, 4)))) + geom_line(size = 1.2) +
     theme_bw() + facet_wrap( ~ Species, nrow = 2) +
@@ -194,13 +213,12 @@ Two key structural modeling decisions are the inclusion of snail migration and t
 + Holling's type II functional response and snail migration
 + Holling's type II functional response and no snail migration  
 
-### Holling's III and snail migration  
 ```{r load_epi_sims}
 qwraps2::lazyload_cache_labels("snail_prep", path = "Epi_simulations_cache/latex/")
 qwraps2::lazyload_cache_labels("ros_sim", path = "Epi_simulations_cache/latex/")
 ```
 
-
+### Holling's III and snail migration  
 ```{r ros_sim_mig, fig.height=4, fig.width=8, echo = FALSE}
 # Plot worm burden over time with rosenbergii stocking events  ###########
   w.ros = sim.ros %>% dplyr::select(time, W, Wt, Wu) %>% 
@@ -261,6 +279,7 @@ snail.ros = sim.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   snail.ros
 ```
 
+### Holling's III and no snail migration  
 ```{r ros_sim_nomig, fig.height=4, fig.width=8, echo = FALSE, cache = TRUE}
 # Simulate M. rosenbergii stocking for n years ########
 sim.ros.nomig = prawn_sim(t.runup = c(1:366), 
@@ -327,6 +346,7 @@ snail.ros.nomig = sim.ros.nomig %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
 snail.ros.nomig    
 ```
 
+### Holling's II and snail migration  
 ```{r ros_sim_hollings2, fig.height=4, fig.width=8, echo = FALSE, cache = TRUE}
 par.all.ros.h2 <- par.all.ros
   par.all.ros.h2["nfr"] <- 1
@@ -400,6 +420,7 @@ snail.ros.h2 = sim.ros.h2 %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   
 ```
 
+### Holling's II and no snail migration  
 ```{r ros_sim_hollings2_nomig, fig.height=4, fig.width=8, echo = FALSE, cache = TRUE}
 par.all.ros.nomig.h2 <- par.all.ros.nomig
   par.all.ros.nomig.h2["nfr"] <- 1
@@ -477,26 +498,41 @@ snail.ros.nomig.h2 = sim.ros.nomig.h2 %>% dplyr::select(time, S.t, E.t, I.t, N.t
 
 # Global sensitivity analysis with Latin Hypercube Sampling and Partial Rank Correlation Coefficients (LHS-PRCC)  
 ## Prawn aquaculture model  
-Assess sensitivity of cumulative profits in prawn aquculture model simulations to parametric uncertainty  
-#### Monotinicity of cumulative profits to parameter uncertainty  
-```{r prawn_monotinicity, echo=FALSE, fig.height=10.5, fig.width=8}
+Assess sensitivity of cumulative profits in prawn aquculture model simulations to parametric uncertainty 
+
+### Monotonicity of cumulative profits to parameter uncertainty  
+```{r prawn_monotonicity, echo=FALSE, fig.height=10.5, fig.width=8}
 qwraps2::lazyload_cache_labels("Fig3_sensitivity", 
                                "Prawn_Aquaculture_Profit_Maximization_cache/latex/")
 #Use simulations over parameter sets from above
-eum_sims_ros %>% filter(P_nought == 2500) %>% select(-fc) %>% 
+prawn_monotonicity <- eum_sims_ros %>% 
+  filter(P_nought == opt.ros$P_nought) %>% select(-fc) %>% 
   gather("parameter", "value", a.p:delta) %>% 
   ggplot(aes(x = value, y = cum_profits)) + 
     theme_bw() + labs(y = "Ten-year Cumulative profit (USD)") +
     geom_point(size = 0.5) +
     facet_wrap( ~ parameter, scales = "free_x", nrow = 6) +
     stat_smooth(method = "loess")
+
+prawn_monotonicity
 ```
 
-#### PRCC plot of cumulative profits to relevant parameters  
+```{r prawn_monotonicity_save, include = FALSE, echo = FALSE}
+prawn_monotonicity
+
+ggsave("Figures/prawn_sensitivity_monotonicity.png",
+       height = 10.5, width = 8.5, units = "in")
+
+```
+
+
+### PRCC plot of cumulative profits to relevant parameters  
 ```{r prawn_prcc, echo = FALSE, fig.height=5, fig.width=8}
 # cumulative profit sensitivity  
 profit.pcc = pcc(X = lhcpars.aqua %>% select(-fc),
-                 y = as.data.frame(eum_sims_ros %>% filter(P_nought == 2500) %>% pull(cum_profits)/1000),
+                 y = as.data.frame(eum_sims_ros %>% 
+                                     filter(P_nought == opt.ros$P_nought) %>% 
+                                     pull(cum_profits)/1000),
                  rank = TRUE)
 
 profit.pcc.df = profit.pcc$PRCC %>% 
@@ -512,13 +548,13 @@ ggplot(profit.pcc.df, aes(x = cor, y = original, label = var)) +
        y = "PRCC",
        main = "Relationship between correlation coefficient and PRCC")
 
-profit.lhsprcc = ggplot(profit.pcc.df, aes(x = var, y = original)) +
+profit.lhsprcc <- ggplot(profit.pcc.df, aes(x = var, y = original)) +
   theme_bw()+
   theme(axis.text = element_text(size = 12),  #increase axis label size
         axis.title = element_text(size = 15), #increase axis title size
         axis.title.y = element_blank(),
         axis.title.x = element_blank()) + 
-  scale_y_continuous(limits = c(-0.7,0.7), breaks = seq(-0.7, 0.7, 0.2))+
+  scale_y_continuous(limits = c(-0.75,0.75), breaks = seq(-0.75, 0.75, 0.25)) +
   scale_x_discrete(labels = c("a.p" = expression(italic(a[P])),
                               "b.p" = expression(italic(b[P])),
                               "c" = expression(italic(c)),
@@ -541,6 +577,15 @@ profit.lhsprcc
 
 ```
 
+```{r prawn_prcc_save, include = FALSE, echo = FALSE}
+profit.lhsprcc
+
+ggsave("Figures/prawn_sensitivity_prcc.png",
+       height = 5, width = 4, units = "in")
+
+```
+
+
 ## Snail epi model  
 Assess sensitivity of cumulative sum of worm burden and cumulative infected snail density in schisto epi model simulations to parametric uncertainty  
 ```{r snail_epi_sens_sims, echo = FALSE, cache = TRUE}
@@ -552,44 +597,61 @@ source("../R/Epi_Model/snail_epi_sim.R")
 #Augment function to continue over errors
   possibly_sim_epi_mod <- possibly(sim_epi_mod, 
                                    otherwise = data.frame(W = NA, S.t = NA, E.t = NA, I.t = NA, N.t = NA), 
-                                   quiet = TRUE)
+                                   quiet = FALSE)
+  
+plan(multiprocess)  
   
   epi_sens_sims <- lhcpars.epi %>% 
     mutate(xi = 0) %>% 
     rowwise %>% do(pars = unlist(.)) %>% 
-    bind_cols(pmap_df(., possibly_sim_epi_mod)) %>% select(-pars) %>% 
+    bind_cols(future_pmap_dfr(., possibly_sim_epi_mod)) %>% select(-pars) %>% 
     bind_cols(., lhcpars.epi)
   
-#  summary(epi_sens_sims$W)
-#  summary(epi_sens_sims$N.t)
-
+  sum(is.na(epi_sens_sims$W))
 ```
 
-#### Monotinicity of cumulative worm burden and infected snail density to parameter uncertainty  
-```{r epi_monotinicity, echo=FALSE, fig.height=10.5, fig.width=8}  
+### Monotonicity of equilibrium worm burden and infected snail density to parameter uncertainty  
+```{r epi_monotonicity, echo=FALSE, fig.height=10.5, fig.width=8}  
 #Use simulations over parameter sets from above
-epi_sens_sims %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr)) %>% 
+epi_w_monotonicity <- epi_sens_sims %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr)) %>% 
   gather("parameter", "value", f:muH) %>% 
   ggplot(aes(x = value, y = W)) + 
-    theme_bw() + labs(y = "Mean Worm Burden (W)") +
+    theme_bw() + 
+    labs(y = "Mean Worm Burden (W)") +
     geom_point(size = 0.5) +
     facet_wrap( ~ parameter, scales = "free_x", nrow = 6) +
     stat_smooth(method = "loess") +
-    ggtitle("Scatter plots of cumulative mean worm burden to key parameters")
+    ggtitle("Scatter plots of mean worm burden to key parameters")
 
-epi_sens_sims %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr)) %>% 
+epi_w_monotonicity
+
+epi_It_monotonicity <- epi_sens_sims %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr)) %>% 
   gather("parameter", "value", f:muH) %>% 
-  ggplot(aes(x = value, y = N.t)) + 
-    theme_bw() + labs(y = "Total snail density (N)") +
+  ggplot(aes(x = value, y = I.t)) + 
+    theme_bw() + 
+    labs(y = expression(paste("Infected snail density (",N[I], ")", sep = ""))) +
     geom_point(size = 0.5) +
     facet_wrap( ~ parameter, scales = "free_x", nrow = 6) +
     stat_smooth(method = "loess") +
-    ggtitle("Scatter plots of cumulative infected snail density to key parameters")
+    ggtitle("Scatter plots of infected snail density to key parameters")
 
+epi_It_monotonicity
+```
+
+```{r epi_monotonicity_save, include = FALSE, echo = FALSE}
+epi_w_monotonicity
+
+ggsave("Figures/epi_w_monotonicity.png",
+       height = 10.5, width = 8.5, units = "in")
+
+epi_It_monotonicity
+
+ggsave("Figures/epi_I_monotonicity.png",
+       height = 10.5, width = 8.5, units = "in")
 
 ```
 
-#### PRCC plot of cumulative worm burden and infected snail density to relevant parameters  
+### PRCC plot of equilibrium worm burden and infected snail density to relevant parameters  
 ```{r epi_prcc, echo = FALSE, fig.height=5, fig.width=8}
 # Epi worm burden sensitivity   #############
 epi.W.pcc = pcc(X = lhcpars.epi %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr)),
@@ -602,16 +664,16 @@ epi.W.pcc.df = epi.W.pcc$PRCC %>%
          var = colnames(lhcpars.epi %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr))),
          outcome = "W")
 
-# Epi snail density sensitivity   #############
-epi.N.pcc = pcc(X = lhcpars.epi %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr)),
-                y = as.data.frame(epi_sens_sims %>% pull(N.t)),
+# Epi infected snail density sensitivity   #############
+epi.I.pcc = pcc(X = lhcpars.epi %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr)),
+                y = as.data.frame(epi_sens_sims %>% pull(I.t)),
                 rank = TRUE)
 
-epi.N.pcc.df = epi.N.pcc$PRCC %>% 
+epi.I.pcc.df = epi.I.pcc$PRCC %>% 
   mutate(cor = cor(lhcpars.epi %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr)), 
-                   epi_sens_sims %>% pull(N.t))[,1],
+                   epi_sens_sims %>% pull(I.t))[,1],
          var = colnames(lhcpars.epi %>% select(-c(A, H, xi:siteI3, psi1:psi3, nfr))),
-         outcome = "N")
+         outcome = "I")
 
 # Correlation plots #######
 ggplot(epi.W.pcc.df, aes(x = cor, y = original, label = var)) + 
@@ -622,7 +684,7 @@ ggplot(epi.W.pcc.df, aes(x = cor, y = original, label = var)) +
        main = "Relationship between worm burden correlation coefficient and PRCC")
 
 
-ggplot(epi.N.pcc.df, aes(x = cor, y = original, label = var)) + 
+ggplot(epi.I.pcc.df, aes(x = cor, y = original, label = var)) + 
   geom_point(pch = 16) + theme_bw() +
   geom_text(aes(label = var), hjust = -0.5, vjust = -0.5) +
   labs(x = "Correlation coefficient",
@@ -631,7 +693,7 @@ ggplot(epi.N.pcc.df, aes(x = cor, y = original, label = var)) +
 
 
 # PRCC plot #######
-epi.lhsprcc <- epi.W.pcc.df %>% bind_rows(., epi.N.pcc.df) %>% 
+epi.lhsprcc <- epi.W.pcc.df %>% bind_rows(., epi.I.pcc.df) %>% 
   ggplot(aes(x = var, y = original, fill = outcome)) +
     theme_bw() + 
     theme(axis.text = element_text(size = 12),  #increase axis label size
@@ -639,7 +701,7 @@ epi.lhsprcc <- epi.W.pcc.df %>% bind_rows(., epi.N.pcc.df) %>%
           axis.title.x = element_blank(),
           axis.title.y = element_blank(),
           legend.position = "none") + 
-    scale_y_continuous(limits = c(-0.7,0.7), breaks = seq(-0.7, 0.7, 0.2))+
+    scale_y_continuous(limits = c(-0.75,0.75), breaks = seq(-0.75, 0.75, 0.25))+
     scale_x_discrete(labels = c("beta" = expression(italic(beta)),
                                 "f" = expression(italic(f)),
                                 "g1" = expression(g[1]),
@@ -659,7 +721,7 @@ epi.lhsprcc <- epi.W.pcc.df %>% bind_rows(., epi.N.pcc.df) %>%
                                 "theta2" = expression(italic(theta[2])),
                                 "z" = expression(italic(z)))) +
     geom_bar(stat = 'identity', width = 0.5, position = position_dodge()) +
-    scale_fill_manual(values = c("N" = "black", "W" = "purple")) +
+    scale_fill_manual(values = c("I" = "red", "W" = "purple")) +
     annotate('text', x = 18, y = -0.6, label = "C)", size = 8)  +
     geom_hline(yintercept = 0, lty = 2) +
     labs(x = 'Parameter', y = 'Epi Model Outcomes PRCC') + coord_flip()
@@ -668,114 +730,98 @@ epi.lhsprcc
 
 ```
 
+```{r epi_prcc_save, include = FALSE, echo = FALSE}
+epi.lhsprcc
+
+ggsave("Figures/epi_prcc.png",
+       height = 5, width = 4, units = "in")
+
+```
 
 ## Integrated model with interventions  
-Assess sensitivity of cumulative sum of worm burden and cumulative infected snail density in integrated aquaculture-epi model simulations to parametric uncertainty  
+Assess sensitivity of DALYs averted in the integrated prawn-MDA treatment to all parameters  
 
-```{r combined_sens_sims, echo = FALSE, cache = TRUE}
-source("../R/Combined_Model/epi_no_diag_prawn_sim.R")
-prawn_start = c("P" = opt.ros$P_nought,
-                "L" = 40)
+```{r combined_sens_sims, echo = FALSE}
+qwraps2::lazyload_cache_labels("compare_interventions", path = "Epi_simulations_cache/latex/")
 
-#Augment function to continue over errors
-  possibly_integrated_mod <- possibly(prawn_intervention_sim, 
-                                      otherwise = data.frame(W = NA, N.t = NA, I.t = NA), 
-                                      quiet = TRUE)
-
-  com_sens_sims <- lhcpars %>% 
-    rowwise %>% do(pars = unlist(.)) %>% 
-    bind_cols(pmap_df(., possibly_integrated_mod)) %>% select(-pars) %>% 
-    bind_cols(., lhcpars)
-  
-#  summary(com_sens_sims$W)
-#  summary(com_sens_sims$N.t)
-
+comp_ints <- comp_ints %>% 
+  rename(Both = Prawns...MDA) %>% 
+  mutate(DALYs_Averted = None - Both)
 ```
 
-#### Monotinicity of cumulative worm burden and infected snail density to parameter uncertainty  
-```{r combined_monotinicity, echo=FALSE, warning = FALSE, fig.height=10.5, fig.width=8}
+### Monotonicity of cumulative worm burden and infected snail density to parameter uncertainty  
+```{r combined_monotonicity, echo=FALSE, warning = FALSE, fig.height=10.5, fig.width=8}
 #Use simulations over parameter sets from above
-com_sens_sims %>% select(-c(A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)) %>% 
-  gather("parameter", "value", a.p:th) %>% 
-  ggplot(aes(x = value, y = W)) + 
-    theme_bw() + labs(y = "Mean Worm Burden (W)") +
+dalys_monotonicity <- comp_ints %>% select(-c(A, H, k, fc, eta, siteS1:siteI3, psi1:psi3)) %>% 
+  gather("parameter", "value", a.p:epmL) %>% 
+  ggplot(aes(x = value, y = DALYs_Averted)) + 
+    theme_bw() + labs(y = "DALYs Averted") +
     geom_point(size = 0.5) +
     facet_wrap( ~ parameter, scales = "free_x", nrow = 7) +
     stat_smooth(method = "loess")
 
-com_sens_sims %>% select(-c(A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)) %>% 
-  gather("parameter", "value", a.p:th) %>% 
-  ggplot(aes(x = value, y = N.t)) + 
-    theme_bw() + labs(y = "Total snail density (N)") +
-    geom_point(size = 0.5) +
-    facet_wrap( ~ parameter, scales = "free_x", nrow = 7) +
-    stat_smooth(method = "loess")
+dalys_monotonicity
+```
+
+```{r combined_monotonicity_save, include = FALSE, echo = FALSE}
+dalys_monotonicity
+
+ggsave("Figures/dalys_monotonicity.png",
+       height = 10.5, width = 8.5, units = "in")
 
 ```
 
-```{r combined_prcc, warning = FALSE, echo = FALSE, fig.height=5, fig.width=8}
-# Combined model worm burden sensitivity   #############
-com.W.pcc = pcc(X = com_sens_sims %>% 
-                      filter(!is.na(W)) %>% 
-                      select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)),
-                y = as.data.frame(com_sens_sims %>% filter(!is.na(W)) %>% pull(W)),
+```{r combined_prcc, fig.height=5, fig.width=8}
+# Combined model worm burden sensitivity
+com.DALYs.pcc = pcc(X = comp_ints %>% 
+                      filter(!is.na(DALYs_Averted)) %>% 
+                      select(-c(DALYs_Averted, Both, None, MDA, Prawns, 
+                                A, H, k, fc, eta, siteS1:siteI3, psi1:psi3)),
+                y = as.data.frame(comp_ints %>% filter(!is.na(DALYs_Averted)) %>% pull(DALYs_Averted)),
                 rank = TRUE)
 
-com.W.pcc.df = com.W.pcc$PRCC %>% 
-  mutate(cor = cor(com_sens_sims %>% 
-                     filter(!is.na(W)) %>% 
-                     select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)), 
-                   com_sens_sims %>% filter(!is.na(W)) %>% pull(W)),
-         var = colnames(com_sens_sims %>% select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta))),
-         outcome = "W")
-
-# Combined model snail density sensitivity   #############
-com.N.pcc = pcc(com_sens_sims %>% 
-                      filter(!is.na(N.t)) %>% 
-                      select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)),
-                y = as.data.frame(com_sens_sims %>% filter(!is.na(N.t)) %>% pull(N.t)),
-                rank = TRUE)
-
-com.N.pcc.df = com.N.pcc$PRCC %>% 
-  mutate(cor = cor(com_sens_sims %>% 
-                      filter(!is.na(N.t)) %>% 
-                      select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta)), 
-                   com_sens_sims %>% filter(!is.na(N.t)) %>% pull(N.t)),
-         var = colnames(com_sens_sims %>% select(-c(W:I.t, A, H, siteS1:siteI3, psi1:psi3, k.ros:delta))),
-         outcome = "N")
+com.DALYs.pcc.df = com.DALYs.pcc$PRCC %>% 
+  mutate(cor = cor(comp_ints %>% 
+                     filter(!is.na(DALYs_Averted)) %>% 
+                     select(-c(DALYs_Averted, Both, None, MDA, Prawns, 
+                                A, H, k, fc, eta, siteS1:siteI3, psi1:psi3)), 
+                   comp_ints %>% filter(!is.na(DALYs_Averted)) %>% pull(DALYs_Averted)),
+         var = colnames(comp_ints %>% select(-c(DALYs_Averted, Both, None, MDA, Prawns, 
+                                A, H, k, fc, eta, siteS1:siteI3, psi1:psi3))),
+         outcome = "DALYs_Averted")
 
 # Correlation plots #######
-ggplot(com.W.pcc.df, aes(x = cor, y = original, label = var)) + 
+ggplot(com.DALYs.pcc.df, aes(x = cor, y = original, label = var)) + 
   geom_point(pch = 16) + theme_bw() +
   geom_text(aes(label = var), hjust = -0.5, vjust = -0.5) +
   labs(x = "Correlation coefficient",
        y = "PRCC",
-       main = "Relationship between worm burden correlation coefficient and PRCC")
-
-ggplot(com.N.pcc.df, aes(x = cor, y = original, label = var)) + 
-  geom_point(pch = 16) + theme_bw() +
-  geom_text(aes(label = var), hjust = -0.5, vjust = -0.5) +
-  labs(x = "Correlation coefficient",
-       y = "PRCC",
-       main = "Relationship between infected snail density correlation coefficient and PRCC")
+       main = "Relationship between DALYs averted correlation coefficient and PRCC")
 
 # PRCC plot #######
-com.lhsprcc <- com.W.pcc.df %>% bind_rows(., com.N.pcc.df) %>% 
-  ggplot(aes(x = var, y = original, fill = outcome)) +
+com.lhsprcc <- com.DALYs.pcc.df %>% 
+  ggplot(aes(x = var, y = original)) +
     theme_bw() + 
     theme(axis.text = element_text(size = 12),  #increase axis label size
           axis.title = element_text(size = 15), #increase axis title size
           axis.title.x = element_blank(),
           legend.position = c(0.25,0.9)) + 
-    scale_y_continuous(limits = c(-0.7,0.7), breaks = seq(-0.7, 0.7, 0.2))+
+    scale_y_continuous(limits = c(-0.75,0.75), breaks = seq(-0.75, 0.75, 0.25))+
     scale_x_discrete(labels = c("a.p" = expression(italic(a[P])),
                                 "a.s" = expression(italic(a[N])),
                                 "ar.slp" = expression(italic(alpha[m])),
                                 "b.p" = expression(italic(b[P])),
                                 "b.s" = expression(italic(b[N])),
                                 "beta" = expression(italic(beta)),
+                                "c" = expression(italic(c)),
+                                "cvrg" = expression(italic(cvrg)),
                                 "d" = expression(italic(d)),
+                                "delta" = expression(italic(delta)),
+                                "weight_hi" = expression(italic(DW[hi])),
+                                "weight_lo" = expression(italic(DW[lo])),
+                                "eff" = expression(italic(eff)),
                                 "eps" = expression(italic(epsilon)),
+                                "epmL" = expression(italic(epmL)),
                                 "f" = expression(italic(f)),
                                 "g1" = expression(g[1]),
                                 "g2" = expression(italic(g[2])),
@@ -795,6 +841,7 @@ com.lhsprcc <- com.W.pcc.df %>% bind_rows(., com.N.pcc.df) %>%
                                 "muW" = expression(italic(mu[W])),
                                 "nfr" = expression(italic(n)),
                                 "om" = expression(italic(omega)),
+                                "p" = expression(italic(p)),
                                 "phi" = expression(italic(Phi)),
                                 "sigma" = expression(italic(sigma)),
                                 "th" = expression(italic(T[h[m]])),
@@ -809,6 +856,14 @@ com.lhsprcc <- com.W.pcc.df %>% bind_rows(., com.N.pcc.df) %>%
     labs(x = 'Parameter', y = 'Combined Model Outcomes PRCC') + coord_flip()
 
 com.lhsprcc
+
+```
+
+```{r combined_prcc_save, include = FALSE, echo = FALSE}
+com.lhsprcc
+
+ggsave("Figures/dalys_monotonicity.png",
+       height = 10.5, width = 4.5, units = "in")
 
 ```
 
