@@ -54,7 +54,7 @@ par.snails.imm=c(
   ## Infection parameters
   beta = 4e-7,       # Human-to-snail infection probability in reference area (infected snails/miracidia/snail/day); from Sokolow et al. 2015 
   m = 0.8,           # Miracidial shedding rate per adult female worm divided by miracidial mortality; from Sokolow et al. 2015
-  sigma = 1/30,      # Latent period for exposed snails (infectious snails/exposed snail/day); from Sokolow et al. 2015 
+  sigma = 1/50,      # Latent period for exposed snails (infectious snails/exposed snail/day); from Sokolow et al. 2015 
   lambda = 7.5e-6,  # Snail-to-human infection probability scaled to 1 m^2 (composite including cercarial shedding, mortality, infection, survival to adult worm) from Sokolow et al. 2015
   theta1 = 167.8/127.8,         # Scale factor describing increase in cercarial shedding rate in larger (size class 2) snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
   theta2 = 1006.8/127.8,         # Scale factor describing increase in cercarial shedding rate in larger (size class 3) snails; from Chu & Dawood 1970 (estimated to be between 2 and 10)
