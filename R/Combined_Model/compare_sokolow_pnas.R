@@ -6,6 +6,7 @@ source("Data/combined_parameters.R")
 
 source("R/Combined_Model/epi_no_diag_prawn_immigration_mod.R")
 source("R/Epi_Model/snail_epi_mod_no_diag_immigration.R")
+source("R/helper_fxs.R")
 
 require(deSolve)
 require(tidyverse)
@@ -36,7 +37,7 @@ sim_constant_prawn <- function(P_dens, var){
                                 seq(1,365*30,30),
                                 snail_prawn_model_imm,
                                 par.all)) %>% 
-    mutate(W = cvrg*Wt + (1-cvrg)*Wu,
+    mutate(W = par.all["cvrg"]*Wt + (1-par.all["cvrg"])*Wu,
            S.t = (S1 + S2 + S3) / area,  # density susceptible snails
            E.t = (E1 + E2 + E3) / area,  # density exposed snails 
            I.t = (I1 + I2 + I3 ) / area, # density infected snails
