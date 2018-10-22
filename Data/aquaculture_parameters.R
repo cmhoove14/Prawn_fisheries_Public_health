@@ -1,7 +1,7 @@
 # Parameters to use in the prawn aquaculture model
 
 par.aqua=c(
-  a.p = -2.6132,   # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii males)
+  a.p = -2.6132,   # Log10 Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii males)
   b.p = 3.5502,      # Allometric parameter for prawn length-weight relationship, from Lalrinsanga et al. 2012 (M. rosenbergii, males)
   gam = 5e-6,    # Density-dependent growth parameter (based on biomass per hectare); informally adjusted based on Ranjeet & Kurup 2010
   muP = 2.21/365,  # Natural prawn mortality rate (M. volenhovenii males) from Nwosu & Wolfi 2006
