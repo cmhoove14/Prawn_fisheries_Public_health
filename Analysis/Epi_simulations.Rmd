@@ -119,7 +119,10 @@ allvh.eqbm.run.imm = as.data.frame(ode(setNames(as.numeric(allvh.eqbm.imm0[-1]),
                                        par.snails.imm))
 
 #Save for eqbm starting values in further simulations
-  allvh.eqbm.imm = allvh.eqbm.run.imm %>% filter(time == max(time)) %>% select(S1:Wu) %>% unlist()
+  allvh.eqbm.imm = allvh.eqbm.run.imm %>% 
+    filter(time == max(time)) %>% 
+    select(S1:Wu) %>% 
+    unlist()
 
 
 ## Set initial values and parameters ###########
@@ -364,6 +367,7 @@ snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   ggplot(aes(x = time, y = density, col = Infection)) +
               theme_bw() +
               theme(legend.position = c(0.35,0.4),
+                    legend.background = element_rect(fill = "transparent"),
                     axis.text = element_text(size = 12),  #increase axis label size
                     axis.title = element_text(size = 14), #increase axis title size
                     axis.title.x=element_blank(),         #Suppress x axis
@@ -709,12 +713,12 @@ w.plot <- rbind(w.nothing, w.mda2, w.ros2, w.mda.ros2) %>%
                                     "MDA + Prawns"="gold")) +
       annotate('text', x = 365, y = 83, label = 'A)', size = 8) +
       labs(x = 'time (years)', y = expression(italic('W'))) +
-              scale_y_continuous(breaks = seq(0,80,10),
-                                 labels = paste("  ", seq(0,80,10)),
-                                 limits = c(0, 85)) +
+      scale_y_continuous(breaks = seq(0,80,10),
+                         labels = paste("  ", seq(0,80,10)),
+                         limits = c(0, 85)) +
       geom_vline(xintercept = 365*(years+1), lty = 2) +
-              scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
-                                 labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
+      scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
+                         labels = seq(365, 365*(years*2+1), 365*5)/365-1) 
 
 # plot combined 3-panel figure with combined worm burden trajectories with multiplot ###############   
   epi_3p_layout = matrix(c(1,2,3), ncol = 1, byrow = T)
@@ -781,6 +785,13 @@ cbind(None_sum = get_sum(comp_ints$None),
       Both_sum = get_sum(comp_ints$Prawns...MDA)) %>% 
   knitr::kable(caption = "Summary of 10-year cumulated DALYs associated with each intervention")
 
+cbind(None_sum = get_sum(comp_ints%>% filter(None > 0) %>% pull(None)),
+      MDA_sum = get_sum(comp_ints%>% filter(MDA > 0) %>% pull(MDA)),
+      Prawns_sum = get_sum(comp_ints%>% filter(Prawns > 0) %>% pull(Prawns)),
+      Both_sum = get_sum(comp_ints%>% filter(Prawns...MDA > 0) %>% pull(Prawns...MDA))) %>% 
+  knitr::kable(caption = "Summary of 10-year cumulated DALYs associated with each intervention (No transmission simulations removed)")
+
+ 
 ```
 
 ```{r save_comp_ints_boxplot, include = FALSE}
@@ -789,3 +800,190 @@ comp_ints_bp
 ggsave("Figures/compare_interventions_with_parameter_uncertainty.png",
        height = 5, width = 4, units = "in")
 ```
+
+```{r cum_dalys_est, cache = TRUE}
+source("../R/Sensitivity_Analysis/sensitivity_prep.R")
+
+#Modified version of the compare interventions function which returns data frames rather than cumulative DALYs estimates
+compare_interventions_return_df <- function(pars, years){
+  
+  opt_df = expand.grid.df(data.frame(t(pars[c("a.p", "b.p", "gam", "muP", "d", "om", 
+                                            "k", "linf", "k.ros")]),
+                                            "c" = cost, "fc" = 0, "p" = price, "delta" = delta), 
+                          data.frame(L_nought = 40, P_nought = seq(500, 7500, 100))) 
+
+#Get mgmt strategy that maximizes cumulative ten year profits
+opt_stock <- opt_df %>% 
+  bind_cols(pmap_df(., sim_aqua_eum, species = "M. rosenbergii")) %>% 
+  filter(cum_profits == max(cum_profits))
+
+# Generate data fram of stocking/harvesting events
+  harvest_time <- opt_stock$time
+  n.harvest = opt_stock$n_harvest
+  stocks = data.frame(var = rep(c('P', 'L'), n.harvest),
+                          time = rep(harvest_time*c(0:(n.harvest-1))+1, each = 2),
+                          value = rep(c(opt_stock$P, opt_df$L_nought[1]), n.harvest),
+                          method = rep('rep', (n.harvest)*2))
+
+#mda events #######
+  mdas = data.frame(var = rep('Wt', years),
+                    time = 365*c(0:(years-1))+1,
+                    value = rep((1-pars["eff"]), years),
+                    method = rep('multiply', years))
+  
+#Combined prawn stocking and mda events ################
+  mda.prawn = rbind(mdas, stocks)
+  mda.prawn = mda.prawn[order(mda.prawn$time),]
+
+# Run epi model to equilibrium  ##############
+  epi_sim <- as.data.frame(ode(nstart,
+                               seq(1,365*100,50),
+                               snail_epi_allvh_imm,
+                               pars))
+  
+  epi_eqbm <- epi_sim %>% filter(time == max(time)) 
+    full_eqbm <- epi_eqbm %>% select(-time) %>% unlist() 
+      
+#Add in prawn info and migration info to starting conditions/parameter set    
+  full_eqbm["P"] <- opt_stock$P
+  full_eqbm["L"] <- opt_df$L_nought[1] 
+    
+  pars["siteS1"] <- epi_eqbm %>% pull(S1)
+  pars["siteE1"] <- epi_eqbm %>% pull(E1)
+  pars["siteI1"] <- epi_eqbm %>% pull(I1)
+  pars["siteS2"] <- epi_eqbm %>% pull(S2)
+  pars["siteE2"] <- epi_eqbm %>% pull(E2)
+  pars["siteI2"] <- epi_eqbm %>% pull(I2)
+  pars["siteS3"] <- epi_eqbm %>% pull(S3)
+  pars["siteE3"] <- epi_eqbm %>% pull(E3)
+  pars["siteI3"] <- epi_eqbm %>% pull(I3)
+  
+  
+#Simulate no intervention   ##########
+    sim.nothing = as.data.frame(ode(epi_eqbm %>% select(-time) %>% unlist(),
+                                    c(1:(years*365)),
+                                    snail_epi_allvh_imm,
+                                    pars)) %>% 
+    mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
+           prev = get_prev(pars["phi"], W),
+           DALYs_Wt = map_dbl(Wt, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * pars["cvrg"])),
+           DALYs_Wu = map_dbl(Wu, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * (1-pars["cvrg"]))),
+           DALYs_W = DALYs_Wt + DALYs_Wu,
+           Intervention = "None")#,
+           #S.t = (S1 + S2 + S3) / area,  # density susceptible snails
+           #E.t = (E1 + E2 + E3) / area,  # density exposed snails 
+           #I.t = (I1 + I2 + I3 ) / area, # density infected snails
+           #N.t = (S.t + E.t + I.t), # total density snails
+           #t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
+           #t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
+           #t.3 = (S3 + E3 + I3) / area)
+  
+#Simulate annual MDA for n years ########
+  sim.mda = as.data.frame(ode(epi_eqbm %>% select(-time) %>% unlist(),
+                              c(1:(years*365)),
+                              snail_epi_allvh_imm,
+                              pars,
+                              events = list(data = mdas),
+                              atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
+    mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
+           prev = get_prev(pars["phi"], W),
+           DALYs_Wt = map_dbl(Wt, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * pars["cvrg"])),
+           DALYs_Wu = map_dbl(Wu, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * (1-pars["cvrg"]))),
+           DALYs_W = DALYs_Wt + DALYs_Wu,
+           Intervention = "MDA Only")#,
+           #S.t = (S1 + S2 + S3) / area,  # density susceptible snails
+           #E.t = (E1 + E2 + E3) / area,  # density exposed snails 
+           #I.t = (I1 + I2 + I3 ) / area, # density infected snails
+           #N.t = (S.t + E.t + I.t), # total density snails
+           #t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
+           #t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
+           #t.3 = (S3 + E3 + I3) / area)
+    
+#Simulate prawn intervention under optimal management for n years    
+  prawn_sim <- as.data.frame(ode(full_eqbm,
+                                 c(1:(years*365)),
+                                 snail_prawn_model_imm,
+                                 pars,
+                                 events = list(data = stocks),
+                                 atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
+    mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
+           prev = get_prev(pars["phi"], W),
+           DALYs_Wt = map_dbl(Wt, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * pars["cvrg"])),
+           DALYs_Wu = map_dbl(Wu, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * (1-pars["cvrg"]))),
+           DALYs_W = DALYs_Wt + DALYs_Wu,
+           Intervention = "Prawns Only")#,
+           #S.t = (S1 + S2 + S3) / area,  # density susceptible snails
+           #E.t = (E1 + E2 + E3) / area,  # density exposed snails 
+           #I.t = (I1 + I2 + I3 ) / area, # density infected snails
+           #N.t = (S.t + E.t + I.t), # total density snails
+           #t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
+           #t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
+           #t.3 = (S3 + E3 + I3) / area)
+  
+#Simulate combined intervention under optimal management and annual MDA for n years    
+  cmbnd_sim <- as.data.frame(ode(full_eqbm,
+                                 c(1:(years*365)),
+                                 snail_prawn_model_imm,
+                                 pars,
+                                 events = list(data = mda.prawn),
+                                 atol = 1e-6, rtol = 1e-6, method = "radau")) %>% 
+    mutate(W = pars["cvrg"]*Wt + (1-pars["cvrg"])*Wu,
+           prev = get_prev(pars["phi"], W),
+           DALYs_Wt = map_dbl(Wt, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * pars["cvrg"])),
+           DALYs_Wu = map_dbl(Wu, est_dalys, 
+                              pars["phi"], pars["weight_lo"], pars["weight_hi"],
+                              pars["epmL"], round(pars["H"] * (1-pars["cvrg"]))),
+           DALYs_W = DALYs_Wt + DALYs_Wu,
+           Intervention = "MDA + Prawns")#,
+           #S.t = (S1 + S2 + S3) / area,  # density susceptible snails
+           #E.t = (E1 + E2 + E3) / area,  # density exposed snails 
+           #I.t = (I1 + I2 + I3 ) / area, # density infected snails
+           #N.t = (S.t + E.t + I.t), # total density snails
+           #t.1 = (S1 + E1 + I1) / area, # density snails of size class 1
+           #t.2 = (S2 + E2 + I2) / area, # density snails of size class 2
+           #t.3 = (S3 + E3 + I3) / area)
+  
+
+  return(bind_rows(sim.nothing, sim.mda, prawn_sim, cmbnd_sim))
+  
+}
+
+comp_ints_dfs <- compare_interventions_return_df(par.all, years = 10)
+
+comp_ints_dfs %>% 
+  group_by(Intervention) %>% 
+  mutate(cum_DALYs_W = cumsum(DALYs_W)) %>% 
+  ggplot(aes(x = time, y = cum_DALYs_W, col = Intervention)) + 
+    geom_line(size = 1.2) +
+    scale_color_manual(values = c("None"="darkred",
+                                  "MDA Only"="purple", 
+                                  "Prawns Only"="blue", 
+                                  "MDA + Prawns"="gold")) +
+    theme(legend.position = c(0.25, 0.75),
+          legend.background = element_rect(fill = "transparent"),
+          axis.text = element_text(size = 12),  #increase axis label size
+          axis.title = element_text(size = 14), #increase axis title size
+          axis.title.x=element_blank(),         #Suppress x axis
+          axis.text.x=element_blank(),          #Suppress x axis
+          title = element_text(size = 14)) +    #increase title size
+    theme_bw() +
+    labs(x = "time (years)", y = "Cumulative DALYs") +
+    scale_x_continuous(breaks = seq(365, 365*years, 365),
+                       labels = seq(365, 365*years, 365)/365) 
+
+```
+
