@@ -76,6 +76,7 @@ source('../R/Prawn_aquaculture/prawn_aquaculture_mod.R')
 source('../R/Prawn_aquaculture/prawn_aquaculture_sim.R')
 source("../Data/aquaculture_parameters.R")
 source("../Data/Ranjeet_Kurup_06_data.R")
+source("../R/helper_fxs.R")
 
   eta.lm = lm(marketable ~ dens, data = rk06)
 
@@ -167,20 +168,22 @@ ggsave("Figures/numeric_estimation_max_profit.png",
 cumprof_heatmap <- bind_rows(aqua_sims_vol, aqua_sims_ros) %>% 
   ggplot(aes(y = time, x = P_start, z = cum_profits)) + 
     geom_tile(aes(fill = cum_profits)) + 
-    geom_contour(breaks = c(seq(0,6000,1500)), col = "black") +
+    geom_contour(breaks = c(seq(0,6000,2000)), col = "black") +
     geom_dl(aes(label = ..level..), method = "top.pieces",
-            stat = "contour", breaks = c(seq(0,6000,1500))) +
+            stat = "contour", breaks = c(seq(0,6000,2000))) +
     scale_fill_distiller(palette = "Spectral", direction = 1) +
     #scale_fill_gradient2(high = "blue", mid = "bisque",low = "red", breaks = c(-10000, -5000, seq(0,6000,1500))) +
     facet_wrap(~Species, nrow = 2) +
     xlab(expression(paste("Stocking density (",P[0],")", sep = ""))) +
     ylab("Time (days)") +
+    scale_x_continuous(breaks = c(0.5,2.5,5,7.5)) +
+    scale_y_continuous(breaks = c(0,365,730)) +
     theme_bw() + 
       theme(axis.text = element_text(size = 12),  #increase axis label size
-            axis.title = element_text(size = 18), #increase axis title size
+            axis.title = element_text(size = 15), #increase axis title size
             legend.title = element_text(size = 15), #increase axis title size
             legend.text = element_text(size = 12),#increase legend text size
-            strip.text = element_text(size = 15)) +
+            strip.text = element_text(size = 12)) +
     guides(fill=guide_legend(title="Cumulative \nProfits",
                              reverse = T))
 
