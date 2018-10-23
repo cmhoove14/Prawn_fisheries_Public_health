@@ -121,7 +121,7 @@ prawn_cost_plot <- cost_sims_vol %>% bind_rows(., cost_sims_ros) %>%
           axis.title=element_text(size=14),
           legend.title=element_text(size=15), 
           legend.text=element_text(size=12)) +
-    guides(fill=guide_legend(title="Cumulative \nProfits",
+    guides(fill=guide_legend(title="Cumulative \nProfits (USD)",
                              reverse = T))
 
 prawn_cost_plot
@@ -191,7 +191,7 @@ prawn_mort_plot <- mort_sims_vol %>% bind_rows(., mort_sims_ros) %>%
           axis.title=element_text(size=14),
           legend.title=element_text(size=15), 
           legend.text=element_text(size=12)) +
-    guides(fill=guide_legend(title="Cumulative \nProfits",
+    guides(fill=guide_legend(title="Cumulative \nProfits (USD)",
                              reverse = T))
 
 prawn_mort_plot
@@ -270,8 +270,7 @@ snail.ros = sim.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
   ggplot(aes(x = time, y = density, col = Infection)) +
               theme_bw() +
-              theme(legend.position = c(0.3, 0.6),
-                    legend.title = element_blank(),
+              theme(legend.position = c(0.3, 0.5),
                     legend.background = element_rect(fill = "transparent"),
                     axis.text = element_text(size = 10),  #increase axis label size
                     axis.title.y = element_text(size = 12), #increase axis title size
@@ -289,6 +288,7 @@ snail.ros = sim.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
                                  limits = c(-0.1, 51)) +
               geom_vline(xintercept = 365*(years+1), lty = 2) +
               annotate('text', x = 365, y = 48, label = 'A)', size = 8) +
+              guides(col = guide_legend(title="Snail \nPopulation")) +
               ggtitle("Holling's III, migration")
   
   snail.ros
