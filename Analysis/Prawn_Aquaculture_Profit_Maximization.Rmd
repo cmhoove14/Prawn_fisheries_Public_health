@@ -184,7 +184,7 @@ cumprof_heatmap <- bind_rows(aqua_sims_vol, aqua_sims_ros) %>%
             legend.title = element_text(size = 15), #increase axis title size
             legend.text = element_text(size = 12),#increase legend text size
             strip.text = element_text(size = 12)) +
-    guides(fill=guide_legend(title="Cumulative \nProfits",
+    guides(fill=guide_legend(title="Cumulative \nProfits (USD)",
                              reverse = T))
 
 cumprof_heatmap
@@ -254,15 +254,19 @@ opt.ros.time <- sim_aqua_time(opt.ros$P_nought, species = "M. rosenbergii")
         geom_vline(xintercept = opt.vol$time, lty = 2, size = 1.1) +
         geom_vline(xintercept = opt.ros$time, lty = 3, size = 1.1) +
         scale_color_manual(values = c("red", "blue")) +
-        facet_wrap( ~ Variable, scales = "free_y", nrow = 2) +
+        facet_wrap( ~ Variable, scales = "free_y", nrow = 2,
+                    strip.position = "left") +
         labs(x = "Time (days)") +
+        ylab(NULL) +
         theme_bw() + 
         theme(legend.position = c(0.3, 0.8),
               legend.text = element_text(size = 12),
               axis.text = element_text(size = 12),  #increase axis label size
-              axis.title = element_text(size = 18), #increase axis title size
+              axis.title = element_text(size = 15), #increase axis title size
               legend.title = element_blank(), #increase axis title size
-              strip.text = element_text(size = 14))
+              strip.text = element_text(size = 15),
+              strip.background = element_blank(),
+              strip.placement = "outside")
 
     ggsave("Figures/example_aquaculture_simulations.png",
            height = 8, width = 8, units = "in")
