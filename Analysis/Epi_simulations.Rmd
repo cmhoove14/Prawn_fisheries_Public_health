@@ -366,7 +366,7 @@ snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   mutate(Infection = factor(Infection, levels = c("Total", "Susceptible", "Exposed", "Infected"))) %>% 
   ggplot(aes(x = time, y = density, col = Infection)) +
               theme_bw() +
-              theme(legend.position = c(0.35,0.4),
+              theme(legend.position = c(0.4,0.4),
                     legend.background = element_rect(fill = "transparent"),
                     axis.text = element_text(size = 12),  #increase axis label size
                     axis.title = element_text(size = 14), #increase axis title size
@@ -379,13 +379,15 @@ snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
                                             "Exposed"="orange", 
                                             "Infected"="red")) +
               annotate('text', x = 365, y = 50, label = 'B)', size = 8) +
-              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              labs(x = 'time (years)', 
+                   y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
               scale_y_continuous(breaks = seq(0,50,10),
                                  labels = seq(0,50,10),
                                  limits = c(0, 51)) +
               geom_vline(xintercept = 365*(years+1), lty = 2) +
               scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
                                  labels = seq(365, 365*(years*2+1), 365*5)/365-1)  +
+              guides(col=guide_legend(title="Snail \nPopulation")) +
               ggtitle("Snail infection dynamics over time, annual MDA")
   
   snail.mda
@@ -452,7 +454,8 @@ snail.ros = sim.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
                                             "Exposed"="orange", 
                                             "Infected"="red")) +
               annotate('text', x = 365, y = 50, label = 'C)', size = 8) +
-              labs(x = 'time (years)', y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
+              labs(x = 'Time (years)', 
+                   y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
               scale_y_continuous(breaks = seq(0,50,10),
                                  labels = seq(0,50,10),
                                  limits = c(-0.1, 51)) +
@@ -691,10 +694,21 @@ snail.mda.vol = sim.mda.vol %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
 ## Final epi fig   
 ```{r Epi_sim_final_fig, fig.height=10.5, fig.width=8, cache = TRUE}
 # worm burden over time for MDA only, prawn only, and mda+prawn interventions #########
-  w.nothing <- sim.nothing %>% mutate(Intervention = "None") %>% dplyr::select(time, W, Intervention)
-  w.mda2 <- sim.mda %>% mutate(Intervention = "MDA Only") %>% dplyr::select(time, W, Intervention)
-  w.ros2 <- sim.ros %>% mutate(Intervention = "Prawns Only") %>% dplyr::select(time, W, Intervention)
-  w.mda.ros2 <- sim.mda.ros %>% mutate(Intervention = "MDA + Prawns") %>% dplyr::select(time, W, Intervention)
+  w.nothing <- sim.nothing %>% 
+    mutate(Intervention = "None") %>% 
+      dplyr::select(time, W, Intervention)
+
+  w.mda2 <- sim.mda %>% 
+      mutate(Intervention = "MDA Only") %>% 
+        dplyr::select(time, W, Intervention)
+  
+  w.ros2 <- sim.ros %>% 
+    mutate(Intervention = "Prawns Only") %>% 
+      dplyr::select(time, W, Intervention)
+  
+  w.mda.ros2 <- sim.mda.ros %>% 
+    mutate(Intervention = "MDA + Prawns") %>% 
+      dplyr::select(time, W, Intervention)
 
 w.plot <- rbind(w.nothing, w.mda2, w.ros2, w.mda.ros2) %>% 
     ggplot(aes(x = time, y = W, col = Intervention)) + 
@@ -712,7 +726,8 @@ w.plot <- rbind(w.nothing, w.mda2, w.ros2, w.mda.ros2) %>%
                                     "Prawns Only"="blue", 
                                     "MDA + Prawns"="gold")) +
       annotate('text', x = 365, y = 83, label = 'A)', size = 8) +
-      labs(x = 'time (years)', y = expression(italic('W'))) +
+      labs(x = 'time (years)', 
+           y = expression(paste("Mean worm burden (", italic('W'), ")", sep = ""))) +
       scale_y_continuous(breaks = seq(0,80,10),
                          labels = paste("  ", seq(0,80,10)),
                          limits = c(0, 85)) +
@@ -759,10 +774,11 @@ poss_comp_ints <- possibly(compare_interventions,
     bind_cols(future_pmap_dfr(., poss_comp_ints, years = years)) %>% 
     select(-pars) %>% bind_cols(., lhcpars)
 
+sum(comp_ints$None > 0.1)  
 ```
 
 ```{r comp_ints_boxplot, fig.height=5, fig.width=8}
-comp_ints_bp <- comp_ints %>% filter(None > 1) %>% 
+comp_ints_bp <- comp_ints %>% filter(None > 0.1) %>% 
   mutate(MDA_Averted = None - MDA,
          Prawns_Averted = None - Prawns,
          Both_Averted = None - Prawns...MDA) %>% 
