@@ -769,23 +769,104 @@ ggsave("Figures/epi_prcc.png",
 ```
 
 ## Integrated model with interventions  
-Assess sensitivity of DALYs averted in the integrated prawn-MDA treatment to all parameters  
+Assess sensitivity of Cumulative DALYs in the integrated prawn-MDA treatment to all parameters  
 
-```{r combined_sens_sims, echo = FALSE}
+```{r combined_sens_sims, fig.height=10.5, fig.width=8.5}
 qwraps2::lazyload_cache_labels("compare_interventions", path = "Epi_simulations_cache/latex/")
 
 comp_ints <- comp_ints %>% 
   rename(Both = Prawns...MDA) %>% 
-  mutate(DALYs_Averted = None - Both)
+  mutate(DALYs_Averted = None - Both,
+         DALYs_Averted_MDA = None - MDA,
+         DALYs_Averted_Prawns = None - Prawns,
+         Class = ifelse(DALYs_Averted_MDA > DALYs_Averted_Prawns,
+                        "MDA_Superior", "Prawns_Superios"))
+
+comp_pars_mda_prawns <- bind_rows(scale(as.matrix(comp_ints %>% 
+          filter(DALYs_Averted_Prawns > DALYs_Averted_MDA) %>% 
+          select(-c(None, MDA, Prawns, Both, 
+                    siteS1:siteI3, psi1:psi3, A, H, fc, Class, eta,
+                    DALYs_Averted, DALYs_Averted_MDA, DALYs_Averted_Prawns)))) %>% 
+          as.data.frame(.) %>% 
+          mutate(Class = "Prawns_Superior"),
+          scale(as.matrix(comp_ints %>% 
+          filter(DALYs_Averted_MDA > DALYs_Averted_Prawns) %>% 
+          select(-c(None, MDA, Prawns, Both, 
+                    siteS1:siteI3,psi1:psi3, A, H, fc, Class, eta,
+                    DALYs_Averted, DALYs_Averted_MDA, DALYs_Averted_Prawns)))) %>% 
+          as.data.frame(.) %>% 
+          mutate(Class = "MDA_Superior")) %>% 
+  reshape2::melt(.) %>% 
+  ggplot(aes(x = variable, value, col = Class)) + geom_boxplot() +
+    theme_bw() + 
+    theme(axis.text = element_text(size = 12),  #increase axis label size
+          axis.title = element_text(size = 15), #increase axis title size
+          axis.title.y = element_blank()) + 
+    coord_flip() + 
+    scale_x_discrete(labels = c("a.p" = expression(italic(a[P])),
+                                "a.s" = expression(italic(a[N])),
+                                "ar.slp" = expression(italic(alpha[m])),
+                                "b.p" = expression(italic(b[P])),
+                                "b.s" = expression(italic(b[N])),
+                                "beta" = expression(italic(beta)),
+                                "c" = expression(italic(c)),
+                                "cvrg" = expression(italic(cvrg)),
+                                "d" = expression(italic(d)),
+                                "delta" = expression(italic(delta)),
+                                "weight_hi" = expression(italic(DW[hi])),
+                                "weight_lo" = expression(italic(DW[lo])),
+                                "eff" = expression(italic(eff)),
+                                "eps" = expression(italic(epsilon)),
+                                "f" = expression(italic(f)),
+                                "g1" = expression(g[1]),
+                                "g2" = expression(italic(g[2])),
+                                "gam" = expression(italic(gamma)),
+                                "xi" = expression(italic(xi)),
+                                "k.ros" = expression(italic(k)),
+                                "Kn" = expression(italic(K)),
+                                "lambda" = expression(italic(lambda)),
+                                "linf" = expression(italic(L[infinity])),
+                                "m" = expression(italic(m)),
+                                "muH" = expression(italic(mu[H])),
+                                "muI" = expression(italic(mu[I])),
+                                "muN1" = expression(italic(mu[N1])),
+                                "muN2" = expression(italic(mu[N2])),
+                                "muN3" = expression(italic(mu[N3])),
+                                "muP" = expression(italic(mu[P])),
+                                "muW" = expression(italic(mu[W])),
+                                "nfr" = expression(italic(n)),
+                                "om" = expression(italic(omega)),
+                                "p" = expression(italic(p)),
+                                "phi" = expression(italic(Phi)),
+                                "sigma" = expression(italic(sigma)),
+                                "th" = expression(italic(T[h[m]])),
+                                "theta1" = expression(italic(theta[1])),
+                                "theta2" = expression(italic(theta[2])),
+                                "z" = expression(italic(z)))) +
+    ylab("Centered parameter value") +
+    ggtitle("Centered distributions of parameters",
+            subtitle = "stratified by superior performance of MDA- or Prawn-only interventions")
+
+
+comp_pars_mda_prawns
+
 ```
 
-### Monotonicity of cumulative worm burden and infected snail density to parameter uncertainty  
+```{r save_comp_pars, include=FALSE, echo = FALSE}
+comp_pars_mda_prawns
+
+ggsave("Figures/comp_pars_mda_prawns.png",
+       height = 10.5, width = 8.5, units = "in")
+```
+
+
+### Monotonicity of cumulative DALYs under integrated intervention to parameter uncertainty  
 ```{r combined_monotonicity, echo=FALSE, warning = FALSE, fig.height=10.5, fig.width=8}
 #Use simulations over parameter sets from above
 dalys_monotonicity <- comp_ints %>% select(-c(A, H, k, fc, eta, siteS1:siteI3, psi1:psi3)) %>% 
   gather("parameter", "value", a.p:epmL) %>% 
   ggplot(aes(x = value, y = Both)) + 
-    theme_bw() + labs(y = "DALYs Averted") +
+    theme_bw() + labs(y = "Cumulative DALYs") +
     geom_point(size = 0.5) +
     facet_wrap( ~ parameter, scales = "free_x", nrow = 7) +
     stat_smooth(method = "loess")
@@ -805,7 +886,7 @@ ggsave("Figures/dalys_monotonicity.png",
 # Combined model worm burden sensitivity
 com.DALYs.pcc = pcc(X = comp_ints %>% 
                       filter(!is.na(Both)) %>% 
-                      select(-c(DALYs_Averted, Both, None, MDA, Prawns, 
+                      select(-c(DALYs_Averted, Both, None, MDA, Prawns, Class,
                                 A, H, k, fc, eta, epmL, siteS1:siteI3, psi1:psi3)),
                 y = as.data.frame(comp_ints %>% filter(!is.na(Both)) %>% pull(Both)),
                 rank = TRUE)
@@ -813,11 +894,11 @@ com.DALYs.pcc = pcc(X = comp_ints %>%
 com.DALYs.pcc.df = com.DALYs.pcc$PRCC %>% 
   mutate(cor = cor(comp_ints %>% 
                      filter(!is.na(Both)) %>% 
-                     select(-c(DALYs_Averted, Both, None, MDA, Prawns, 
+                     select(-c(DALYs_Averted, Both, None, MDA, Prawns, Class, 
                                 A, H, k, fc, eta, epmL, siteS1:siteI3, psi1:psi3)), 
                    comp_ints %>% filter(!is.na(Both)) %>% pull(Both)),
          var = colnames(comp_ints %>% select(-c(DALYs_Averted, Both, None, MDA, Prawns, 
-                                A, H, k, fc, eta, epmL, siteS1:siteI3, psi1:psi3))),
+                                                Class, A, H, k, fc, eta, epmL, siteS1:siteI3, psi1:psi3))),
          outcome = "Both")
 
 # Correlation plots #######
@@ -900,7 +981,7 @@ ggsave("Figures/dalys_prcc.png",
 # Combined model worm burden sensitivity
 com.DALYs.pcc.rmv0 = pcc(X = comp_ints %>% 
                       filter(!is.na(Both) & None > 0) %>% 
-                      select(-c(DALYs_Averted, Both, None, MDA, Prawns, 
+                      select(-c(DALYs_Averted, Both, None, MDA, Prawns,  Class,
                                 A, H, k, fc, eta, epmL, siteS1:siteI3, psi1:psi3)),
                 y = as.data.frame(comp_ints %>% 
                                     filter(!is.na(Both) & None > 0) %>% 
@@ -910,13 +991,13 @@ com.DALYs.pcc.rmv0 = pcc(X = comp_ints %>%
 com.DALYs.pcc.rmv0.df = com.DALYs.pcc.rmv0$PRCC %>% 
   mutate(cor = cor(comp_ints %>% 
                      filter(!is.na(Both) & None > 0) %>% 
-                     select(-c(DALYs_Averted, Both, None, MDA, Prawns, 
+                     select(-c(DALYs_Averted, Both, None, MDA, Prawns,  Class,
                                 A, H, k, fc, eta, epmL, siteS1:siteI3, psi1:psi3)), 
                    comp_ints %>% 
                      filter(!is.na(Both) & None > 0) %>% 
                      pull(Both)),
          var = colnames(comp_ints %>% select(-c(DALYs_Averted, Both, None, MDA, Prawns, 
-                                A, H, k, fc, eta, epmL, siteS1:siteI3, psi1:psi3))),
+                                 Class, A, H, k, fc, eta, epmL, siteS1:siteI3, psi1:psi3))),
          outcome = "Both")
 
 # Correlation plots #######
