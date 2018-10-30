@@ -780,7 +780,28 @@ comp_ints <- comp_ints %>%
          DALYs_Averted_MDA = None - MDA,
          DALYs_Averted_Prawns = None - Prawns,
          Class = ifelse(DALYs_Averted_MDA > DALYs_Averted_Prawns,
-                        "MDA_Superior", "Prawns_Superios"))
+                        "MDA_Superior", "Prawns_Superior"))
+
+#Get variable levels to sort in figure:
+# want to sort by difference in median centered parameter value
+comp_var_lvls <- bind_cols(as.data.frame(scale(as.matrix(comp_ints %>% 
+                                             select(-c(None, MDA, Prawns, Both, 
+                                                       siteS1:siteI3, psi1:psi3, 
+                                                       A, H, fc, Class, eta,
+                                                       DALYs_Averted, 
+                                                       DALYs_Averted_Prawns,
+                                                       DALYs_Averted_MDA))))),
+                           comp_ints %>% select(DALYs_Averted_Prawns,
+                                                DALYs_Averted_MDA)) %>% 
+  filter(!is.na(DALYs_Averted_MDA)) %>% 
+  gather("variable", "value", -c(DALYs_Averted_Prawns, DALYs_Averted_MDA)) %>% 
+  mutate(mda_superior = ifelse(DALYs_Averted_MDA > DALYs_Averted_Prawns, 1, 0)) %>% 
+  group_by(mda_superior, variable) %>% 
+  summarise(med_mda = median(value, na.rm = TRUE)) %>% 
+  spread(key = mda_superior, value = med_mda) %>% 
+  mutate(diff = `1`-`0`) %>% arrange(diff) %>% pull(variable)
+
+comp_var_lvls <- factor(comp_var_lvls, levels = comp_var_lvls)
 
 comp_pars_mda_prawns <- bind_rows(scale(as.matrix(comp_ints %>% 
           filter(DALYs_Averted_Prawns > DALYs_Averted_MDA) %>% 
@@ -797,11 +818,13 @@ comp_pars_mda_prawns <- bind_rows(scale(as.matrix(comp_ints %>%
           as.data.frame(.) %>% 
           mutate(Class = "MDA_Superior")) %>% 
   reshape2::melt(.) %>% 
+  mutate(variable = factor(variable, levels = comp_var_lvls)) %>% 
   ggplot(aes(x = variable, value, col = Class)) + geom_boxplot() +
     theme_bw() + 
     theme(axis.text = element_text(size = 12),  #increase axis label size
           axis.title = element_text(size = 15), #increase axis title size
-          axis.title.y = element_blank()) + 
+          axis.title.y = element_blank(),
+          legend.title = element_blank()) + 
     coord_flip() + 
     scale_x_discrete(labels = c("a.p" = expression(italic(a[P])),
                                 "a.s" = expression(italic(a[N])),
