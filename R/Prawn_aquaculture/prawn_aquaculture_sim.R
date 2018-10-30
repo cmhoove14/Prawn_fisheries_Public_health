@@ -6,7 +6,7 @@ get_cum_profits <- function(n, Pi, delta, Time){
     
   } else {
     
-    return(sum(sapply(c(1:n), function(x) Pi*exp(-delta*(x-1)*Time))))
+    return(sum(sapply(c(1:n), function(n) Pi*exp(-delta*n*Time))))
     
   }
 }
@@ -48,7 +48,7 @@ sim_aqua_eum <- function(a.p, b.p, gam, muP, d, om, k, linf, k.ros, c, fc, p, de
              harvest_mass = total_mass * market_frac,
       #If average prawn mass is less than 30 g (marketable size) don't estimate monetary outcomes       
              revenue = ifelse(p_mass <30, NA, harvest_mass*price),
-             profit = ifelse(p_mass <30, NA, revenue*exp(-delta*time) - cost*P_nought - fixed_cost),
+             profit = ifelse(p_mass <30, NA, revenue - cost*P_nought - fixed_cost),
              roi = ifelse(p_mass <30, NA, profit / (cost*P_nought)),
              n_harvest = ifelse(p_mass <30, NA, floor((years*365)/time)),
              cum_profits = pmap_dbl(list(n = n_harvest, 
@@ -88,7 +88,7 @@ sim_aqua_time <- function(P_nought, species = "M. vollenhovenii"){
              harvest_mass = total_mass * market_frac,
       #If average prawn mass is less than 30 g (marketable size) don't estimate monetary outcomes       
              revenue = ifelse(p_mass <30, NA, harvest_mass*price),
-             profit = ifelse(p_mass <30, NA, revenue*exp(-delta*time) - cost*P_nought - fixed_cost),
+             profit = ifelse(p_mass <30, NA, revenue - cost*P_nought - fixed_cost),
              roi = ifelse(p_mass <30, NA, profit / (cost*P_nought)),
              n_harvest = ifelse(p_mass <30, NA, floor((years*365)/time)),
              cum_profits = pmap_dbl(list(n = n_harvest, 
