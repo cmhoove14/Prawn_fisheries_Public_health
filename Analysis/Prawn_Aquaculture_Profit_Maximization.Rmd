@@ -18,6 +18,7 @@ require(parallel)
 require(kableExtra)
 require(broom)
 require(directlabels)
+require(viridis)
 require(furrr)
 require(tidyverse)
 
@@ -171,7 +172,7 @@ cumprof_heatmap <- bind_rows(aqua_sims_vol, aqua_sims_ros) %>%
     geom_contour(breaks = c(seq(0,6000,2000)), col = "black") +
     geom_dl(aes(label = ..level..), method = "top.pieces",
             stat = "contour", breaks = c(seq(0,6000,2000))) +
-    scale_fill_distiller(palette = "Spectral", direction = 1) +
+    scale_fill_viridis(option = "magma", direction = 1) +
     #scale_fill_gradient2(high = "blue", mid = "bisque",low = "red", breaks = c(-10000, -5000, seq(0,6000,1500))) +
     facet_wrap(~Species, nrow = 2) +
     xlab(expression(paste("Stocking density (",P[0],")", sep = ""))) +
@@ -383,7 +384,7 @@ par.all = c(par.aqua, par.snails.imm, par.epi_prawn)
   eum_sim <- expand.grid.df(lhcpars.aqua, test_starts)
   
 #Simulate across all parameter sets and stocking densities  
-  plan(multiprocess)
+plan(multiprocess)
   eum_sims_vol <- eum_sim %>% 
     bind_cols(future_pmap_dfr(., sim_aqua_eum, species = "M. vollenhovenii"))
   
@@ -405,8 +406,10 @@ par.all = c(par.aqua, par.snails.imm, par.epi_prawn)
                 n_harvest_loq = quantile(n_harvest, 0.25),
                 Species = unique(Species),
                 n_par_sets = n())
-    
-  eum_sims_ros <- eum_sim %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. rosenbergii"))
+
+plan(multiprocess)
+  eum_sims_ros <- eum_sim %>% 
+    bind_cols(future_pmap_dfr(., sim_aqua_eum, species = "M. rosenbergii"))
   
     eum_sims_ros_sum <- eum_sims_ros %>%       #Summarise across parameter sets
       group_by(P_nought) %>%  
