@@ -378,7 +378,7 @@ snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
                                             "Susceptible"="green", 
                                             "Exposed"="orange", 
                                             "Infected"="red")) +
-              annotate('text', x = 365, y = 50, label = 'B)', size = 8) +
+              annotate('text', x = 365, y = 50, label = expression(bold('b')), size = 10) +
               labs(x = 'time (years)', 
                    y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
               scale_y_continuous(breaks = seq(0,50,10),
@@ -393,9 +393,13 @@ snail.mda = sim.mda %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
   snail.mda
   
 ```
+
 ## Prawn-only Intervention  
+
 Simulate prawn intervention as `r print(years)` years of stocking and harvesting in a hypothetical transmission site under optimal management for each species  
+
 ### M. rosenbergii  
+
 ```{r ros_sim, fig.height=5, fig.width=8, cache = TRUE}
 #Simulate M. rosenbergii stocking for n years ########
   sim.ros = prawn_sim(t.runup = c(1:366), 
@@ -453,7 +457,7 @@ snail.ros = sim.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
                                             "Susceptible"="green", 
                                             "Exposed"="orange", 
                                             "Infected"="red")) +
-              annotate('text', x = 365, y = 50, label = 'C)', size = 8) +
+              annotate('text', x = 365, y = 50, label = expression(bold('c')), size = 10) +
               labs(x = 'Time (years)', 
                    y = expression(paste("Snail density (", 'N'[i], 'm'^'-2', ")"))) +
               scale_y_continuous(breaks = seq(0,50,10),
@@ -725,7 +729,7 @@ w.plot <- rbind(w.nothing, w.mda2, w.ros2, w.mda.ros2) %>%
                                     "MDA Only"="purple", 
                                     "Prawns Only"="blue", 
                                     "MDA + Prawns"="gold")) +
-      annotate('text', x = 365, y = 83, label = 'A)', size = 8) +
+      annotate('text', x = 365, y = 83, label = expression(bold('a')), size = 10) +
       labs(x = 'time (years)', 
            y = expression(paste("Mean worm burden (", italic('W'), ")", sep = ""))) +
       scale_y_continuous(breaks = seq(0,80,10),
@@ -755,6 +759,17 @@ png("Figures/epi_sim_final_fig.png",
             layout = epi_3p_layout)
   
 dev.off()  
+
+pdf("Figures/Pub_Figs/epi_sim_final_fig.pdf",
+    width = 8.5, height = 11)
+
+  multiplot(w.plot, 
+            snail.mda + ggtitle(""), 
+            snail.ros + ggtitle(""), 
+            layout = epi_3p_layout)
+  
+dev.off()  
+
 ```
 
 # Compare interventions with uncertainty   

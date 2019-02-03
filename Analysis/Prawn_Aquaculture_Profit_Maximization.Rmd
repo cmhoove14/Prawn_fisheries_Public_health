@@ -175,16 +175,16 @@ cumprof_heatmap <- bind_rows(aqua_sims_vol, aqua_sims_ros) %>%
     scale_fill_viridis(option = "magma", direction = 1) +
     #scale_fill_gradient2(high = "blue", mid = "bisque",low = "red", breaks = c(-10000, -5000, seq(0,6000,1500))) +
     facet_wrap(~Species, nrow = 2) +
-    xlab(expression(paste("Stocking density (",P[0],")", sep = ""))) +
+    xlab(expression(paste('Stocking density, ', P[0],' (', Pm^-2, ")", sep = ""))) +
     ylab("Time (days)") +
     scale_x_continuous(breaks = c(0.5,2.5,5,7.5)) +
-    scale_y_continuous(breaks = c(0,365,730)) +
+    scale_y_continuous(breaks = c(0,365,730), limits = c(0,750)) +
     theme_bw() + 
       theme(axis.text = element_text(size = 12),  #increase axis label size
             axis.title = element_text(size = 15), #increase axis title size
             legend.title = element_text(size = 15), #increase axis title size
             legend.text = element_text(size = 12),#increase legend text size
-            strip.text = element_text(size = 12)) +
+            strip.text = element_text(size = 12, face = "italic")) +
     guides(fill=guide_legend(title="Cumulative \nProfits (USD)",
                              reverse = T))
 
@@ -196,6 +196,11 @@ cumprof_heatmap
 
 ggsave("Figures/time_p0_cumprof_heatmap.png",
        width = 6, height = 6, units = "in")
+
+cumprof_heatmap
+
+ggsave("Figures/Pub_Figs/time_p0_cumprof_heatmap.pdf",
+       width = 8.5, height = 8.5, units = "in", dpi = 300)
 
 ```
 
@@ -242,9 +247,10 @@ opt.ros.time <- sim_aqua_time(opt.ros$P_nought, species = "M. rosenbergii")
            cum_profits = as.numeric(as.character(n_harvest)) * as.numeric(as.character(profit))) %>% 
     gather(key = "Variable", value = "Value", P_dens, L, harvest_mass, profit, n_harvest, cum_profits)
 
-    opt.time %>% mutate(time = as.numeric(time),
-                        Value = as.numeric(Value),
-                        Species = factor(Species, levels = c("M. rosenbergii", "M. vollenhovenii"))) %>% 
+sim_time_fig <- opt.time %>% 
+      mutate(time = as.numeric(time),
+             Value = as.numeric(Value),
+             Species = factor(Species, levels = c("M. rosenbergii", "M. vollenhovenii"))) %>% 
       filter(Variable %in% c("P_dens", "L", "harvest_mass", "cum_profits")) %>% 
       mutate(Variable = case_when(Variable == "P_dens" ~ "Density, P",
                                   Variable == "L" ~ "Mean Length, L (mm)",
@@ -254,7 +260,9 @@ opt.ros.time <- sim_aqua_time(opt.ros$P_nought, species = "M. rosenbergii")
         geom_line(size = 1.25) +
         geom_vline(xintercept = opt.vol$time, lty = 2, size = 1.1) +
         geom_vline(xintercept = opt.ros$time, lty = 3, size = 1.1) +
-        scale_color_manual(values = c("red", "blue")) +
+        scale_color_manual(values = c("red", "blue"),
+                           labels = c(expression(italic("M. rosenbergii")),
+                                      expression(italic("M. vollenhovenii")))) +
         facet_wrap( ~ Variable, scales = "free_y", nrow = 2,
                     strip.position = "left") +
         labs(x = "Time (days)") +
@@ -269,8 +277,16 @@ opt.ros.time <- sim_aqua_time(opt.ros$P_nought, species = "M. rosenbergii")
               strip.background = element_blank(),
               strip.placement = "outside")
 
-    ggsave("Figures/example_aquaculture_simulations.png",
-           height = 8, width = 8, units = "in")
+sim_time_fig
+
+  ggsave("Figures/example_aquaculture_simulations.png",
+         height = 8, width = 8, units = "in")
+  
+sim_time_fig
+
+  ggsave("Figures/Pub_Figs/example_aquaculture_simulations.pdf",
+         height = 8.5, width = 8.5, units = "in", dpi = 300)
+  
 ```
 
 # Eumetric curves   

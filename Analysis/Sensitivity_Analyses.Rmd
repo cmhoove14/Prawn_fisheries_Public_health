@@ -106,10 +106,10 @@ max(cost_sims_ros %>% filter(cum_profits > 0) %>% pull(fc))
 prawn_cost_plot <- cost_sims_vol %>% bind_rows(., cost_sims_ros) %>% 
   ggplot(aes(x = P_nought/1000, y = fc, fill = cum_profits, z = cum_profits)) + 
     geom_tile() +
-    geom_contour(breaks = c(0), col = "black") +
+    geom_contour(breaks = c(0), col = "white") +
     scale_fill_viridis(option = "magma", direction = 1) +
     geom_dl(aes(label = ..level..), method = "top.pieces",
-            stat = "contour", breaks = c(0)) +
+            stat = "contour", breaks = c(0), col = "white") +
     scale_x_continuous(limits = range(cost_sim$P_nought/1000),
                        breaks = c(0.5, 2.5,5.0,7.5)) +
     scale_y_continuous(limits = range(cost_sim$fc)) +
@@ -120,6 +120,7 @@ prawn_cost_plot <- cost_sims_vol %>% bind_rows(., cost_sims_ros) %>%
     theme(axis.ticks=element_blank(), 
           axis.text=element_text(size=12), 
           axis.title=element_text(size=14),
+          strip.text = element_text(size = 12, face = "italic"),
           legend.title=element_text(size=15), 
           legend.text=element_text(size=12)) +
     guides(fill=guide_legend(title="Cumulative \nProfits (USD)",
@@ -133,6 +134,11 @@ prawn_cost_plot
 
 ggsave("Figures/prawn_fixed_cost_sensitivity.png",
        height = 6, width = 6, units = "in")
+
+prawn_cost_plot
+
+ggsave("Figures/Pub_Figs/prawn_fixed_cost_sensitivity.pdf",
+       height = 6, width = 6, units = "in", dpi = 300)
 
 ```
 
@@ -176,10 +182,10 @@ max(mort_sims_ros %>% filter(cum_profits > 0) %>% pull(muP)) / par.aqua["muP"]
 prawn_mort_plot <- mort_sims_vol %>% bind_rows(., mort_sims_ros) %>%   
   ggplot(aes(x = P_nought/1000, y = muP, fill = cum_profits, z = cum_profits)) + 
     geom_tile() + #coord_equal() + 
-    geom_contour(breaks = c(0), col = "black") +
+    geom_contour(breaks = c(0), col = "white") +
     scale_fill_viridis(option = "magma", direction = 1) +
-    geom_dl(aes(label = ..level..), method = "top.pieces",
-            stat = "contour", breaks = c(0)) +
+    #geom_dl(aes(label = ..level..), method = "top.pieces",
+    #        stat = "contour", breaks = c(0)) +
     scale_x_continuous(limits = range(mort_sim$P_nought/1000),
                        breaks = c(0.5, 2.5,5.0,7.5)) +
     scale_y_continuous(limits = range(mort_sim$muP)) +
@@ -190,6 +196,7 @@ prawn_mort_plot <- mort_sims_vol %>% bind_rows(., mort_sims_ros) %>%
     theme(axis.ticks=element_blank(), 
           axis.text=element_text(size=12), 
           axis.title=element_text(size=14),
+          strip.text = element_text(size = 12, face = "italic"),
           legend.title=element_text(size=15), 
           legend.text=element_text(size=12)) +
     guides(fill=guide_legend(title="Cumulative \nProfits (USD)",
@@ -203,6 +210,12 @@ prawn_mort_plot
 
 ggsave("Figures/prawn_mortality_sensitivity.png",
        height = 6, width = 6, units = "in")
+
+prawn_mort_plot
+
+ggsave("Figures/Pub_Figs/prawn_mortality_sensitivity.pdf",
+       height = 6, width = 6, units = "in", dpi = 300)
+
 
 ```
 
@@ -288,7 +301,7 @@ snail.ros = sim.ros %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
                                  labels = seq(0,50,10),
                                  limits = c(-0.1, 51)) +
               geom_vline(xintercept = 365*(years+1), lty = 2) +
-              annotate('text', x = 365, y = 48, label = 'A)', size = 8) +
+              annotate('text', x = 365, y = 48, label = expression(bold('a')), size = 10) +
               guides(col = guide_legend(title="Snail \nPopulation")) +
               ggtitle("Holling's III, migration")
   
@@ -351,7 +364,7 @@ snail.ros.nomig = sim.ros.nomig %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
               geom_vline(xintercept = 365*(years+1), lty = 2) +
               scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
                                  labels = seq(365, 365*(years*2+1), 365*5)/365-1)   +
-              annotate('text', x = 365, y = 48, label = 'B)', size = 8) +
+              annotate('text', x = 365, y = 48, label = expression(bold('b')), size = 10) +
               ggtitle("Holling's III, no migration")
 
 snail.ros.nomig    
@@ -417,7 +430,7 @@ snail.ros.h2 = sim.ros.h2 %>% dplyr::select(time, S.t, E.t, I.t, N.t) %>%
                                  labels = seq(0,50,10),
                                  limits = c(-0.1, 51)) +
               geom_vline(xintercept = 365*(years+1), lty = 2) +
-              annotate('text', x = 365, y = 48, label = 'C)', size = 8) +
+              annotate('text', x = 365, y = 48, label = expression(bold('c')), size = 10) +
               ggtitle("Holling's II, migration") +
               scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
                                  labels = seq(365, 365*(years*2+1), 365*5)/365-1)
@@ -489,7 +502,7 @@ snail.ros.nomig.h2 = sim.ros.nomig.h2 %>% dplyr::select(time, S.t, E.t, I.t, N.t
                                  labels = seq(0,50,10),
                                  limits = c(-0.1, 51)) +
               geom_vline(xintercept = 365*(years+1), lty = 2) +
-              annotate('text', x = 365, y = 48, label = 'D)', size = 8) +
+              annotate('text', x = 365, y = 48, label = expression(bold('d')), size = 10) +
               ggtitle("Holling's II, no migration") +
               scale_x_continuous(breaks = seq(365, 365*(years*2+1), 365*5),
                                  labels = seq(365, 365*(years*2+1), 365*5)/365-1)
@@ -511,6 +524,18 @@ multiplot(snail.ros,
           layout = matrix(c(1,2,3,4), ncol = 2, byrow = T))
 
 dev.off()  
+
+pdf("Figures/Pub_Figs/snail_predation_migration_fig.pdf",
+    width = 8.5, height = 8.5)
+
+multiplot(snail.ros,
+          snail.ros.nomig,
+          snail.ros.h2,
+          snail.ros.nomig.h2,
+          layout = matrix(c(1,2,3,4), ncol = 2, byrow = T))
+
+dev.off()  
+
 ```
 
 # Global sensitivity analysis with Latin Hypercube Sampling and Partial Rank Correlation Coefficients (LHS-PRCC)  
@@ -539,6 +564,11 @@ prawn_monotonicity
 
 ggsave("Figures/prawn_sensitivity_monotonicity.png",
        height = 10.5, width = 8.5, units = "in")
+
+prawn_monotonicity
+
+ggsave("Figures/Pub_Figs/prawn_sensitivity_monotonicity.pdf",
+       height = 10.5, width = 8.5, units = "in", dpi=300)
 
 ```
 
@@ -591,7 +621,7 @@ profit.lhsprcc <- profit.pcc.df %>% select(-cor) %>%
                               "p" = expression(italic(p)))) +
   geom_bar(fill = 'darkgreen', stat = 'identity', width = 0.25)+
   geom_hline(yintercept = 0, lty = 2)+
-  annotate('text', x = 11, y = -0.6, label = 'B)', size = 8) +
+  annotate('text', x = 11, y = -0.6, label = expression(bold('b')), size = 10) +
   labs(x = 'Parameter', 
        y = "Ten-year Cumulative profit PRCC") + coord_flip()
 
@@ -671,10 +701,21 @@ epi_w_monotonicity
 ggsave("Figures/epi_w_monotonicity.png",
        height = 10.5, width = 8.5, units = "in")
 
+epi_w_monotonicity
+
+ggsave("Figures/Pub_Figs/epi_w_monotonicity.pdf",
+       height = 10.5, width = 8.5, units = "in", dpi = 300)
+
+
 epi_It_monotonicity
 
 ggsave("Figures/epi_I_monotonicity.png",
        height = 10.5, width = 8.5, units = "in")
+
+epi_It_monotonicity
+
+ggsave("Figures/Pub_Figs/epi_I_monotonicity.pdf",
+       height = 10.5, width = 8.5, units = "in", dpi = 300)
 
 ```
 
@@ -752,7 +793,7 @@ epi.lhsprcc <- epi.W.pcc.df %>% bind_rows(., epi.I.pcc.df) %>% select(-cor) %>%
                                 "z" = expression(italic(z)))) +
     geom_bar(stat = 'identity', width = 0.5, position = position_dodge()) +
     scale_fill_manual(values = c("I" = "red", "W" = "purple")) +
-    annotate('text', x = 18, y = -0.6, label = "C)", size = 8)  +
+    annotate('text', x = 18, y = -0.6, label = expression(bold("c")), size = 10)  +
     geom_hline(yintercept = 0, lty = 2) +
     labs(x = 'Parameter', y = 'PRCC') + coord_flip()
 
@@ -880,6 +921,12 @@ comp_pars_mda_prawns
 
 ggsave("Figures/comp_pars_mda_prawns.png",
        height = 10.5, width = 8.5, units = "in")
+
+comp_pars_mda_prawns
+
+ggsave("Figures/Pub_Figs/comp_pars_mda_prawns.pdf",
+       height = 10.5, width = 8.5, units = "in", dpi = 300)
+
 ```
 
 
@@ -902,6 +949,11 @@ dalys_monotonicity
 
 ggsave("Figures/dalys_monotonicity.png",
        height = 10.5, width = 8.5, units = "in")
+
+dalys_monotonicity
+
+ggsave("Figures/Pub_Figs/dalys_monotonicity.pdf",
+       height = 10.5, width = 8.5, units = "in", dpi = 300)
 
 ```
 
@@ -987,7 +1039,8 @@ com.lhsprcc <- com.DALYs.pcc.df %>% select(-cor) %>%
                                 "theta2" = expression(italic(theta[2])),
                                 "z" = expression(italic(z)))) +
     geom_bar(stat = 'identity', width = 0.5, position = position_dodge()) +
-    annotate('text', x = nrow(com.DALYs.pcc.df), y = -0.6, label = "A)", size = 8)  +
+    annotate('text', x = nrow(com.DALYs.pcc.df), y = -0.6, 
+             label = expression(bold("a")), size = 10)  +
     geom_hline(yintercept = 0, lty = 2) +
     labs(x = 'Parameter', y = 'PRCC') + coord_flip()
 
@@ -1090,7 +1143,8 @@ com.lhsprcc.rmv0 <- com.DALYs.pcc.rmv0.df %>% select(-cor) %>%
                                 "theta2" = expression(italic(theta[2])),
                                 "z" = expression(italic(z)))) +
     geom_bar(stat = 'identity', width = 0.5, position = position_dodge()) +
-    annotate('text', x = nrow(com.DALYs.pcc.df)-1, y = -0.6, label = "A)", size = 8)  +
+    annotate('text', x = nrow(com.DALYs.pcc.df)-1, y = -0.6, 
+             label = expression(bold("a")), size = 10)  +
     geom_hline(yintercept = 0, lty = 2) +
     labs(x = 'Parameter', y = 'Combined Model Outcomes PRCC') + coord_flip() +
     ggtitle("Correlation with no transmission parameter sets removed")
@@ -1127,5 +1181,13 @@ png("Figures/combined_prcc_fig.png",
   multiplot(profit.lhsprcc, epi.lhsprcc, com.lhsprcc, layout = prcc_layout)
 
 dev.off()  
+
+pdf("Figures/Pub_Figs/combined_prcc_fig.pdf",
+    width = 8, height = 10.5)
+
+  multiplot(profit.lhsprcc, epi.lhsprcc, com.lhsprcc, layout = prcc_layout)
+
+dev.off()  
+
 ```
 
