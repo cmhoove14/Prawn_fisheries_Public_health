@@ -67,7 +67,34 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 ```
 
 # Epi preparation  
-Load all functions, models, parameter sets and so some initial runs to get equilibrium starting values, set snail immigration parameters, get prawn stocking data frames used in integrated model simulations, generated MDA events data frames, 1 year simulation run in for display in plots, etc.
+Load all functions, models, parameter sets and do some initial runs to get equilibrium starting values, set snail immigration parameters, get prawn stocking data frames used in integrated model simulations, generated MDA events data frames, 1 year simulation run in for display in plots, etc.
+
+```{r Opt_stock, cache = TRUE}
+source('../R/Prawn_aquaculture/prawn_aquaculture_mod.R')
+source('../R/Prawn_aquaculture/prawn_aquaculture_sim.R')
+source("../Data/aquaculture_parameters.R")
+source("../Data/Ranjeet_Kurup_06_data.R")
+source("../R/helper_fxs.R")
+
+  eta.lm = lm(marketable ~ dens, data = rk06)
+
+#Simulation for eumetric curve for M. volenhovenii #####
+# Create matriz with parameter sets and stocking densities ranging from 0.5-7.5Pm^-2 
+#Starting length of 40 mm corresponds to juveniles of ~0.35 grams
+opt.df = expand.grid.df(data.frame(t(par.aqua), c = cost, fc = 0, p = price, delta = delta), 
+                        data.frame(L_nought = 40, P_nought = seq(500, 7500, 100))) 
+
+#Get mgmt strategy that maximizes cumulative ten year profits
+opt.vol.df <- opt.df %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. vollenhovenii"))
+  opt.vol <- opt.vol.df %>% filter(cum_profits == max(cum_profits))
+  
+opt.ros.df <- opt.df %>% bind_cols(pmap_df(., sim_aqua_eum, species = "M. rosenbergii"))
+  opt.ros <- opt.ros.df %>% filter(cum_profits == max(cum_profits))
+
+eum_dat <- rbind(opt.vol.df, opt.ros.df)  
+
+```
+
 
 ```{r snail_prep, warnings=FALSE, cache = TRUE}
 #Load all necessary functions, models, and parameter sets
@@ -89,8 +116,8 @@ source("../R/Sensitivity_Analysis/sensitivity_prep.R")
 par.all = c(par.aqua, par.snails.imm, par.epi_prawn)
 
 #Load some parameters from the prawn aquaculture simulations needed here
-qwraps2::lazyload_cache_labels("Opt_stock", 
-                               path = "Prawn_Aquaculture_Profit_Maximization_cache/latex/")
+#qwraps2::lazyload_cache_labels("Opt_stock", 
+#                               path = "Prawn_Aquaculture_Profit_Maximization_cache/latex/")
 
 #Run to equilibrium to get eqbm values of state variables
 allvh.eqbm.run.imm0 = as.data.frame(ode(nstart.sn,
