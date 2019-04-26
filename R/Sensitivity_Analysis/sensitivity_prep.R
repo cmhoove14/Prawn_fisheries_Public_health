@@ -2,6 +2,9 @@
 #source("Data/aquaculture_parameters.R")
 #source("Data/snail_epi_parameters.R")
 #source("Data/combined_parameters.R")
+source("../Data/Ranjeet_Kurup_06_data.R")
+
+  eta.lm = lm(marketable ~ dens, data = rk06)
 
 #get all parameters in the same vector ###########
 par.all = c(par.aqua, 
