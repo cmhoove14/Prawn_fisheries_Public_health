@@ -1,3 +1,8 @@
+source("../Data/Ranjeet_Kurup_06_data.R")
+
+  eta.lm = lm(marketable ~ dens, data = rk06)
+
+
 #Small function to estimate cumulative discounted profits given number of cycles, profit per cycle, discount rate, and time per cycle
 get_cum_profits <- function(n, Pi, delta, Time){
   if(is.na(Pi)){
