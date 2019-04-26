@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/cmhoove14/Prawn_fisheries_Public_health.svg?branch=master)](https://travis-ci.com/cmhoove14/Prawn_fisheries_Public_health)
+
 # Prawn_fisheries_Public_health
 Code repository for project connecting prawn fisheries model to schisto epidemiologic model
 
