@@ -73,10 +73,8 @@ Load all functions, models, parameter sets and do some initial runs to get equil
 source('../R/Prawn_aquaculture/prawn_aquaculture_mod.R')
 source('../R/Prawn_aquaculture/prawn_aquaculture_sim.R')
 source("../Data/aquaculture_parameters.R")
-source("../Data/Ranjeet_Kurup_06_data.R")
 source("../R/helper_fxs.R")
 
-  eta.lm = lm(marketable ~ dens, data = rk06)
 
 #Simulation for eumetric curve for M. volenhovenii #####
 # Create matriz with parameter sets and stocking densities ranging from 0.5-7.5Pm^-2 
@@ -107,9 +105,6 @@ source("../R/Combined_Model/epi_no_diag_prawn_sim.R")
 source("../Data/snail_epi_parameters.R")
 source("../Data/combined_parameters.R")
 source("../Data/aquaculture_parameters.R")
-source("../Data/Ranjeet_Kurup_06_data.R")
-
-  eta.lm = lm(marketable ~ dens, data = rk06)
 
 source("../R/Sensitivity_Analysis/sensitivity_prep.R")
 
