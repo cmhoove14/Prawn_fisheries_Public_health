@@ -1,4 +1,5 @@
 Package: compendium
 Version: 0.1.0
-Depends: rmarkdown, tidyverse, httr, jsonlite, deSolve,sensitivity,parallel,kableExtra,broom,directlabels,furrr,tidyverse
+Remotes: url::https://cran.r-project.org/src/contrib/Archive/quadprog/quadprog_1.5-5.tar.gz
+Depends: rmarkdown, tidyverse, deSolve,sensitivity,parallel,kableExtra,broom,directlabels,furrr
 
