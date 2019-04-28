@@ -3,5 +3,6 @@
 language: R
 warnings_are_errors: false
 sudo: false
+cache: packages
 script: 
   - R -e 'lapply(list.files(pattern=".*.Rmd", recursive=TRUE), rmarkdown::render)' 
